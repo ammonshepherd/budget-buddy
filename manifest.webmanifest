@@ -1,0 +1,19 @@
+{
+  "name": "Budget Buddy",
+  "short_name": "Budget Buddy",
+  "description": "A simple envelope-style budgeting app.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8f2",
+  "theme_color": "#12372a",
+  "id": "./",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

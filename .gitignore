@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Build and tool output
+dist/
+coverage/
+
+# OS/editor files
+.DS_Store
