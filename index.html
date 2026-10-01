@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#12372a" />
+    <meta name="theme-color" content="#f6f8f2" />
     <meta
       name="description"
       content="Budget Buddy is a simple envelope-style budgeting app."
@@ -14,36 +14,54 @@
     <title>Budget Buddy</title>
   </head>
   <body>
-    <header class="site-header">
-      <a class="brand" href="#budget" aria-label="Budget Buddy home">
-        <img src="./icons/icon.svg" alt="" width="40" height="40" />
-        <span>Budget Buddy</span>
-      </a>
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="#budget" aria-label="Budget Buddy home">
+          <img src="./icons/icon.svg" alt="" width="36" height="36" />
+          <span>Budget Buddy</span>
+        </a>
 
-      <div class="header-actions">
-        <span class="app-version" id="app-version" aria-label="Application version"></span>
-        <button id="install-button" class="button button-secondary" type="button" hidden>
-          Install app
-        </button>
-      </div>
-    </header>
+        <div class="header-actions">
+          <span class="app-version" id="app-version" aria-label="Application version"></span>
+          <button id="install-button" class="icon-button" type="button" aria-label="Install Budget Buddy" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
+            </svg>
+          </button>
+        </div>
+      </header>
 
-    <nav class="main-nav" aria-label="Main navigation">
-      <a href="#budget" data-route="budget">Budget</a>
-      <a href="#accounts" data-route="accounts">Accounts</a>
-      <a href="#activity" data-route="activity">Activity</a>
-      <a href="#settings" data-route="settings">Settings</a>
-    </nav>
-
-    <main class="shell">
-      <div id="app" aria-live="polite">
+      <main id="app" class="page-content" aria-live="polite">
         <p class="loading-message">Loading Budget Buddy...</p>
-      </div>
-    </main>
+      </main>
 
-    <footer class="site-footer">
-      <p>Budget Buddy</p>
-    </footer>
+      <nav class="bottom-nav" aria-label="Primary navigation">
+        <a href="#budget" data-route="budget">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6.5h16v13H4zM7 6.5V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.5M8 12h8M8 15.5h5" />
+          </svg>
+          <span>Budget</span>
+        </a>
+        <a href="#accounts" data-route="accounts">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7.5h16v12H4zM4 7.5l2-3h12l2 3M4 10h16M8 15h3" />
+          </svg>
+          <span>Accounts</span>
+        </a>
+        <a href="#activity" data-route="activity">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 5h14v14H5zM8 9h8M8 12h8M8 15h5" />
+          </svg>
+          <span>Activity</span>
+        </a>
+        <a href="#settings" data-route="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0-5v2m0 13v2M3.5 12h2m13 0h2M5.99 5.99l1.41 1.42m9.2 9.18 1.41 1.42m0-12.02-1.41 1.42m-9.2 9.18-1.41 1.42" />
+          </svg>
+          <span>Settings</span>
+        </a>
+      </nav>
+    </div>
 
     <script type="module" src="./app.js"></script>
   </body>

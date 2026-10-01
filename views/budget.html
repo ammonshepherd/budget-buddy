@@ -1,15 +1,17 @@
 <section class="page-view" aria-labelledby="budget-title">
   <header class="page-heading">
-    <p class="eyebrow">Plan your money</p>
+    <p class="eyebrow">September 2026</p>
     <h1 id="budget-title">Budget</h1>
-    <p>Assign your available money to envelopes and plan the month ahead.</p>
+    <p>Give every dollar a job before the month gets busy.</p>
   </header>
 
+  <section class="hero-card" aria-label="Budgetable money">
+    <span class="card-label">Budgetable money</span>
+    <strong class="hero-amount">$0.00</strong>
+    <span class="card-helper">Ready to assign</span>
+  </section>
+
   <section class="summary-grid" aria-label="Budget summary">
-    <article class="summary-card">
-      <span>Budgetable money</span>
-      <strong>$0.00</strong>
-    </article>
     <article class="summary-card">
       <span>Assigned</span>
       <strong>$0.00</strong>
@@ -20,10 +22,13 @@
     </article>
   </section>
 
-  <section class="placeholder-card">
-    <h2>Envelope categories</h2>
-    <p>Your categories will appear here when the budget model is connected.</p>
-    <button class="button" id="budget-action" type="button">Explore budget tools</button>
+  <section class="list-card">
+    <div class="section-heading">
+      <h2>Envelope categories</h2>
+      <span class="section-count">0</span>
+    </div>
+    <p class="empty-state">Your categories will appear here when the budget model is connected.</p>
+    <button class="primary-button" id="budget-action" type="button">Explore budget tools</button>
     <p class="page-status" data-page-status role="status"></p>
   </section>
 </section>

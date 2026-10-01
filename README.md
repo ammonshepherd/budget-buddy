@@ -1,6 +1,6 @@
 # Budget Buddy
 
-Budget Buddy is a framework-free progressive web app foundation for an envelope-style budgeting application.
+Budget Buddy is a framework-free, mobile-first progressive web app foundation for an envelope-style budgeting application.
 
 ## Version
 
@@ -16,7 +16,8 @@ Versions follow:
 
 - Installable web app manifest
 - Service worker with an application-shell cache
-- Responsive starter interface
+- Mobile-first phone-app layout
+- Bottom navigation for Budget, Accounts, Activity, and Settings
 - Hash-based SPA navigation compatible with GitHub Pages
 - HTML views separated from controller JavaScript
 - No backend credentials or database connections committed
