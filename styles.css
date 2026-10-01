@@ -227,10 +227,6 @@ body {
     align-items: flex-start;
   }
 
-  .app-version {
-    display: none;
-  }
-
   .summary-grid {
     grid-template-columns: 1fr;
   }
