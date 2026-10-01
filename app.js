@@ -1,7 +1,6 @@
-const installButton = document.querySelector("#install-button");
-const startButton = document.querySelector("#get-started-button");
-const statusMessage = document.querySelector("#status-message");
+import { initializeApp } from "./controllers/appController.js";
 
+const installButton = document.querySelector("#install-button");
 let deferredInstallPrompt;
 
 if ("serviceWorker" in navigator) {
@@ -27,11 +26,8 @@ installButton.addEventListener("click", async () => {
   installButton.hidden = true;
 });
 
-startButton.addEventListener("click", () => {
-  statusMessage.textContent = "The budget dashboard is coming next.";
-});
-
 window.addEventListener("appinstalled", () => {
   installButton.hidden = true;
-  statusMessage.textContent = "Budget Buddy was installed.";
 });
+
+initializeApp();

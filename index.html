@@ -15,52 +15,34 @@
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="./" aria-label="Budget Buddy home">
+      <a class="brand" href="#budget" aria-label="Budget Buddy home">
         <img src="./icons/icon.svg" alt="" width="40" height="40" />
         <span>Budget Buddy</span>
       </a>
-      <button id="install-button" class="button button-secondary" type="button" hidden>
-        Install app
-      </button>
+
+      <div class="header-actions">
+        <span class="app-version" id="app-version" aria-label="Application version"></span>
+        <button id="install-button" class="button button-secondary" type="button" hidden>
+          Install app
+        </button>
+      </div>
     </header>
 
-    <main class="shell">
-      <section class="hero" aria-labelledby="page-title">
-        <p class="eyebrow">Your money, organized</p>
-        <h1 id="page-title">A calmer way to plan your budget.</h1>
-        <p class="hero-copy">
-          This starter PWA is ready for the Budget Buddy budgeting experience.
-          Your budget dashboard will live here.
-        </p>
-        <div class="hero-actions">
-          <button class="button" type="button" id="get-started-button">
-            Get started
-          </button>
-          <span id="status-message" class="status-message" role="status"></span>
-        </div>
-      </section>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#budget" data-route="budget">Budget</a>
+      <a href="#accounts" data-route="accounts">Accounts</a>
+      <a href="#activity" data-route="activity">Activity</a>
+      <a href="#settings" data-route="settings">Settings</a>
+    </nav>
 
-      <section class="feature-grid" aria-label="Budget Buddy features">
-        <article class="card">
-          <span class="card-icon" aria-hidden="true">↗</span>
-          <h2>Plan ahead</h2>
-          <p>Give every dollar a job before the month gets busy.</p>
-        </article>
-        <article class="card">
-          <span class="card-icon" aria-hidden="true">✓</span>
-          <h2>Stay flexible</h2>
-          <p>Adjust categories as real-life spending changes.</p>
-        </article>
-        <article class="card">
-          <span class="card-icon" aria-hidden="true">⌁</span>
-          <h2>See clearly</h2>
-          <p>Keep accounts, spending, and goals in one place.</p>
-        </article>
-      </section>
+    <main class="shell">
+      <div id="app" aria-live="polite">
+        <p class="loading-message">Loading Budget Buddy...</p>
+      </div>
     </main>
 
     <footer class="site-footer">
-      <p>Budget Buddy PWA foundation</p>
+      <p>Budget Buddy</p>
     </footer>
 
     <script type="module" src="./app.js"></script>

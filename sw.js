@@ -1,11 +1,21 @@
-const CACHE_NAME = "budget-buddy-shell-v1";
+const CACHE_NAME = "budget-buddy-shell-v0.0.1";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
-  "./icons/icon.svg"
+  "./icons/icon.svg",
+  "./views/budget.html",
+  "./views/accounts.html",
+  "./views/activity.html",
+  "./views/settings.html",
+  "./controllers/appController.js",
+  "./controllers/pageController.js",
+  "./controllers/budgetController.js",
+  "./controllers/accountsController.js",
+  "./controllers/activityController.js",
+  "./controllers/settingsController.js"
 ];
 
 self.addEventListener("install", (event) => {
@@ -42,6 +52,10 @@ self.addEventListener("fetch", (event) => {
         });
         return response;
       })
-      .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./")))
+      .catch(() =>
+        caches.match(event.request).then(
+          (cached) => cached || caches.match("./")
+        )
+      )
   );
 });
