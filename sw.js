@@ -1,4 +1,4 @@
-const CACHE_NAME = "budget-buddy-shell-v0.0.1-mobile";
+const CACHE_NAME = "budget-buddy-shell-v0.0.1-purple";
 const APP_SHELL = [
   "./",
   "./index.html",
