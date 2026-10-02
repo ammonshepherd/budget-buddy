@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Budget Buddy</title>
-  <desc id="desc">A green square with a white B-shaped budget mark.</desc>
-  <rect width="512" height="512" rx="112" fill="#12372a"/>
-  <path fill="#d5efc2" d="M160 112h142c57 0 92 29 92 73 0 28-14 50-38 62 31 11 50 35 50 69 0 53-40 84-108 84H160V112Zm70 57v58h64c22 0 32-11 32-29 0-19-12-29-35-29h-61Zm0 115v61h70c25 0 39-11 39-31 0-20-14-30-41-30h-68Z"/>
+  <desc id="desc">A purple square with a light purple B-shaped budget mark.</desc>
+  <rect width="512" height="512" rx="112" fill="#4b2a68"/>
+  <path fill="#eadcf6" d="M160 112h142c57 0 92 29 92 73 0 28-14 50-38 62 31 11 50 35 50 69 0 53-40 84-108 84H160V112Zm70 57v58h64c22 0 32-11 32-29 0-19-12-29-35-29h-61Zm0 115v61h70c25 0 39-11 39-31 0-20-14-30-41-30h-68Z"/>
 </svg>
