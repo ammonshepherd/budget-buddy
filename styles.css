@@ -1,21 +1,21 @@
 :root {
   color-scheme: light;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #19352b;
-  background: #e7ede7;
+  color: #281a35;
+  background: #ece7f2;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --app-background: #f6f8f2;
+  --app-background: #faf8fc;
   --surface: #ffffff;
-  --surface-muted: #edf3ec;
-  --border: #dce7dc;
-  --text: #19352b;
-  --text-muted: #6c7c72;
-  --brand: #12372a;
-  --brand-light: #e0f0d8;
-  --accent: #487d59;
-  --focus: #d98c36;
-  --shadow: 0 1rem 3rem rgba(25, 53, 43, 0.09);
+  --surface-muted: #f2ecf7;
+  --border: #e3dbe9;
+  --text: #281a35;
+  --text-muted: #74677e;
+  --brand: #4b2a68;
+  --brand-light: #eee5f7;
+  --accent: #8051a2;
+  --focus: #d29a3b;
+  --shadow: 0 1rem 3rem rgba(75, 42, 104, 0.12);
 }
 
 * {
@@ -24,14 +24,14 @@
 
 html {
   min-block-size: 100%;
-  background: #e7ede7;
+  background: #ece7f2;
 }
 
 body {
   min-inline-size: 320px;
   min-block-size: 100dvh;
   margin: 0;
-  background: #e7ede7;
+  background: #ece7f2;
 }
 
 button,
@@ -81,7 +81,7 @@ a:focus-visible {
 
 .brand img {
   border-radius: 0.75rem;
-  box-shadow: 0 0.3rem 0.8rem rgba(18, 55, 42, 0.16);
+  box-shadow: 0 0.3rem 0.8rem rgba(75, 42, 104, 0.2);
 }
 
 .header-actions {
@@ -178,7 +178,7 @@ a:focus-visible {
 
 .card-label,
 .card-helper {
-  color: #bcd7bd;
+  color: #eadcf6;
   font-size: 0.82rem;
 }
 
@@ -264,7 +264,7 @@ a:focus-visible {
 }
 
 .primary-button:hover {
-  background: #1d5843;
+  background: #633b82;
 }
 
 .page-status {
@@ -345,7 +345,7 @@ a:focus-visible {
   padding: 0.55rem 0.45rem max(0.55rem, env(safe-area-inset-bottom));
   border-block-start: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: color-mix(in srgb, var(--surface) 90%, transparent);
-  box-shadow: 0 -0.5rem 2rem rgba(25, 53, 43, 0.08);
+  box-shadow: 0 -0.5rem 2rem rgba(75, 42, 104, 0.1);
   backdrop-filter: blur(1rem);
 }
 
@@ -395,7 +395,7 @@ a:focus-visible {
   .app-shell {
     min-block-size: calc(100dvh - 2rem);
     border-radius: 2rem;
-    box-shadow: 0 1.5rem 4rem rgba(25, 53, 43, 0.14);
+    box-shadow: 0 1.5rem 4rem rgba(75, 42, 104, 0.16);
   }
 
   .bottom-nav {
