@@ -10,10 +10,16 @@
   "id": "./",
   "icons": [
     {
-      "src": "./icons/budget-buddy-logo.png",
+      "src": "./icons/logo-icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/logo-icon.svg",
+      "sizes": "256x256",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }

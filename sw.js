@@ -1,11 +1,12 @@
-const CACHE_NAME = "budget-buddy-shell-v0.0.1-logo";
+const CACHE_NAME = "budget-buddy-shell-v0.0.1-logo-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
-  "./icons/budget-buddy-logo.png",
+  "./icons/logo-icon.png",
+  "./icons/logo-icon.svg",
   "./views/budget.html",
   "./views/accounts.html",
   "./views/activity.html",
