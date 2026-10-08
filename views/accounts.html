@@ -1,17 +1,6 @@
-<section class="page-view" aria-labelledby="accounts-title">
-  <header class="page-heading">
-    <p class="eyebrow">Your money sources</p>
-    <h1 id="accounts-title">Accounts</h1>
-    <p>See the accounts that provide money for your budget.</p>
-  </header>
-
-  <section class="list-card">
-    <div class="section-heading">
-      <h2>Your accounts</h2>
-      <span class="section-count">0</span>
-    </div>
-    <p class="empty-state">Account balances will appear here when the account model is connected.</p>
-    <button class="primary-button" id="accounts-action" type="button">Explore accounts</button>
-    <p class="page-status" data-page-status role="status"></p>
-  </section>
+<section aria-labelledby="page-title">
+  <div class="page-heading"><h1 id="page-title" tabindex="-1">Accounts</h1><button id="add-account" type="button">Add account</button></div>
+  <div id="account-list"></div><p id="accounts-empty" class="empty" hidden>Add an account with its opening balance to begin.</p>
+  <section id="account-detail" hidden aria-labelledby="account-name"><a href="#accounts" class="back-link">← All accounts</a><div class="page-heading"><h2 id="account-name"></h2><button id="edit-account" type="button" class="secondary">Edit account</button></div><p id="account-balance" class="account-total"></p><div class="toolbar"><button id="account-add-transaction" type="button">Add transaction</button><button id="account-transfer" class="secondary" type="button">Transfer</button></div><p class="hint">Newest transactions first. Entries before the opening cutoff are history only.</p><div id="account-transactions"></div></section>
 </section>
+<template id="account-template"><article class="account-card"><a class="account-link"><span><strong class="name"></strong><small class="type"></small></span><strong class="balance"></strong></a><button type="button" class="text-button">Edit</button></article></template>
