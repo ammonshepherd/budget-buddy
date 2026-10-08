@@ -22,3 +22,9 @@ test("matching retains the categorized parent and a merged bank audit record",()
   matchTransaction(s,bank,t.id); assert.equal(s.transactions[0].payee,"Manual"); assert.equal(s.transactions[0].allocations.length,1); assert.equal(s.transactions[1].status,"merged"); assert.equal(s.transactions[1].merged_into_id,t.id); assert.deepEqual(s.transactions[0].tags,["manual","bank"]);
   assert.throws(()=>matchTransaction(s,{...bank,amount:-2000},t.id));
 });
+test("posted cutoff uses normalized dates and ambiguous debit/credit rows are rejected",()=>{
+  const s=demoState();s.household.start_month="2026-01";s.accounts[0].opening_date="2026-01-01";
+  const csv=parseCSV('Date,Description,Debit,Credit,Posted\n01/02/2026,Posted charge,10,0,01/03/2026\n01/02/2026,Ambiguous,10,5,01/03/2026');
+  const rows=mappedTransactions(csv,{date:"0",payee:"1",amount:"",debit:"2",credit:"3",posted_date:"4",dateFormat:"mdy"},s.accounts[0],s);
+  assert.equal(rows[0].transaction.funding,"needs_funding");assert.equal(rows[0].transaction.posted_date,"2026-01-03");assert.match(rows[1].error,/both a debit and a credit/);
+});

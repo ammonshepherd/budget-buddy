@@ -54,12 +54,18 @@ export function mappedTransactions(csv, mapping, account, state) {
       const parseAmount = (raw) => cents(raw.replace(/^\((.*)\)$/, "-$1"));
       let amount;
       if (mapping.amount !== "") { amount = parseAmount(cell(row, "amount")); if (mapping.reverse === "yes") amount = -amount; }
-      else amount = (cell(row, "credit") ? Math.abs(parseAmount(cell(row, "credit"))) : 0) - (cell(row, "debit") ? Math.abs(parseAmount(cell(row, "debit"))) : 0);
+      else {
+        const credit = cell(row, "credit") ? Math.abs(parseAmount(cell(row, "credit"))) : 0;
+        const debit = cell(row, "debit") ? Math.abs(parseAmount(cell(row, "debit"))) : 0;
+        if (credit && debit) throw new Error("A row cannot have both a debit and a credit.");
+        amount = credit - debit;
+      }
       if (!amount) throw new Error("Amount is zero or missing.");
       const external = cell(row, "external_id");
-      const transaction = { id: id(), account_id: account.id, date, posted_date: cell(row, "posted_date") ? parseDate(cell(row, "posted_date"), mapping.dateFormat) : null,
+      const postedDate = cell(row, "posted_date") ? parseDate(cell(row, "posted_date"), mapping.dateFormat) : null;
+      const transaction = { id: id(), account_id: account.id, date, posted_date: postedDate,
         amount, payee, note: cell(row, "note"), check_number: cell(row, "check_number"), tags: cell(row, "tags").split(/[;|]/).map((t) => t.trim()).filter(Boolean),
-        kind: amount < 0 ? "expense" : account.type === "credit" ? "adjustment" : "income", funding: amount < 0 && account.on_budget && date.slice(0, 7) >= state.household.start_month && (cell(row, "posted_date") || date) >= account.opening_date ? "needs_funding" : "not_required",
+        kind: amount < 0 ? "expense" : account.type === "credit" ? "adjustment" : "income", funding: amount < 0 && account.on_budget && date.slice(0, 7) >= state.household.start_month && (postedDate || date) >= account.opening_date ? "needs_funding" : "not_required",
         status: "active", transfer_id: null, merged_into_id: null, source: "csv", external_id: external || null,
         original_description: payee, import_data: Object.fromEntries(csv.headers.map((h, i) => [h, row[i]])), allocations: [] };
       const candidates = state.transactions.filter((t) => t.status === "active" && t.account_id === account.id &&

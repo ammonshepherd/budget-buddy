@@ -24,7 +24,7 @@
         </a>
 
         <div class="header-actions">
-          <span class="app-version" id="app-version" aria-label="Application version"></span>
+          <span class="app-version" id="app-version"></span>
           <span id="demo-label" hidden>Demo</span>
           <button id="exit-demo" class="text-button" type="button" hidden>Exit demo</button>
           <button id="install-button" class="icon-button" type="button" aria-label="Install Budget Buddy" hidden>
@@ -35,9 +35,11 @@
         </div>
       </header>
 
+      <section aria-label="App notifications">
       <p id="app-status" class="global-message hint" role="status" hidden></p>
       <p id="app-error" class="global-message notice" role="alert" hidden></p>
       <div id="update-notice" class="global-message notice" hidden>A new app version is ready. Finish your edits, then <button id="reload-update" class="secondary" type="button">Reload app</button>.</div>
+      </section>
       <main id="app" class="page-content" tabindex="-1">
         <p class="loading-message">Loading Budget Buddy...</p>
       </main>

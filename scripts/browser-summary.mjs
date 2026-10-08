@@ -6,7 +6,7 @@ const failures=[];
 function walk(suite) {
   for(const spec of suite.specs || [])for(const test of spec.tests || []) {
     const result=test.results.at(-1);
-    if(result?.status!=="passed" && result?.status!=="skipped")failures.push({title:spec.title,project:test.projectName,error:result.error?.message||"Unknown failure"});
+    if(result?.status!=="passed" && result?.status!=="skipped")failures.push({title:spec.title,project:test.projectName,error:JSON.stringify(result.errors?.length ? result.errors : [result.error])});
   }
   for(const child of suite.suites || [])walk(child);
 }

@@ -29,17 +29,27 @@ export function saveTransaction(state, record) {
   const old = state.transactions.find((r) => r.id === t.id);
   if (old) Object.assign(old, t); else state.transactions.push(t);
 }
-export function saveTransfer(state, { from, to, amount, date = today(), existingId }) {
+export function saveTransfer(state, { from, to, amount, date = today(), existingId, retainedId, counterpartId }) {
   if (from === to || amount <= 0) throw new Error("Choose different accounts and a positive amount.");
   const oldPair = existingId ? state.transactions.filter((t) => t.transfer_id === existingId && t.status === "active") : [];
+  if (retainedId) {
+    const retained = state.transactions.find((t) => t.id === retainedId && t.status === "active");
+    if (!retained || retained.kind === "transfer" || Math.abs(retained.amount) !== amount || retained.account_id !== (retained.amount < 0 ? from : to)) throw new Error("The imported transfer side must retain its account and amount.");
+    oldPair.push(retained);
+    if (counterpartId) {
+      const counterpart = state.transactions.find((t) => t.id === counterpartId && t.status === "active");
+      if (!counterpart || counterpart.id === retained.id || counterpart.kind === "transfer" || counterpart.amount !== -retained.amount || counterpart.account_id !== (counterpart.amount < 0 ? from : to) || counterpart.date !== date) throw new Error("Choose an equal opposite bank entry for the other account and date.");
+      oldPair.push(counterpart);
+    }
+  }
   const transferId = existingId || id();
   const destination = state.accounts.find((a) => a.id === to);
   const source = state.accounts.find((a) => a.id === from);
   for (const [account, signed] of [[from, -amount], [to, amount]]) {
     const old = oldPair.find((t) => (t.amount < 0) === (signed < 0));
     const t = { id: old?.id || id(), account_id: account, amount: signed, date, posted_date: null,
-      payee: `Transfer ${signed < 0 ? "to" : "from"} ${signed < 0 ? destination.name : source.name}`, note: "", tags: [], check_number: "",
-      kind: "transfer", funding: "not_required", status: "active", transfer_id: transferId, merged_into_id: null, source: "manual", external_id: null, original_description: "", import_data: {}, allocations: [] };
+      payee: old?.payee || `Transfer ${signed < 0 ? "to" : "from"} ${signed < 0 ? destination.name : source.name}`, note: old?.note || "", tags: old?.tags || [], check_number: old?.check_number || "",
+      kind: "transfer", funding: "not_required", status: "active", transfer_id: transferId, merged_into_id: null, source: old?.source || "manual", external_id: old?.external_id || null, original_description: old?.original_description || "", import_data: old?.import_data || {}, allocations: [] };
     if (signed < 0 && destination.type === "credit" && destination.on_budget && inBudget(state, t)) {
       const category = state.categories.find((c) => c.card_account_id === to);
       t.allocations = [{ category_id: category.id, amount: signed }]; t.funding = "funded";

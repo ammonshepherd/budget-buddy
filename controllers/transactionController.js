@@ -40,6 +40,8 @@ export function editTransaction(record, onSave, accountId) {
     openMove(form.date.value.slice(0, 7), () => { update(); }, target);
   });
   const deleteButton = $(".void-transaction", form); deleteButton.hidden = !record;
+  const convert = $(".convert-transfer", form); convert.hidden = !record;
+  convert.addEventListener("click", () => { d.close(); editTransfer(record, onSave); });
   deleteButton.addEventListener("click", () => confirm("Delete transaction", "Void this transaction? It will leave the active ledger; the original record stays in history. Budget funding will be rechecked.", async () => { await changeState((s) => voidTransaction(s, record.id)); d.close(); announce("Transaction deleted."); await onSave(); }));
   update();
   d.submit(async (v) => {
@@ -57,12 +59,25 @@ export function editTransaction(record, onSave, accountId) {
 }
 export function editTransfer(record, onSave, accountId) {
   const s = getState(), d = dialog(record ? "Edit transfer" : "Transfer money", "transfer-form");
-  const pair = record ? s.transactions.filter((t) => t.transfer_id === record.transfer_id && t.status === "active") : [];
+  const converting = record && record.kind !== "transfer";
+  const pair = record ? converting ? [record] : s.transactions.filter((t) => t.transfer_id === record.transfer_id && t.status === "active") : [];
   const accounts = s.accounts.filter((a) => !a.archived || pair.some((t) => t.account_id === a.id));
   options(d.form.from, accounts, { selected: pair.find((t) => t.amount < 0)?.account_id || accountId });
   options(d.form.to, accounts, { selected: pair.find((t) => t.amount > 0)?.account_id });
   fill(d.form, { date: record?.date || today(), amount: record ? decimal(Math.abs(record.amount)) : "" }); d.form.date.max = today();
-  d.submit(async (v) => { await changeState((draft) => saveTransfer(draft, { ...v, amount: cents(v.amount), existingId: record?.transfer_id })); announce("Transfer saved."); await onSave(); });
+  if (converting) {
+    const locked = record.amount < 0 ? d.form.from : d.form.to; locked.disabled = true;
+    d.form.amount.readOnly = true;
+    $(".counterpart-field", d.form).hidden = false;
+  }
+  const update = () => {
+    const to = getState().accounts.find((a) => a.id === d.form.to.value);
+    $(".fund-transfer", d.form).hidden = to?.type !== "credit" || !to.on_budget;
+    if (converting) options(d.form.counterpart_id, getState().transactions.filter((t) => t.status === "active" && t.kind !== "transfer" && t.amount === -record.amount && t.date === d.form.date.value && t.account_id === (record.amount < 0 ? d.form.to.value : d.form.from.value)), { placeholder: "Create the other transfer entry", label: (t) => `${t.payee} (${t.date}) ${formatMoney(t.amount)}` });
+  };
+  d.form.addEventListener("change", update); update();
+  $(".fund-transfer", d.form).addEventListener("click", () => openMove(d.form.date.value.slice(0,7), () => {}, getState().categories.find((c) => c.card_account_id === d.form.to.value)?.id));
+  d.submit(async (v) => { await changeState((draft) => saveTransfer(draft, { ...v, from: d.form.from.value, to: d.form.to.value, amount: cents(v.amount), existingId: converting ? undefined : record?.transfer_id, retainedId: converting ? record.id : undefined, counterpartId: v.counterpart_id || undefined })); announce("Transfer saved."); await onSave(); });
   if (record) {
     const button = document.createElement("button"); button.type = "button"; button.className = "danger secondary"; button.textContent = "Delete transfer";
     button.addEventListener("click", () => confirm("Delete transfer", "Void both linked entries?", async () => { await changeState((draft) => voidTransaction(draft, record.id)); d.close(); await onSave(); })); d.form.append(button);
