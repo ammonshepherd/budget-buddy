@@ -56,6 +56,8 @@ npm run test:e2e
 
 `checks.yml` runs unit tests, migration/RLS/funding tests against PostgreSQL 17, SQL-vs-JavaScript calculation comparisons, and mobile/desktop Playwright tests with axe checks for WCAG 2.2 AA rules. Browser reports and screenshots are retained as CI artifacts. Automated accessibility checks do not substitute for physical-device and screen-reader testing.
 
+See [the validation report](docs/validation.md) for executed checks, evidence and the remaining device/project checks.
+
 For database tests locally, use a disposable PostgreSQL database: execute `tests/database/bootstrap.sql`, both migrations, and `tests/database/rules.sql`; generate further checks with `node tests/database/generate.mjs` and run its SQL. The bootstrap emulates Supabase’s Auth schema for tests only; **never run it against your Supabase project**.
 
-This release uses a single small household snapshot with a revision lock and a 10 MB request cap. Refresh before editing after another user has changed the budget; a stale save fails without overwriting their work. Paginated reads and granular write RPCs can replace snapshots if the history grows. Multi-currency, direct bank sync, advanced reconciliation and offline writes are outside this release.
+This release uses a single small household snapshot with a revision lock and a 10 MB request cap. Refresh before editing after another user has changed the budget; a stale save fails without overwriting their work. Paginated reads and granular write RPCs can replace snapshots if the history grows. Enter/import amounts with a dot as the decimal separator; commas are accepted only as thousands separators, so decimal commas cannot silently change an amount. Calendar defaults and the account cutoff’s “today” use UTC. Multi-currency, direct bank sync, advanced reconciliation and offline writes are outside this release.

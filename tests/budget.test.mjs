@@ -6,7 +6,7 @@ const purchase = (s, amount, category = s.categories[0].id, account = s.accounts
   amount: -amount, payee: "Store", kind: "expense", allocations: [{ category_id: category, amount: -amount }], funding: "funded", status: "active", note: "", tags: [], check_number: "", source: "manual", external_id: null, original_description: "", import_data: {}, transfer_id: null, merged_into_id: null });
 test("decimal inputs are exact cents and invalid precision is rejected", () => {
   assert.equal(cents("1,234.56"),123456); assert.equal(cents("-0.01"),-1); assert.equal(cents("0.10"),10);
-  for (const value of ["NaN","1.001","1e5", "", "--1"]) assert.throws(() => cents(value));
+  for (const value of ["NaN","1.001","1e5", "", "--1","12,50","1.234,56"]) assert.throws(() => cents(value));
 });
 test("strict funded cash purchases reduce Remaining and cash without changing Assignable", () => {
   const s = demoState(), before = summary(s); saveTransaction(s, purchase(s,1200)); validateState(s);

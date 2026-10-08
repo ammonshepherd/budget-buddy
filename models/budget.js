@@ -7,8 +7,9 @@ export const money = (cents, currency = "USD") => new Intl.NumberFormat(undefine
   style: "currency", currency
 }).format(cents / 100);
 export function cents(value) {
-  const text = String(value).trim().replace(/[$,\s]/g, "");
-  if (!/^-?\d+(\.\d{1,2})?$/.test(text)) throw new Error("Enter an amount with at most two decimal places.");
+  const raw = String(value).trim().replace(/[$\s]/g, "");
+  if (!/^-?(\d+|\d{1,3}(,\d{3})+)(\.\d{1,2})?$/.test(raw)) throw new Error("Use a dot for decimals (up to two places) and commas only for thousands.");
+  const text = raw.replace(/,/g, "");
   const negative = text.startsWith("-");
   const [whole, fraction = ""] = text.replace("-", "").split(".");
   const result = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
