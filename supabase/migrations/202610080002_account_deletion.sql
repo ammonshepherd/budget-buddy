@@ -5,6 +5,7 @@ begin
   select household_id,role into h,member_role from public.household_members where user_id=p_user;
   if h is null then return; end if;
   perform 1 from public.households where id=h for update;
+  select role into member_role from public.household_members where household_id=h and user_id=p_user;
   if member_role='owner' and exists(select 1 from public.household_members where household_id=h and user_id<>p_user) then raise exception 'Transfer household ownership before deleting the owner account.'; end if;
 end; $$;
 -- Runs inside Auth's delete transaction, so an Auth failure cannot leave a
@@ -35,6 +36,7 @@ begin
   select household_id into h from public.household_members where user_id=auth.uid() and role='owner';
   if h is null then raise exception 'Only the owner can transfer ownership.'; end if;
   perform 1 from public.households where id=h for update;
+  if not exists(select 1 from public.household_members where household_id=h and user_id=auth.uid() and role='owner') then raise exception 'Only the owner can transfer ownership.'; end if;
   select m.user_id into u from public.household_members m join auth.users a on a.id=m.user_id where m.household_id=h and lower(a.email)=lower(trim(p_email)) and m.user_id<>auth.uid();
   if u is null then raise exception 'Choose another existing household member.'; end if;
   update public.household_members set role=case when user_id=u then 'owner' else 'member' end where household_id=h;

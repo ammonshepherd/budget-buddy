@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: '22'
       - uses: actions/configure-pages@v5
+      - run: npm test
       - run: npm run build
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}

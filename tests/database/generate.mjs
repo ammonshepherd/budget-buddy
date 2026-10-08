@@ -39,4 +39,7 @@ saveTransaction(state,{...txn,id:id(),account_id:state.accounts[0].id,amount:-50
 saveTransaction(state,{...txn,id:id(),amount:100,payee:"Card credit after payment",kind:"adjustment",allocations:[]}); checkpoint("unreserved card credit invents no cash");
 state.transactions.push({...txn,id:id(),account_id:state.accounts[0].id,source:"csv",funding:"needs_funding",amount:-2000,allocations:[]}); checkpoint("pending import");
 sql.push("reset role;", "\\echo 'SQL and JavaScript calculation parity checks passed'");
+sql.push(`delete from auth.users where id='${user}'; do $check$ begin
+  if exists(select 1 from public.households where name='Golden checks') or exists(select 1 from public.accounts where id='${state.accounts[0].id}') then raise exception 'Sole-owner deletion did not clean up data'; end if;
+  end; $check$;`);
 console.log(sql.join("\n"));

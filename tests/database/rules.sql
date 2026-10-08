@@ -60,4 +60,24 @@ begin
     if sqlerrm not like '%Transfer household ownership%' then raise; end if;
   end;
 end; $$;
+-- Auth deletion must enforce the same ownership rule atomically.
+do $$begin
+  begin delete from auth.users where id='00000000-0000-4000-8000-000000000001'; raise exception 'Shared owner deletion should fail'; exception when others then
+    if sqlerrm not like '%Transfer household ownership%' then raise; end if;
+  end;
+  if not exists(select 1 from auth.users where id='00000000-0000-4000-8000-000000000001') then raise exception 'Blocked owner deletion removed identity'; end if;
+end;$$;
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',false);
+select public.transfer_household_ownership('partner@example.test');
+do $$begin
+  begin perform public.add_household_member('other@example.test'); raise exception 'Former owner should not invite'; exception when others then
+    if sqlerrm not like '%Only the household owner%' then raise; end if;
+  end;
+end;$$;
+reset role;
+delete from auth.users where id='00000000-0000-4000-8000-000000000001';
+do $$begin
+  if not exists(select 1 from public.households where name='Test household') or not exists(select 1 from public.transactions where payee='Over budget') then raise exception 'Member deletion removed shared history'; end if;
+end;$$;
 \echo 'Database rule and RLS checks passed'

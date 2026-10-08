@@ -28,6 +28,7 @@ export function initializeAccountsPage(params, rerender) {
 export function editAccount(account, rerender) {
   const d = dialog(account ? "Edit account" : "Add account", "account-form");
   fill(d.form, account ? { ...account, opening_balance: decimal(account.opening_balance) } : { opening_date: today() });
+  d.form.opening_date.max = today();
   const locked = account && getState().transactions.some((t) => t.account_id === account.id);
   for (const field of ["type", "on_budget", "opening_balance", "opening_date"]) d.form.elements[field].disabled = !!locked;
   const update = () => { if (!locked) { d.form.on_budget.disabled = d.form.type.value === "tracking"; if (d.form.type.value === "tracking") d.form.on_budget.checked = false; } };

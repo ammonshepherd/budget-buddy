@@ -167,6 +167,7 @@ begin
   select household_id into h from public.household_members where user_id=(select auth.uid());
   if h is null or h <> (p_state->'household'->>'id')::uuid then raise exception 'Household access denied.'; end if;
   select revision into rev from public.households where id=h for update;
+  if not public.is_budget_member(h) then raise exception 'Household access denied.'; end if;
   if rev <> p_expected_revision then raise exception 'This budget changed in another tab or by another member. Refresh before saving.'; end if;
   if octet_length(p_state::text)>10000000 then raise exception 'Budget request is too large.'; end if;
   if (p_state->'household'->>'start_month')<>(select start_month from public.households where id=h) or
@@ -179,6 +180,7 @@ begin
      exists(select 1 from public.transactions a where a.household_id=h and not exists(select 1 from jsonb_array_elements(p_state->'transactions') v where (v->>'id')::uuid=a.id)) then raise exception 'Archive or void records instead of deleting history.'; end if;
   if exists(select 1 from public.category_months a where a.household_id=h and not exists(select 1 from jsonb_array_elements(p_state->'months') v where (v->>'category_id')::uuid=a.category_id and v->>'month'=a.month)) then raise exception 'Monthly budget history cannot be omitted.'; end if;
   for r in select * from jsonb_array_elements(p_state->'accounts') loop
+    if (r->>'opening_date')::date>current_date then raise exception 'Opening dates cannot be in the future.'; end if;
     if exists(select 1 from public.accounts a where a.id=(r->>'id')::uuid and a.household_id<>h) then raise exception 'Account access denied.'; end if;
     if exists(select 1 from public.accounts a where a.id=(r->>'id')::uuid and exists(select 1 from public.transactions t where t.account_id=a.id) and
       (a.type<>r->>'type' or a.on_budget<>(r->>'on_budget')::boolean or a.opening_balance<>(r->>'opening_balance')::bigint or a.opening_date<>(r->>'opening_date')::date)) then raise exception 'Account baseline is locked after transactions exist. Use a balance adjustment.'; end if;
@@ -241,6 +243,7 @@ begin
       where p.transfer_id=t.transfer_id and p.amount>0 and p.status='active' and card.type='credit' and card.on_budget and c.id=x.category_id))) then raise exception 'Ordinary transfers do not spend categories.'; end if;
   if exists(select 1 from public.budget_figures(h) where assigned<0 or remaining<0 or saved<0) then raise exception 'Insufficient Available. Reallocate funds before completing this change.'; end if;
   current_reserved:=public.budget_reserved(h);
+  if abs(current_reserved)>9007199254740991 or abs(public.budget_cash(h))>9007199254740991 or exists(select 1 from public.budget_figures(h) where greatest(abs(assigned),abs(spent),abs(remaining),abs(saved))>9007199254740991) then raise exception 'Budget totals exceed the supported exact-cent range.'; end if;
   if public.budget_cash(h)-current_reserved<0 and current_reserved>old_reserved then raise exception 'Not enough Assignable money. Resolve unfunded charges or release assignments.'; end if;
   update public.households set name=p_state->'household'->>'name',revision=revision+1 where id=h;
   return public.get_budget_state();
@@ -252,6 +255,7 @@ begin
   select household_id into h from public.household_members where user_id=auth.uid() and role='owner';
   if h is null then raise exception 'Only the household owner can add a member.'; end if;
   perform 1 from public.households where id=h for update;
+  if not exists(select 1 from public.household_members where household_id=h and user_id=auth.uid() and role='owner') then raise exception 'Only the household owner can add a member.'; end if;
   select id into u from auth.users where lower(email)=lower(trim(p_email));
   if u is null then raise exception 'Create this user in Supabase Auth first.'; end if;
   insert into public.household_members values(h,u,'member');

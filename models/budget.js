@@ -89,7 +89,7 @@ export function validateState(state, previous) {
   for (const a of state.accounts) {
     if (!a.name.trim() || !amount(a.opening_balance) || !["cash", "credit", "tracking"].includes(a.type)) fail("Invalid account.");
     if (a.type === "tracking" && a.on_budget) fail("Tracking accounts cannot fund the budget.");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.opening_date)) fail("Choose an opening date.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.opening_date) || a.opening_date > today()) fail("Choose an opening date no later than today.");
     if (a.type === "credit" && a.on_budget && !state.categories.some((c) => c.card_account_id === a.id)) fail("Credit accounts need a payment category.");
   }
   for (const c of state.categories) {
@@ -132,8 +132,10 @@ export function validateState(state, previous) {
   const end = [monthNow(), ...state.months.map((r) => r.month), ...state.transactions.map((t) => t.date.slice(0, 7))].sort().at(-1);
   for (const c of state.categories) for (const month of monthsBetween(state.household.start_month, end)) {
     const f = categoryFigures(state, c.id, month);
+    if (!Object.values(f).every(Number.isSafeInteger)) fail("Budget totals exceed the supported exact-cent range.");
     if (f.assigned < 0 || f.saved < 0 || f.remaining < 0) fail(`Insufficient Available in ${c.name} (${month}). Reallocate money before saving.`);
   }
+  if (!Object.values(summary(state)).every(Number.isSafeInteger)) fail("Budget totals exceed the supported exact-cent range.");
   if (previous) {
     if (state.household.start_month !== previous.household.start_month || state.household.currency !== previous.household.currency) fail("Starting month and currency cannot be changed after setup.");
     for (const a of state.accounts) {

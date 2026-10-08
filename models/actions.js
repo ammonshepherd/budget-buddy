@@ -47,7 +47,7 @@ export function saveTransfer(state, { from, to, amount, date = today(), existing
   const source = state.accounts.find((a) => a.id === from);
   for (const [account, signed] of [[from, -amount], [to, amount]]) {
     const old = oldPair.find((t) => (t.amount < 0) === (signed < 0));
-    const t = { id: old?.id || id(), account_id: account, amount: signed, date, posted_date: null,
+    const t = { id: old?.id || id(), account_id: account, amount: signed, date, posted_date: old?.posted_date || null,
       payee: old?.payee || `Transfer ${signed < 0 ? "to" : "from"} ${signed < 0 ? destination.name : source.name}`, note: old?.note || "", tags: old?.tags || [], check_number: old?.check_number || "",
       kind: "transfer", funding: "not_required", status: "active", transfer_id: transferId, merged_into_id: null, source: old?.source || "manual", external_id: old?.external_id || null, original_description: old?.original_description || "", import_data: old?.import_data || {}, allocations: [] };
     if (signed < 0 && destination.type === "credit" && destination.on_budget && inBudget(state, t)) {

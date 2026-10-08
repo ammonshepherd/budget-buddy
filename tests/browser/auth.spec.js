@@ -6,7 +6,7 @@ test.use({ serviceWorkers: "block" });
 test("real adapter signs in, creates household, saves, refreshes session, edits profile and signs out",async({page})=>{
   let state=null,refreshes=0; const requests=[];
   const user={id:"00000000-0000-4000-8000-000000000001",email:"person@example.test",user_metadata:{display_name:"Household user"}};
-  const token=()=>({access_token:"verified-test-token",refresh_token:"refresh-test-token",expires_at:Math.floor(Date.now()/1000)+3600,user});
+  const token=()=>({access_token:"verified-test-token",refresh_token:"refresh-test-token",expires_in:3600,user});
   await page.route("**/config.js",route=>route.fulfill({contentType:"text/javascript",body:'export const config={supabaseUrl:"https://supabase.example.test",supabaseKey:"sb_publishable_test"};'}));
   await page.route("https://supabase.example.test/**",async route=>{
     const req=route.request(),url=new URL(req.url()),body=req.postDataJSON(); requests.push({path:url.pathname,body,headers:req.headers()});

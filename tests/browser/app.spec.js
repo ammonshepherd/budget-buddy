@@ -44,7 +44,20 @@ test("accounts create/edit, categories regroup, CSV previews and unfunded resolu
 });
 test("service worker caches only shell assets and survives an offline shell reload",async({page,context})=>{
   await page.evaluate(async()=>{await navigator.serviceWorker.ready; await new Promise(resolve=>{if(navigator.serviceWorker.controller)resolve();else navigator.serviceWorker.addEventListener("controllerchange",resolve,{once:true});});});
+  await page.evaluate(async()=>{const response=await fetch("./rest/v1/private-test");if(response.status!==404)throw new Error("API test should receive its real 404 response.");});
   const keys=await page.evaluate(async()=>{const result=[];for(const name of await caches.keys())for(const req of await(await caches.open(name)).keys())result.push(req.url);return result;});
   expect(keys.some((url)=>url.includes("/auth/")||url.includes("/rest/"))).toBe(false);
-  await context.setOffline(true); await page.reload(); await expect(page.getByRole("heading",{name:"Budget",exact:true})).toBeVisible(); await context.setOffline(false);
+  await context.setOffline(true); await page.reload(); await expect(page.getByRole("heading",{name:"Budget",exact:true})).toBeVisible();
+  expect(await page.evaluate(async()=>{try{await fetch("./rest/v1/private-test");return false;}catch{return true;}})).toBe(true);
+  await context.setOffline(false);
+});
+test("Saved requires an explicit move, month persists, and dialogs support keyboard focus",async({page})=>{
+  const before=await page.locator("#assignable").textContent(); const date=new Date();date.setUTCMonth(date.getUTCMonth()+1,1); const next=date.toISOString().slice(0,7);
+  await page.getByLabel("Month",{exact:true}).fill(next); await page.getByLabel("Month",{exact:true}).dispatchEvent("change");
+  await expect(page.getByLabel("Month",{exact:true})).toHaveValue(next);const row=page.locator(".category-card").filter({has:page.getByRole("button",{name:"Groceries",exact:true})});
+  await expect(row.locator(".remaining")).toHaveText("$0.00");await expect(row.locator(".saved")).toHaveText("$300.00");
+  const opener=row.getByRole("button",{name:"Move Saved to Assigned"});await opener.click();const d=page.getByRole("dialog",{name:"Move Saved to Assigned"});await audit(page);
+  await page.keyboard.press("Tab");expect(await page.evaluate(()=>document.activeElement.closest("dialog")!==null)).toBe(true);await page.keyboard.press("Escape");await expect(d).toHaveCount(0);await expect(opener).toBeFocused();
+  await opener.click();await d.getByLabel("Amount",{exact:true}).fill("50.00");await d.getByRole("button",{name:"Move money"}).click();
+  await expect(row.locator(".remaining")).toHaveText("$50.00");await expect(row.locator(".saved")).toHaveText("$250.00");await expect(page.locator("#assignable")).toHaveText(before);await page.reload();await expect(page.getByLabel("Month",{exact:true})).toHaveValue(next);
 });

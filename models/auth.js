@@ -9,12 +9,15 @@ export function checkConfig() {
   if (url.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(url.hostname)) throw new Error("Supabase must use HTTPS.");
   if (config.supabaseKey.startsWith("sb_secret_")) throw new Error("A secret key cannot be used in the browser.");
   if (config.supabaseKey.includes(".")) {
-    try { if (JSON.parse(atob(config.supabaseKey.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).role === "service_role") throw new Error("A service-role key cannot be used in the browser."); }
-    catch (error) { if (error.message.includes("service-role")) throw error; }
+    let role;
+    try { role = JSON.parse(atob(config.supabaseKey.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).role; }
+    catch { throw new Error("Invalid public Supabase key."); }
+    if (role !== "anon") throw new Error("Only a public anon key can be used in the browser.");
   }
 }
 export function getSession() { return session; }
 function persist(value) {
+  if (value) value = { ...value, expires_at: value.expires_at ?? Math.floor(Date.now() / 1000) + Number(value.expires_in || 3600) };
   session = value;
   if (value) localStorage.setItem(SESSION_KEY, JSON.stringify(value));
   else localStorage.removeItem(SESSION_KEY);
@@ -26,7 +29,10 @@ async function authRequest(path, body, token, method = "POST") {
     ...(body ? { body: JSON.stringify(body) } : {})
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || "Sign-in request failed.");
+  if (!response.ok) {
+    const error = new Error(data.msg || data.message || data.error_description || "Sign-in request failed.");
+    error.status = response.status; throw error;
+  }
   return data;
 }
 export async function initializeAuth() {
@@ -48,7 +54,8 @@ export async function initializeAuth() {
   } catch (error) {
     // A network outage must not erase a valid stored session. The app stays locked
     // until the identity can be verified; it never restores private budget data.
-    session = undefined;
+    if ([400,401,403].includes(error.status)) persist(null);
+    else session = undefined;
     throw error;
   }
 }

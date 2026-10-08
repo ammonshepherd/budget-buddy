@@ -73,8 +73,11 @@ test("group reassignment preserves amounts; account baseline is immutable after 
 });
 test("imported transfer conversion reuses both bank records without double counting", () => {
   const s=demoState(), other={...s.accounts[0],id:id(),name:"Savings",opening_balance:0};saveAccount(s,other);
-  const outgoing={...purchase(s,1000),source:"csv",funding:"needs_funding",allocations:[],external_id:"out-1",import_data:{Bank:"original"}};
+  const outgoing={...purchase(s,1000),source:"csv",funding:"needs_funding",allocations:[],external_id:"out-1",posted_date:today(),import_data:{Bank:"original"}};
   const incoming={...outgoing,id:id(),account_id:other.id,amount:1000,kind:"income",funding:"not_required",external_id:"in-1"};s.transactions.push(outgoing,incoming);
   const before=summary(s);saveTransfer(s,{from:outgoing.account_id,to:incoming.account_id,amount:1000,date:today(),retainedId:outgoing.id,counterpartId:incoming.id});validateState(s);
-  assert.equal(s.transactions.length,2);assert.equal(summary(s).assignable,before.assignable);assert.equal(summary(s).unresolved,0);assert.equal(s.transactions[0].external_id,"out-1");assert.deepEqual(s.transactions[0].import_data,{Bank:"original"});
+  assert.equal(s.transactions.length,2);assert.equal(summary(s).assignable,before.assignable);assert.equal(summary(s).unresolved,0);assert.equal(s.transactions[0].external_id,"out-1");assert.equal(s.transactions[0].posted_date,today());assert.deepEqual(s.transactions[0].import_data,{Bank:"original"});
+});
+test("future account baselines cannot create Assignable money today", () => {
+  const s=demoState();s.accounts[0].opening_date="2099-01-01";assert.throws(()=>validateState(s),/opening date no later than today/);
 });
