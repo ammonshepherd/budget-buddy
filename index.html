@@ -15,7 +15,6 @@
     <title>Budget Buddy</title>
   </head>
   <body>
-    <a class="skip-link" href="#app">Skip to content</a>
     <div class="app-shell">
       <header class="app-header">
         <a class="brand" href="#budget" aria-label="Budget Buddy home">
@@ -24,9 +23,7 @@
         </a>
 
         <div class="header-actions">
-          <span class="app-version" id="app-version"></span>
-          <span id="demo-label" hidden>Demo</span>
-          <button id="exit-demo" class="text-button" type="button" hidden>Exit demo</button>
+          <span class="app-version" id="app-version" aria-label="Application version"></span>
           <button id="install-button" class="icon-button" type="button" aria-label="Install Budget Buddy" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
@@ -35,12 +32,7 @@
         </div>
       </header>
 
-      <section aria-label="App notifications">
-      <p id="app-status" class="global-message hint" role="status" hidden></p>
-      <p id="app-error" class="global-message notice" role="alert" hidden></p>
-      <div id="update-notice" class="global-message notice" hidden>A new app version is ready. Finish your edits, then <button id="reload-update" class="secondary" type="button">Reload app</button>.</div>
-      </section>
-      <main id="app" class="page-content" tabindex="-1">
+      <main id="app" class="page-content" aria-live="polite">
         <p class="loading-message">Loading Budget Buddy...</p>
       </main>
 
@@ -71,7 +63,6 @@
         </a>
       </nav>
     </div>
-    <div id="shared-templates" hidden></div>
 
     <script type="module" src="./app.js"></script>
   </body>

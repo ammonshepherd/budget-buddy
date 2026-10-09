@@ -6,7 +6,7 @@ let deferredInstallPrompt;
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").catch((error) => {
-      console.warn("Service worker registration failed:", error);
+      console.error("Service worker registration failed:", error);
     });
   });
 }
@@ -28,12 +28,6 @@ installButton.addEventListener("click", async () => {
 
 window.addEventListener("appinstalled", () => {
   installButton.hidden = true;
-});
-
-let controlled = !!navigator.serviceWorker?.controller;
-navigator.serviceWorker?.addEventListener("controllerchange", () => {
-  if (controlled) document.querySelector("#update-notice").hidden = false;
-  controlled = true;
 });
 
 initializeApp();

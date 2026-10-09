@@ -12,9 +12,3 @@ coverage/
 
 # OS/editor files
 .DS_Store
-.env
-.env.*
-node_modules/
-dist/
-playwright-report/
-test-results/

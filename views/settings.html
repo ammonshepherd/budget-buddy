@@ -1,7 +1,36 @@
-<section aria-labelledby="page-title">
-  <div class="page-heading"><h1 id="page-title" tabindex="-1">Settings</h1></div>
-  <section class="panel" aria-labelledby="profile-title"><h2 id="profile-title">Your account</h2><p id="user-name"></p><p id="user-email"></p><div class="toolbar"><button id="edit-profile" type="button">Edit profile</button><button id="sign-out" class="secondary" type="button">Sign out</button></div><button id="delete-user" class="danger text-button" type="button">Delete sign-in account</button></section>
-  <section class="panel" aria-labelledby="household-title"><h2 id="household-title">Household</h2><p id="household-info"></p><p class="hint">Share one budget using separate sign-ins. The owner can add an existing Supabase user by email.</p><button id="add-member" class="secondary" type="button">Add household member</button><button id="transfer-ownership" class="secondary" type="button">Transfer ownership</button></section>
-  <section class="panel" aria-labelledby="import-title"><h2 id="import-title">Import transactions</h2><p>Upload a CSV, choose its account, map columns, and review before importing. Existing bank charges without categories will be marked Needs funding.</p><button id="open-import" type="button">Upload CSV</button></section>
-  <section class="panel" aria-labelledby="app-info-title"><h2 id="app-info-title">App &amp; data</h2><p id="connection-info"></p><p class="hint">Financial changes require a connection to Supabase. The app shell can open offline; private budget responses are never cached by the service worker.</p><button id="refresh-data" class="secondary" type="button">Refresh budget</button><button id="check-update" class="secondary" type="button">Check for app update</button></section>
+<section class="page-view" aria-labelledby="settings-title">
+  <header class="page-heading">
+    <p class="eyebrow">Your preferences</p>
+    <h1 id="settings-title">Settings</h1>
+    <p>Manage your preferences and prepare Budget Buddy for your household.</p>
+  </header>
+
+  <section class="settings-list" aria-label="Application settings">
+    <button class="settings-row" type="button">
+      <span class="settings-row-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm0-5v2m0 13v2M3.5 12h2m13 0h2M5.99 5.99l1.41 1.42m9.2 9.18 1.41 1.42m0-12.02-1.41 1.42m-9.2 9.18-1.41 1.42" />
+        </svg>
+      </span>
+      <span class="settings-row-copy">
+        <strong>Preferences</strong>
+        <small>Customize how Budget Buddy works</small>
+      </span>
+      <span class="settings-row-chevron" aria-hidden="true">›</span>
+    </button>
+    <button class="settings-row" type="button">
+      <span class="settings-row-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 5h14v14H5zM8 9h8M8 12h8M8 15h5" />
+        </svg>
+      </span>
+      <span class="settings-row-copy">
+        <strong>About Budget Buddy</strong>
+        <small>Version and application information</small>
+      </span>
+      <span class="settings-row-chevron" aria-hidden="true">›</span>
+    </button>
+    <button class="primary-button" id="settings-action" type="button">Explore settings</button>
+    <p class="page-status" data-page-status role="status"></p>
+  </section>
 </section>

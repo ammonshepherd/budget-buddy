@@ -1,18 +1,34 @@
-<section aria-labelledby="page-title">
-  <div class="page-heading"><h1 id="page-title" tabindex="-1">Budget</h1><label>Month <input id="budget-month" type="month" required></label></div>
-  <div class="balance-card"><span>Assignable</span><strong id="assignable"></strong><small id="budget-summary"></small></div>
-  <p id="funding-warning" class="notice" hidden></p>
-  <div class="toolbar"><button id="add-category" type="button">Add category</button><button id="add-group" class="secondary" type="button">Add group</button><button id="reallocate" class="secondary" type="button">Move money</button></div>
-  <p class="hint">Remaining = Assigned − Spent. Saved stays separate until moved into Assigned.</p>
-  <div id="budget-groups"></div>
-  <p id="budget-empty" class="empty" hidden>Add a group and category to begin assigning money.</p>
+<section class="page-view" aria-labelledby="budget-title">
+  <header class="page-heading">
+    <p class="eyebrow">September 2026</p>
+    <h1 id="budget-title">Budget</h1>
+    <p>Give every dollar a job before the month gets busy.</p>
+  </header>
+
+  <section class="hero-card" aria-label="Budgetable money">
+    <span class="card-label">Budgetable money</span>
+    <strong class="hero-amount">$0.00</strong>
+    <span class="card-helper">Ready to assign</span>
+  </section>
+
+  <section class="summary-grid" aria-label="Budget summary">
+    <article class="summary-card">
+      <span>Assigned</span>
+      <strong>$0.00</strong>
+    </article>
+    <article class="summary-card">
+      <span>Remaining</span>
+      <strong>$0.00</strong>
+    </article>
+  </section>
+
+  <section class="list-card">
+    <div class="section-heading">
+      <h2>Envelope categories</h2>
+      <span class="section-count">0</span>
+    </div>
+    <p class="empty-state">Your categories will appear here when the budget model is connected.</p>
+    <button class="primary-button" id="budget-action" type="button">Explore budget tools</button>
+    <p class="page-status" data-page-status role="status"></p>
+  </section>
 </section>
-<template id="budget-group-template"><section class="budget-group"><div class="group-heading"><h2></h2><button type="button" class="text-button">Edit group</button></div><div class="categories"></div></section></template>
-<template id="budget-category-template">
-  <article class="category-card">
-    <div class="category-heading"><button type="button" class="category-name text-button"></button><span class="category-kind"></span></div>
-    <form class="category-form"><label>Assigned<input name="assigned" inputmode="decimal" required></label><label>Planned<input name="planned" inputmode="decimal" required></label><button type="submit" class="secondary">Save</button></form>
-    <dl class="category-totals"><div><dt>Spent</dt><dd class="spent"></dd></div><div><dt>Remaining</dt><dd class="remaining"></dd></div><div><dt>Saved</dt><dd class="saved"></dd></div></dl>
-    <button class="use-saved text-button" type="button">Move Saved to Assigned</button>
-  </article>
-</template>

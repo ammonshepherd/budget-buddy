@@ -1,5 +1,17 @@
-<section aria-labelledby="page-title">
-  <div class="page-heading"><h1 id="page-title" tabindex="-1">Activity</h1><button id="add-transaction" type="button">Add transaction</button></div>
-  <form id="activity-filters" class="filters" role="search" aria-label="Filter transactions"><label>Month<input name="month" type="month"></label><label>Account<select name="account"><option value="">All accounts</option></select></label><label class="wide">Search category<input name="search" type="search" placeholder="Category name"></label><label>Sort<select name="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="amount">Amount</option></select></label><label class="checkbox"><input name="unfunded" type="checkbox">Needs funding only</label><button id="clear-filters" class="secondary" type="button">Clear filters</button></form>
-  <p id="activity-count" class="hint" role="status"></p><div id="activity-transactions"></div>
+<section class="page-view" aria-labelledby="activity-title">
+  <header class="page-heading">
+    <p class="eyebrow">Your spending trail</p>
+    <h1 id="activity-title">Activity</h1>
+    <p>Review transactions and keep your budget in sync with real life.</p>
+  </header>
+
+  <section class="list-card">
+    <div class="section-heading">
+      <h2>Recent activity</h2>
+      <span class="section-count">0</span>
+    </div>
+    <p class="empty-state">Transactions will appear here when the activity model is connected.</p>
+    <button class="primary-button" id="activity-action" type="button">Explore activity</button>
+    <p class="page-status" data-page-status role="status"></p>
+  </section>
 </section>
