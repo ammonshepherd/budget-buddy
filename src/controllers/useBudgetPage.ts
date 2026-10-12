@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { buildBudgetMonth, type EnvelopeRow } from "../models/budgetMath";
+import { useMemo, useState } from "react";
+import { buildBudgetMonth, visibleGroups, type EnvelopeRow } from "../models/budgetMath";
 import { UserFacingError } from "../models/dataStore";
 import { formatCents } from "../models/money";
 import { addMonths, formatMonth, type Month } from "../models/month";
@@ -14,6 +14,7 @@ const nextPosition = (items: { position: number }[]) =>
 /** The Budget page for one month: the numbers to show and what the user can do. */
 export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
   const view = useMemo(() => buildBudgetMonth(data, month), [data, month]);
+  const [showUnused, setShowUnused] = useState(false);
   const householdId = data.household.id;
 
   const envelope = (id: string): EnvelopeRow => {
@@ -24,6 +25,10 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
 
   return {
     view,
+    /** Groups and envelopes to show: only those in use this month, unless toggled. */
+    groups: visibleGroups(view, showUnused),
+    showUnused,
+    toggleUnused: () => setShowUnused((show) => !show),
     monthLabel: formatMonth(month),
     previousHref: budgetHref(addMonths(month, -1)),
     nextHref: budgetHref(addMonths(month, 1)),

@@ -716,3 +716,16 @@ a:focus-visible {
 .field input[type="file"] {
   padding-block: 0.55rem;
 }
+
+.unused-toggle {
+  margin: 0;
+  text-align: center;
+}
+
+.envelope.unused .envelope-name {
+  color: var(--text-muted);
+}
+
+.envelope.unused small {
+  font-weight: 500;
+}

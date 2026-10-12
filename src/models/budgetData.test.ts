@@ -6,6 +6,7 @@ import {
   buildBudgetMonth,
   checkTransactionSpend,
   coverSources,
+  visibleGroups,
 } from "./budgetMath";
 import type { BudgetData, Transaction } from "./types";
 
@@ -210,5 +211,101 @@ describe("coverSources", () => {
     const view = buildBudgetMonth(household(), "2026-10");
     expect(coverSources(view, "food", 2_000).map((e) => e.id)).toEqual(["fun"]);
     expect(coverSources(view, "food", 20_000)).toEqual([]);
+  });
+});
+
+describe("envelopes in use per month", () => {
+  /** Adds a second group with envelopes that are used only in some months. */
+  function withMonthlySets(): BudgetData {
+    const data = household();
+    data.groups.push(
+      { id: "extra", name: "Extras", position: 1 },
+      { id: "empty", name: "Empty", position: 2 },
+    );
+    data.envelopes.push(
+      { id: "trip", groupId: "extra", name: "Trip", position: 0 },
+      { id: "gifts", groupId: "extra", name: "Gifts", position: 1 },
+      { id: "new", groupId: "extra", name: "New", position: 2 },
+    );
+    data.envelopeMonths.push(
+      // Planned in September only, never funded.
+      { envelopeId: "trip", month: "2026-09", assigned: 0, released: 0, planned: 20_000 },
+      // Funded in September and never spent: the money carries into Saved.
+      { envelopeId: "gifts", month: "2026-09", assigned: 5_000, released: 0, planned: 0 },
+    );
+    return data;
+  }
+
+  const inUse = (data: BudgetData, month: string) =>
+    Object.fromEntries(
+      buildBudgetMonth(data, month)
+        .groups.flatMap((g) => g.envelopes)
+        .map((e) => [e.id, e.inUse]),
+    );
+
+  it("counts a stored month, spending, held money, or never having been used", () => {
+    const data = withMonthlySets();
+    expect(inUse(data, "2026-09")).toEqual({
+      food: true, // assigned and spent
+      fun: false, // nothing yet in September, though used in October
+      trip: true, // planned
+      gifts: true, // assigned
+      new: true, // never used anywhere
+    });
+    expect(inUse(data, "2026-10")).toEqual({
+      food: true,
+      fun: true,
+      trip: false, // no plan, no money: hidden
+      gifts: true, // still holds $50 in Saved
+      new: true,
+    });
+  });
+
+  it("counts a $0 record, as a plan import with no amount stores", () => {
+    const data = withMonthlySets();
+    data.envelopeMonths.push({
+      envelopeId: "trip",
+      month: "2026-10",
+      assigned: 0,
+      released: 0,
+      planned: 0,
+    });
+    expect(inUse(data, "2026-10").trip).toBe(true);
+  });
+
+  it("counts spending without a stored month, so an overspend is never hidden", () => {
+    const data = withMonthlySets();
+    data.transactions.push(
+      tx({
+        id: "t",
+        date: "2026-11-02",
+        amount: -1_000,
+        allocations: [{ envelopeId: "trip", amount: -1_000 }],
+      }),
+    );
+    const trip = buildBudgetMonth(data, "2026-11")
+      .groups.flatMap((g) => g.envelopes)
+      .find((e) => e.id === "trip")!;
+    expect(trip).toMatchObject({ inUse: true, shortfall: 1_000 });
+  });
+
+  it("hides unused envelopes and their emptied groups unless showing all", () => {
+    const data = withMonthlySets();
+    data.envelopes = data.envelopes.filter((e) => e.id !== "new" && e.id !== "gifts");
+    const view = buildBudgetMonth(data, "2026-10");
+    expect(view.unusedCount).toBe(1);
+
+    const names = (showAll: boolean) =>
+      visibleGroups(view, showAll).map((g) => [g.name, g.envelopes.map((e) => e.name)]);
+    expect(names(false)).toEqual([
+      ["Everyday", ["Food", "Fun"]],
+      // Extras is hidden: its only envelope, Trip, is not used in October.
+      ["Empty", []], // a group with no envelopes yet stays, so envelopes can be added
+    ]);
+    expect(names(true)).toEqual([
+      ["Everyday", ["Food", "Fun"]],
+      ["Extras", ["Trip"]],
+      ["Empty", []],
+    ]);
   });
 });
