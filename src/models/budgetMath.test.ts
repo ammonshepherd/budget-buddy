@@ -54,10 +54,10 @@ describe("computeEnvelopeMonth", () => {
     expect(m.shortfall).toBe(2_500);
   });
 
-  it("rejects releasing more than is Saved", () => {
-    expect(() =>
-      computeEnvelopeMonth({ month: "2026-10", assigned: 0, released: 101, spent: 0 }, 100),
-    ).toThrow(RangeError);
+  it("reports releasing more than is Saved as a negative Saved instead of throwing", () => {
+    const m = computeEnvelopeMonth({ month: "2026-10", assigned: 0, released: 101, spent: 0 }, 100);
+    expect(m.saved).toBe(-1);
+    expect(m.envelopeMoney).toBe(100);
   });
 
   it("rejects a negative release", () => {

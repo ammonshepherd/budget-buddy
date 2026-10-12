@@ -15,3 +15,4 @@ coverage/
 dev-dist/
 playwright-report/
 test-results/
+dist-e2e/
