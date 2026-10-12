@@ -1,10 +1,10 @@
 # Budget Buddy
 
-Budget Buddy is a framework-free, mobile-first progressive web app foundation for an envelope-style budgeting application.
+Budget Buddy is a mobile-first, installable envelope-budgeting web app for a small household.
 
 ## Version
 
-The current application version is **0.0.1**.
+The current application version is **0.1.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -12,37 +12,39 @@ Versions follow:
 - **y**: feature additions
 - **z**: incremental changes to a feature
 
-## Current foundation
+## Stack
 
-- Installable web app manifest
-- Service worker with an application-shell cache
-- Mobile-first phone-app layout
-- Bottom navigation for Budget, Accounts, Activity, and Settings
-- Hash-based SPA navigation compatible with GitHub Pages
-- HTML views separated from controller JavaScript
-- No backend credentials or database connections committed
+- [Vite](https://vite.dev) dev server and bundler, with `vite-plugin-pwa` for the service worker and manifest
+- [React](https://react.dev) + TypeScript
+- [Vitest](https://vitest.dev) unit tests and [Playwright](https://playwright.dev) UI tests
+- Hash routing (`#budget`, `#accounts`, …) so the app works on GitHub Pages
+- Supabase (not connected yet)
 
-## Folder structure
+## Folder structure (MVC)
 
 ```text
-views/          HTML page fragments
-controllers/    Routing and page behavior
-models/         Reserved for Supabase and data-access code
+src/models/        Types and pure functions (budgetMath.ts holds all budget math); no React
+src/controllers/   React hooks that load data and handle user actions
+src/views/         React components; display only
+public/icons/      App icons
+e2e/               Playwright UI tests
 ```
 
-## Run locally
-
-Because service workers require a secure context, use a local web server instead of opening `index.html` directly:
+## Commands
 
 ```bash
-npx serve .
+npm install          # once, after cloning
+npm run dev          # start the dev server with instant reload
+npm run build        # type-check and build to dist/
+npm run preview      # serve the built app locally
+npm run format       # format with Prettier
+npm run lint         # check with ESLint
+npm test             # unit tests (Vitest)
+npm run test:ui      # UI tests (Playwright; first run `npx playwright install chromium`)
 ```
-
-Then open the local URL shown by the command.
 
 ## Planned next steps
 
-1. Add Supabase project configuration using environment-specific build settings.
-2. Add authentication and Row Level Security policies.
-3. Add budget, category, account, and transaction data models.
-4. Expand offline behavior only after defining a safe synchronization strategy.
+1. Supabase schema migrations, auth and Row Level Security.
+2. Accounts, transactions and CSV import.
+3. Envelope groups and envelopes on the Budget page, with a month picker in the URL.
