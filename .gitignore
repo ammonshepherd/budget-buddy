@@ -12,3 +12,6 @@ coverage/
 
 # OS/editor files
 .DS_Store
+dev-dist/
+playwright-report/
+test-results/
