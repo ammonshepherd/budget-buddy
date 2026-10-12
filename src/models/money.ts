@@ -20,3 +20,19 @@ export function formatCents(cents: Cents): string {
   assertCents(cents);
   return usd.format(cents / 100);
 }
+
+/**
+ * Reads a typed dollar amount ("12", "-4.5", "$1,234.56") as cents.
+ * Returns null when it is not a valid amount with at most two decimals.
+ */
+export function parseCents(text: string): Cents | null {
+  const match = /^(-)?\$?(\d{1,10}(?:,\d{3})*|\d+)?(?:\.(\d{0,2}))?$/.exec(
+    text.trim().replace(/^\$-/, "-$"),
+  );
+  if (!match || (match[2] === undefined && !match[3])) return null;
+  const dollars = Number((match[2] ?? "0").replaceAll(",", ""));
+  const cents = Number((match[3] ?? "").padEnd(2, "0"));
+  const value = dollars * 100 + cents;
+  if (!Number.isSafeInteger(value)) return null;
+  return match[1] && value !== 0 ? -value : value;
+}

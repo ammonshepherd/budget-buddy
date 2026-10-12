@@ -52,6 +52,6 @@ export default defineConfig({
   ],
   test: {
     // Unit tests live next to the code they test; Playwright owns e2e/.
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx", "integration/**/*.test.ts"],
   },
 });

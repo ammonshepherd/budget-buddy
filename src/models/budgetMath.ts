@@ -7,15 +7,10 @@
  * `spentFromAmounts` to turn signed transaction amounts into one.
  */
 import { assertCents, type Cents } from "./money";
+import { addMonths, isMonth, monthOf, type Month } from "./month";
+import type { BudgetData, Envelope, Transaction } from "./types";
 
-/** A calendar month as "YYYY-MM", e.g. "2026-10". Sorts correctly as a string. */
-export type Month = string;
-
-const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
-
-export function isMonth(value: string): value is Month {
-  return MONTH_PATTERN.test(value);
-}
+export { isMonth, type Month };
 
 /** What the user did with one envelope in one month. */
 export interface EnvelopeMonthInput {
@@ -36,7 +31,11 @@ export interface EnvelopeMonth {
   spent: Cents;
   /** Saved(M): the reserve carried in from earlier months, before releases. */
   savedAtStart: Cents;
-  /** The reserve still held this month: Saved(M) − Released(M). */
+  /**
+   * The reserve still held this month: Saved(M) − Released(M). Negative only
+   * if earlier spending was categorized after this month's release; shown
+   * as-is (like `shortfall`) rather than thrown, so the page still renders.
+   */
   saved: Cents;
   /** Remaining(M) = Assigned + Released − Spent. */
   remaining: Cents;
@@ -70,9 +69,6 @@ export function computeEnvelopeMonth(
   assertCents(savedAtStart, "savedAtStart");
   if (released < 0) {
     throw new RangeError(`released must not be negative (got ${released}) in ${month}`);
-  }
-  if (released > savedAtStart) {
-    throw new RangeError(`released (${released}) is more than Saved (${savedAtStart}) in ${month}`);
   }
 
   const remaining = assigned + released - spent;
@@ -199,6 +195,218 @@ export function checkSpend(current: EnvelopeMonth, additionalSpent: Cents): Spen
   assertCents(additionalSpent, "additionalSpent");
   const remainingAfter = current.remaining - additionalSpent;
   const shortfall = Math.max(0, -remainingAfter);
-  const fromSaved = Math.min(shortfall, current.saved);
+  const fromSaved = Math.min(shortfall, Math.max(0, current.saved));
   return { remainingAfter, shortfall, fromSaved, stillShort: shortfall - fromSaved };
+}
+
+// ---------------------------------------------------------------------------
+// Household-level math: turns loaded BudgetData into the numbers pages show.
+// ---------------------------------------------------------------------------
+
+/** Account balance = opening balance + every non-voided transaction. Never stored. */
+export function accountBalance(
+  accountId: string,
+  data: Pick<BudgetData, "accounts" | "transactions">,
+): Cents {
+  const account = data.accounts.find((a) => a.id === accountId);
+  if (!account) throw new RangeError(`Unknown account ${accountId}`);
+  let balance = account.openingBalance;
+  for (const tx of data.transactions) {
+    if (tx.accountId === accountId && !tx.voided) balance += tx.amount;
+  }
+  return balance;
+}
+
+/** Transactions that move budget money: non-voided, in an on-budget account. */
+function budgetTransactions(data: BudgetData): Transaction[] {
+  const onBudget = new Set(data.accounts.filter((a) => a.onBudget).map((a) => a.id));
+  return data.transactions.filter((tx) => !tx.voided && onBudget.has(tx.accountId));
+}
+
+/** Each envelope's month-by-month history, built from stored months and spending. */
+export function envelopeHistories(data: BudgetData): Map<string, EnvelopeMonth[]> {
+  const inputs = new Map<string, Map<Month, EnvelopeMonthInput>>();
+  const row = (envelopeId: string, month: Month) => {
+    let months = inputs.get(envelopeId);
+    if (!months) inputs.set(envelopeId, (months = new Map()));
+    let input = months.get(month);
+    if (!input) months.set(month, (input = { month, assigned: 0, released: 0, spent: 0 }));
+    return input;
+  };
+
+  for (const record of data.envelopeMonths) {
+    const input = row(record.envelopeId, record.month);
+    input.assigned += record.assigned;
+    input.released += record.released;
+  }
+  for (const tx of budgetTransactions(data)) {
+    for (const allocation of tx.allocations) {
+      row(allocation.envelopeId, monthOf(tx.date)).spent -= allocation.amount;
+    }
+  }
+
+  const histories = new Map<string, EnvelopeMonth[]>();
+  for (const envelope of data.envelopes) {
+    histories.set(
+      envelope.id,
+      computeEnvelopeHistory([...(inputs.get(envelope.id)?.values() ?? [])]),
+    );
+  }
+  return histories;
+}
+
+/**
+ * Available to Assign for a month, from loaded data.
+ * Income = uncategorized inflows; uncategorized outflows reduce it.
+ * Transfers count as neither. Accounts count from their opening month.
+ */
+export function availableToAssignFor(data: BudgetData, month: Month): Cents {
+  let openingBalances = 0;
+  for (const account of data.accounts) {
+    if (account.onBudget && monthOf(account.openingDate) <= month) {
+      openingBalances += account.openingBalance;
+    }
+  }
+  let income = 0;
+  let uncategorizedSpent = 0;
+  for (const tx of budgetTransactions(data)) {
+    if (tx.isTransfer || tx.allocations.length > 0 || monthOf(tx.date) > month) continue;
+    if (tx.amount > 0) income += tx.amount;
+    else uncategorizedSpent -= tx.amount;
+  }
+  let assigned = 0;
+  for (const record of data.envelopeMonths) {
+    if (record.month <= month) assigned += record.assigned;
+  }
+  return availableToAssign({ openingBalances, income, assigned, uncategorizedSpent });
+}
+
+/** The latest month that has any data, or `atLeast` if that is later. */
+function lastMonthWithData(data: BudgetData, atLeast: Month): Month {
+  let last = atLeast;
+  const consider = (month: Month) => {
+    if (month > last) last = month;
+  };
+  data.envelopeMonths.forEach((r) => consider(r.month));
+  data.transactions.forEach((tx) => consider(monthOf(tx.date)));
+  data.accounts.forEach((a) => consider(monthOf(a.openingDate)));
+  return last;
+}
+
+/**
+ * How much can still be assigned in `month`. Assigning in a month lowers
+ * Available to Assign for that month and every later one, so this is the
+ * smallest of them (never below zero).
+ */
+export function assignableIn(data: BudgetData, month: Month): Cents {
+  const last = lastMonthWithData(data, month);
+  let lowest = availableToAssignFor(data, month);
+  for (let m = addMonths(month, 1); m <= last; m = addMonths(m, 1)) {
+    lowest = Math.min(lowest, availableToAssignFor(data, m));
+  }
+  return Math.max(0, lowest);
+}
+
+export interface EnvelopeRow extends EnvelopeMonth {
+  id: string;
+  name: string;
+  planned: Cents;
+}
+
+export interface GroupRows {
+  id: string;
+  name: string;
+  envelopes: EnvelopeRow[];
+}
+
+export interface BudgetMonthView {
+  month: Month;
+  availableToAssign: Cents;
+  overAssigned: Cents;
+  /** What the Assign action may add this month (see assignableIn). */
+  assignable: Cents;
+  totals: { planned: Cents; assigned: Cents; spent: Cents; remaining: Cents; saved: Cents };
+  groups: GroupRows[];
+}
+
+const byPosition = <T extends { position: number; name: string }>(a: T, b: T) =>
+  a.position - b.position || a.name.localeCompare(b.name);
+
+/** Everything the Budget page shows for one month. */
+export function buildBudgetMonth(data: BudgetData, month: Month): BudgetMonthView {
+  const histories = envelopeHistories(data);
+  const planned = new Map(
+    data.envelopeMonths.filter((r) => r.month === month).map((r) => [r.envelopeId, r.planned]),
+  );
+  const totals = { planned: 0, assigned: 0, spent: 0, remaining: 0, saved: 0 };
+
+  const rowFor = (envelope: Envelope): EnvelopeRow => {
+    const state = envelopeAsOf(histories.get(envelope.id) ?? [], month);
+    const row = {
+      ...state,
+      id: envelope.id,
+      name: envelope.name,
+      planned: planned.get(envelope.id) ?? 0,
+    };
+    totals.planned += row.planned;
+    totals.assigned += row.assigned;
+    totals.spent += row.spent;
+    totals.remaining += row.remaining;
+    totals.saved += row.saved;
+    return row;
+  };
+
+  const groups = [...data.groups].sort(byPosition).map((group) => ({
+    id: group.id,
+    name: group.name,
+    envelopes: data.envelopes
+      .filter((e) => e.groupId === group.id)
+      .sort(byPosition)
+      .map(rowFor),
+  }));
+
+  const available = availableToAssignFor(data, month);
+  return {
+    month,
+    availableToAssign: available,
+    overAssigned: overAssigned(available),
+    assignable: assignableIn(data, month),
+    totals,
+    groups,
+  };
+}
+
+/** A transaction about to be saved, as the shortfall check needs it. */
+export interface PendingTransaction {
+  /** Set when editing, so the old version is not counted twice. */
+  id?: string;
+  date: string;
+  amount: Cents;
+  envelopeId: string | null;
+}
+
+/**
+ * Checks whether saving a transaction into an envelope would push that
+ * envelope's Remaining below zero in the transaction's month. Returns null
+ * for an uncategorized transaction.
+ */
+export function checkTransactionSpend(
+  data: BudgetData,
+  pending: PendingTransaction,
+): SpendCheck | null {
+  if (!pending.envelopeId) return null;
+  const without = { ...data, transactions: data.transactions.filter((tx) => tx.id !== pending.id) };
+  const history = envelopeHistories(without).get(pending.envelopeId) ?? [];
+  return checkSpend(envelopeAsOf(history, monthOf(pending.date)), -pending.amount);
+}
+
+/** Envelopes that could give `amount` in `month` without going negative (cover step 2). */
+export function coverSources(
+  view: BudgetMonthView,
+  excludeId: string,
+  amount: Cents,
+): EnvelopeRow[] {
+  return view.groups
+    .flatMap((g) => g.envelopes)
+    .filter((e) => e.id !== excludeId && e.remaining >= amount);
 }

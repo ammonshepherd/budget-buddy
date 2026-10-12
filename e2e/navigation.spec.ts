@@ -1,14 +1,15 @@
 import { expect, test } from "@playwright/test";
+import { goTo, signInWithHousehold } from "./helpers";
 
-test("opens on the Budget page with the app version", async ({ page }) => {
+test("shows sign-in first, with the app version", async ({ page }) => {
   await page.goto("./");
-  await expect(page.getByRole("heading", { level: 1, name: "Budget" })).toBeVisible();
-  await expect(page.getByText("Available to Assign", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
   await expect(page.getByLabel("Application version")).toHaveText(/^v\d+\.\d+\.\d+$/);
+  await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
 });
 
 test("bottom navigation switches pages and updates the URL hash", async ({ page }) => {
-  await page.goto("./");
+  await signInWithHousehold(page);
   const nav = page.getByRole("navigation", { name: "Primary navigation" });
 
   for (const name of ["Accounts", "Activity", "Settings", "Budget"]) {
@@ -20,9 +21,12 @@ test("bottom navigation switches pages and updates the URL hash", async ({ page 
   }
 });
 
-test("a deep link opens the right page", async ({ page }) => {
-  await page.goto("./#activity");
-  await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
+test("signing out returns to the sign-in page", async ({ page }) => {
+  await signInWithHousehold(page);
+  await goTo(page, "Settings");
+  await expect(page.getByText("Signed in as test@example.com")).toBeVisible();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
 });
 
 test("assets and manifest are served from the GitHub Pages base path", async ({ page }) => {
