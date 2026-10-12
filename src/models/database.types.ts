@@ -15,7 +15,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -327,6 +327,10 @@ export type Database = {
         Returns: undefined
       }
       create_household: { Args: { p_name: string }; Returns: string }
+      import_envelope_plan: {
+        Args: { p_household_id: string; p_month: string; p_rows: Json }
+        Returns: undefined
+      }
       move_between_envelopes: {
         Args: {
           p_amount: number

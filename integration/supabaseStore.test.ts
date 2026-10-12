@@ -5,8 +5,8 @@
  *   SUPABASE_TEST_EMAIL=... SUPABASE_TEST_PASSWORD=... npm run test:integration
  *
  * Uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from .env.local. Each run
- * adds a closed account and a group named after the run to the test
- * account's household; accounts are never deleted (by design).
+ * leaves a closed account in the test account's household (accounts are
+ * never deleted, by design); groups and envelopes it creates are removed.
  */
 import { loadEnv } from "vite";
 import { describe, expect, it } from "vitest";
@@ -130,5 +130,43 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
 
     await store.signOut();
     expect(await store.getSession()).toBeNull();
+  }, 30_000);
+
+  it("imports an envelope plan, matching existing names", async () => {
+    const store = createSupabaseStore(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
+    await store.signIn(email!, password!);
+    if (!(await store.load())) await store.createHousehold("Integration test");
+    const householdId = (await store.load())!.household.id;
+    const run = `plan-${Date.now()}`;
+    const month = "2030-01";
+
+    await store.importEnvelopePlan(householdId, month, [
+      { group: run, envelope: "Rent", planned: 120_000 },
+      { group: run, envelope: "Water", planned: 4_550 },
+    ]);
+    // Same names in other case: updates Planned, creates nothing new.
+    await store.importEnvelopePlan(householdId, month, [
+      { group: run.toUpperCase(), envelope: " rent ", planned: 130_000 },
+    ]);
+
+    const data = (await store.load())!;
+    const groups = data.groups.filter((g) => g.name.toLowerCase() === run);
+    expect(groups).toHaveLength(1);
+    const envelopes = data.envelopes.filter((e) => e.groupId === groups[0]!.id);
+    const planned = (name: string) =>
+      data.envelopeMonths.find(
+        (r) => r.month === month && r.envelopeId === envelopes.find((e) => e.name === name)?.id,
+      )?.planned;
+    expect(envelopes.map((e) => e.name).sort()).toEqual(["Rent", "Water"]);
+    expect([planned("Rent"), planned("Water")]).toEqual([130_000, 4_550]);
+
+    // Bad input is refused as a whole.
+    await expect(
+      store.importEnvelopePlan(householdId, month, [{ group: run, envelope: "", planned: 1 }]),
+    ).rejects.toThrow(UserFacingError);
+
+    for (const envelope of envelopes) await store.deleteEnvelope(envelope.id);
+    await store.deleteGroup(groups[0]!.id);
+    await store.signOut();
   }, 30_000);
 });
