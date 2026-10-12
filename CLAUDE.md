@@ -91,11 +91,16 @@ manual/imported matching, reconciliation, tithing/fast-offering rules.
 
 ## Supabase state
 
-The dev project already has these empty tables (from the reverted PR #4):
-households, household_members, accounts, category_groups, categories,
-category_months, transactions, transaction_allocations. Inspect them before
-writing migrations; adapt or replace them to match this file. Keep all schema
-changes as files in `supabase/migrations/`.
+The PR #4 prototype was replaced in v0.2.0 by the migrations in
+`supabase/migrations/` (applied to the dev project; file names match the
+project's migration history). Tables: households, household_members, accounts,
+category_groups, categories (= envelopes), category_months, transactions,
+transaction_allocations. Every table has household-scoped RLS; multi-row
+writes go through SQL functions (`create_household`, `save_transaction`,
+`adjust_category_month`, `move_between_envelopes`). Budget math stays in
+`budgetMath.ts`, not SQL. Inspect the live schema before writing a migration,
+keep every schema change as a file in `supabase/migrations/`, and regenerate
+`src/models/database.types.ts` afterwards.
 
 Never commit or ask for the service_role key or database password. The app
 uses only the project URL and publishable/anon key, in `.env.local`.

@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { parseRoute } from "./routes";
+import { budgetHref, parseLocation } from "./routes";
 
-describe("parseRoute", () => {
+describe("parseLocation", () => {
   it("reads known routes regardless of case or a leading slash", () => {
-    expect(parseRoute("#accounts")).toBe("accounts");
-    expect(parseRoute("#/Settings")).toBe("settings");
+    expect(parseLocation("#accounts")).toEqual({ route: "accounts", month: null });
+    expect(parseLocation("#/Settings")).toEqual({ route: "settings", month: null });
+  });
+
+  it("reads the Budget month and ignores invalid ones", () => {
+    expect(parseLocation(budgetHref("2026-10"))).toEqual({ route: "budget", month: "2026-10" });
+    expect(parseLocation("#budget/2026-13")).toEqual({ route: "budget", month: null });
+    expect(parseLocation("#activity/2026-10").month).toBeNull();
   });
 
   it("falls back to Budget", () => {
-    expect(parseRoute("")).toBe("budget");
-    expect(parseRoute("#nope")).toBe("budget");
+    expect(parseLocation("")).toEqual({ route: "budget", month: null });
+    expect(parseLocation("#nope")).toEqual({ route: "budget", month: null });
   });
 });
