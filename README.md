@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.3.0** (kept in `package.json`).
+The current application version is **0.4.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -99,6 +99,13 @@ category,group,planned amount
 Rent,Bills,1200.00
 Groceries,Everyday,450
 ```
+
+## Envelopes per month
+
+Each month's Budget page shows only the envelopes that month uses: ones with a plan,
+assignment or imported row for the month, spending that month, or money still in them
+(Saved or Remaining). Brand-new envelopes show until first used. The rest are behind
+"Show N envelopes not used this month", where they can still be assigned to.
 
 ## Planned next steps
 

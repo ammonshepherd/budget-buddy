@@ -311,6 +311,8 @@ export interface EnvelopeRow extends EnvelopeMonth {
   id: string;
   name: string;
   planned: Cents;
+  /** Whether the envelope belongs on this month's page (see envelopeInUse). */
+  inUse: boolean;
 }
 
 export interface GroupRows {
@@ -326,7 +328,44 @@ export interface BudgetMonthView {
   /** What the Assign action may add this month (see assignableIn). */
   assignable: Cents;
   totals: { planned: Cents; assigned: Cents; spent: Cents; remaining: Cents; saved: Cents };
+  /** Every group and envelope; use visibleGroups for what to show. */
   groups: GroupRows[];
+  /** Envelopes not in use this month. */
+  unusedCount: number;
+}
+
+/**
+ * Each month shows only the envelopes it uses, so months can have different
+ * sets. An envelope is in use in a month when any of these is true:
+ * - it has a stored record for the month (planned, assigned, released, or a
+ *   plan import, even of $0);
+ * - money was spent from it that month;
+ * - it holds money (Saved or Remaining is not zero), so money is never hidden;
+ * - it has never been used in any month (a new envelope stays visible).
+ */
+export function envelopeInUse(
+  state: EnvelopeMonth,
+  facts: { hasRecordThisMonth: boolean; everUsed: boolean },
+): boolean {
+  return (
+    facts.hasRecordThisMonth ||
+    !facts.everUsed ||
+    state.spent !== 0 ||
+    state.savedAtStart !== 0 ||
+    state.saved !== 0 ||
+    state.remaining !== 0
+  );
+}
+
+/**
+ * The groups to show: envelopes not in use are left out unless `showAll`.
+ * A group stays when it has an envelope to show or has no envelopes yet.
+ */
+export function visibleGroups(view: BudgetMonthView, showAll: boolean): GroupRows[] {
+  if (showAll) return view.groups;
+  return view.groups
+    .map((group) => ({ ...group, envelopes: group.envelopes.filter((e) => e.inUse) }))
+    .filter((group, i) => group.envelopes.length > 0 || view.groups[i]!.envelopes.length === 0);
 }
 
 const byPosition = <T extends { position: number; name: string }>(a: T, b: T) =>
@@ -338,15 +377,24 @@ export function buildBudgetMonth(data: BudgetData, month: Month): BudgetMonthVie
   const planned = new Map(
     data.envelopeMonths.filter((r) => r.month === month).map((r) => [r.envelopeId, r.planned]),
   );
+  const used = new Set(data.envelopeMonths.map((r) => r.envelopeId));
+  for (const tx of data.transactions) tx.allocations.forEach((a) => used.add(a.envelopeId));
   const totals = { planned: 0, assigned: 0, spent: 0, remaining: 0, saved: 0 };
+  let unusedCount = 0;
 
   const rowFor = (envelope: Envelope): EnvelopeRow => {
     const state = envelopeAsOf(histories.get(envelope.id) ?? [], month);
+    const inUse = envelopeInUse(state, {
+      hasRecordThisMonth: planned.has(envelope.id),
+      everUsed: used.has(envelope.id),
+    });
+    if (!inUse) unusedCount++;
     const row = {
       ...state,
       id: envelope.id,
       name: envelope.name,
       planned: planned.get(envelope.id) ?? 0,
+      inUse,
     };
     totals.planned += row.planned;
     totals.assigned += row.assigned;
@@ -373,6 +421,7 @@ export function buildBudgetMonth(data: BudgetData, month: Month): BudgetMonthVie
     assignable: assignableIn(data, month),
     totals,
     groups,
+    unusedCount,
   };
 }
 

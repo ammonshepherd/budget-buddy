@@ -89,8 +89,10 @@ function SignedInApp({ session }: { session: UserSession }) {
   }
 
   const { data } = state;
+  const month = location.month ?? currentMonth();
   const pages: Record<Route, JSX.Element> = {
-    budget: <BudgetPage budget={budget} data={data} month={location.month ?? currentMonth()} />,
+    // key: each month starts fresh (unused envelopes hidden, rows closed).
+    budget: <BudgetPage key={month} budget={budget} data={data} month={month} />,
     accounts: <AccountsPage budget={budget} data={data} />,
     activity: <ActivityPage budget={budget} data={data} />,
     settings: (

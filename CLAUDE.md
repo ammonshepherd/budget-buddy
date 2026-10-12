@@ -72,6 +72,10 @@ Releasing Saved does not change Available to Assign (money stays in the envelope
   2. move from another envelope,
   3. assign more from Available to Assign.
 - Assigning is blocked when Available to Assign is insufficient.
+- Each month's Budget page shows only envelopes in use that month (a stored
+  month record, spending that month, or money in Saved/Remaining; never-used
+  envelopes always show). Others sit behind a "show unused" toggle. Money is
+  never hidden. Rule lives in `envelopeInUse` in `budgetMath.ts`.
 - Imported transactions arrive Uncategorized.
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount.

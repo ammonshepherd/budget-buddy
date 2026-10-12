@@ -76,9 +76,19 @@ export function BudgetPage({
         </p>
       )}
 
-      {view.groups.map((group) => (
+      {page.groups.map((group) => (
         <GroupCard key={group.id} group={group} page={page} />
       ))}
+
+      {view.unusedCount > 0 && (
+        <p className="unused-toggle">
+          <button className="text-button" type="button" onClick={page.toggleUnused}>
+            {page.showUnused
+              ? "Hide envelopes not used this month"
+              : `Show ${view.unusedCount} ${view.unusedCount === 1 ? "envelope" : "envelopes"} not used this month`}
+          </button>
+        </p>
+      )}
 
       <section className="list-card">
         <div className="section-heading">
@@ -141,9 +151,12 @@ function GroupCard({ group, page }: { group: GroupRows; page: Page }) {
 function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page }) {
   const remove = useAsyncAction(() => page.deleteEnvelope(envelope.id));
   return (
-    <details className="envelope">
+    <details className={envelope.inUse ? "envelope" : "envelope unused"}>
       <summary>
-        <span className="envelope-name">{envelope.name}</span>
+        <span className="envelope-name">
+          {envelope.name}
+          {!envelope.inUse && <small> · not used this month</small>}
+        </span>
         <span className="envelope-remaining">
           <Money cents={envelope.remaining} />
         </span>
