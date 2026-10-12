@@ -24,3 +24,15 @@ test("a deep link opens the right page", async ({ page }) => {
   await page.goto("./#activity");
   await expect(page.getByRole("heading", { level: 1, name: "Activity" })).toBeVisible();
 });
+
+test("assets and manifest are served from the GitHub Pages base path", async ({ page }) => {
+  await page.goto("./");
+  const logo = page.locator(".brand img");
+  await expect(logo).toHaveAttribute("src", "/budget-buddy/icons/logo-icon.svg");
+  expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+
+  const manifestHref = await page.locator('link[rel="manifest"]').getAttribute("href");
+  expect(manifestHref).toBe("/budget-buddy/manifest.webmanifest");
+  const manifest = await (await page.request.get(manifestHref!)).json();
+  expect(manifest).toMatchObject({ start_url: "/budget-buddy/", scope: "/budget-buddy/" });
+});

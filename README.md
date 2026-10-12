@@ -43,6 +43,22 @@ npm test             # unit tests (Vitest)
 npm run test:ui      # UI tests (Playwright; first run `npx playwright install chromium`)
 ```
 
+## Deployment
+
+The app is hosted on GitHub Pages at <https://ammonshepherd.github.io/budget-buddy/>.
+`.github/workflows/deploy.yml` checks, tests and builds every pull request, and deploys
+to Pages on each push to `main`. Vite `base` and the PWA manifest use `/budget-buddy/`,
+so the dev server runs at <http://localhost:5173/budget-buddy/>.
+
+One-time setup:
+
+- **Settings → Pages → Source:** GitHub Actions.
+- **Settings → Secrets and variables → Actions → Variables:** `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY` (public values). For local development copy `.env.example` to
+  `.env.local`.
+- **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
+  and as a redirect URL.
+
 ## Planned next steps
 
 1. Supabase schema migrations, auth and Row Level Security.

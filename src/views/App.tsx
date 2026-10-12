@@ -33,7 +33,12 @@ export function App() {
     <div className="app-shell">
       <header className="app-header">
         <a className="brand" href="#budget" aria-label="Budget Buddy home">
-          <img src="./icons/logo-icon.svg" alt="" width="36" height="36" />
+          <img
+            src={`${import.meta.env.BASE_URL}icons/logo-icon.svg`}
+            alt=""
+            width="36"
+            height="36"
+          />
           <span>Budget Buddy</span>
         </a>
         <div className="header-actions">

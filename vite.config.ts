@@ -4,11 +4,14 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import packageJson from "./package.json" with { type: "json" };
 
+// GitHub Pages serves the app from https://ammonshepherd.github.io/budget-buddy/,
+// so every URL the build produces starts with this path.
+const BASE = "/budget-buddy/";
+
 // Vite is the dev server and bundler. This one file configures the build,
 // the PWA plugin and Vitest (which reuses Vite's settings).
 export default defineConfig({
-  // Relative paths so the built app works from a GitHub Pages sub-folder.
-  base: "./",
+  base: BASE,
   define: {
     // Replaced at build time; read through src/models/appInfo.ts.
     __APP_VERSION__: JSON.stringify(packageJson.version),
@@ -24,9 +27,9 @@ export default defineConfig({
         name: "Budget Buddy",
         short_name: "Budget Buddy",
         description: "A simple envelope-style budgeting app.",
-        start_url: "./",
-        scope: "./",
-        id: "./",
+        start_url: BASE,
+        scope: BASE,
+        id: BASE,
         display: "standalone",
         background_color: "#faf8fc",
         theme_color: "#4b2a68",
