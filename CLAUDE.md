@@ -11,6 +11,12 @@ descriptions and when asked, without being condescending.
   `lkaurrcarzzkbqdwqfge` ("budget-buddy").
 - Vitest (unit/integration) and Playwright (UI).
 - Hash routing so the app still works on GitHub Pages.
+- Hosting: GitHub Pages at `https://ammonshepherd.github.io/budget-buddy/`,
+  deployed by a GitHub Actions workflow that runs `npm run build` on pushes to
+  `main` (Pages source = GitHub Actions). Vite `base` is `/budget-buddy/`; the PWA
+  manifest scope/start_url must match. Supabase URL and anon key are injected at
+  build time from repository Actions variables. Supabase Auth Site URL and
+  redirect URL must include the Pages URL.
 
 ## Architecture: keep MVC
 
