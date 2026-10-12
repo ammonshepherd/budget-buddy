@@ -208,6 +208,15 @@ export function createSupabaseStore(
       check(error);
     },
 
+    async importEnvelopePlan(householdId, month, rows) {
+      const { error } = await db().rpc("import_envelope_plan", {
+        p_household_id: householdId,
+        p_month: month,
+        p_rows: rows.map(({ group, envelope, planned }) => ({ group, envelope, planned })),
+      });
+      check(error);
+    },
+
     async saveTransaction(_householdId, input) {
       const { error } = await db().rpc("save_transaction", {
         // The generated types mark SQL arguments as non-null, but both of

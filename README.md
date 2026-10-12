@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.2.0** (kept in `package.json`).
+The current application version is **0.3.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -86,8 +86,22 @@ One-time setup:
 - **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
   and as a redirect URL.
 
+## Envelope plan import
+
+Settings → **Import envelope plan** takes a CSV for one month with the columns
+`category, group, planned amount` (header optional; with a header, columns may be in
+any order). It previews the rows, lists invalid ones with their line numbers, then in
+one step creates missing groups and envelopes (names match ignoring case) and sets
+Planned for that month. Envelopes not in the file are left alone.
+
+```csv
+category,group,planned amount
+Rent,Bills,1200.00
+Groceries,Everyday,450
+```
+
 ## Planned next steps
 
-1. CSV import with preview, invalid-row report and duplicate prevention.
+1. Transaction CSV import with preview, invalid-row report and duplicate prevention.
 2. Rename and reorder envelopes and groups; "copy last month's spending into Planned".
 3. Inviting a second household member.

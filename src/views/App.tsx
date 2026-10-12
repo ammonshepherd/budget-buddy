@@ -93,7 +93,9 @@ function SignedInApp({ session }: { session: UserSession }) {
     budget: <BudgetPage budget={budget} data={data} month={location.month ?? currentMonth()} />,
     accounts: <AccountsPage budget={budget} data={data} />,
     activity: <ActivityPage budget={budget} data={data} />,
-    settings: <SettingsPage data={data} email={session.email} onSignOut={store.signOut} />,
+    settings: (
+      <SettingsPage budget={budget} data={data} email={session.email} onSignOut={store.signOut} />
+    ),
   };
 
   return (

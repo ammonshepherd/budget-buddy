@@ -1,21 +1,25 @@
 import { useAsyncAction } from "../../controllers/useAsyncAction";
+import type { Budget } from "../../controllers/useBudget";
 import { APP_VERSION } from "../../models/appInfo";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage } from "../components";
+import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { ActivityIcon, SettingsIcon } from "../icons";
 
 export function SettingsPage({
+  budget,
   data,
   email,
   onSignOut,
 }: {
+  budget: Budget;
   data: BudgetData;
   email: string;
   onSignOut: () => Promise<void>;
 }) {
   const signOut = useAsyncAction(onSignOut);
   return (
-    <section className="page-view" aria-labelledby="settings-title">
+    <section className="page-view stack" aria-labelledby="settings-title">
       <header className="page-heading">
         <p className="eyebrow">Your preferences</p>
         <h1 id="settings-title">Settings</h1>
@@ -51,6 +55,8 @@ export function SettingsPage({
         </button>
         <ErrorMessage error={signOut.error} />
       </section>
+
+      <EnvelopePlanImport budget={budget} data={data} />
     </section>
   );
 }

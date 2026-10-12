@@ -4,6 +4,7 @@
  * a real Supabase project. It mirrors the database rules the UI relies on.
  */
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
+import { nameKey } from "./envelopePlan";
 import type { BudgetData } from "./types";
 
 export function createMemoryStore(): DataStore {
@@ -20,6 +21,8 @@ export function createMemoryStore(): DataStore {
     session = next;
     listeners.forEach((listener) => listener(next));
   };
+  const nextPosition = (items: { position: number }[]) =>
+    items.reduce((max, item) => Math.max(max, item.position + 1), 0);
   const envelopeMonth = (envelopeId: string, month: string) => {
     const b = budget();
     if (!b.envelopes.some((e) => e.id === envelopeId)) {
@@ -111,6 +114,30 @@ export function createMemoryStore(): DataStore {
     },
     async setPlanned(_householdId, envelopeId, month, planned) {
       envelopeMonth(envelopeId, month).planned = planned;
+    },
+    async importEnvelopePlan(_householdId, month, rows) {
+      const b = budget();
+      const byPosition = <T extends { position: number }>(items: T[]) =>
+        [...items].sort((x, y) => x.position - y.position);
+      for (const row of rows) {
+        let group = byPosition(b.groups).find((g) => nameKey(g.name) === nameKey(row.group));
+        if (!group) {
+          group = { id: id(), name: row.group.trim(), position: nextPosition(b.groups) };
+          b.groups.push(group);
+        }
+        const siblings = b.envelopes.filter((e) => e.groupId === group.id);
+        let envelope = byPosition(siblings).find((e) => nameKey(e.name) === nameKey(row.envelope));
+        if (!envelope) {
+          envelope = {
+            id: id(),
+            groupId: group.id,
+            name: row.envelope.trim(),
+            position: nextPosition(siblings),
+          };
+          b.envelopes.push(envelope);
+        }
+        envelopeMonth(envelope.id, month).planned = row.planned;
+      }
     },
 
     async saveTransaction(_householdId, input) {
