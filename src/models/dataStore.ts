@@ -7,6 +7,7 @@ import type { EnvelopePlanRow } from "./envelopePlan";
 import type { Cents } from "./money";
 import type { Month } from "./month";
 import type { ImportedTransaction, ImportFormat } from "./transactionImport";
+import type { TransferInput } from "./transfers";
 import type { AccountType, BudgetData, IsoDate } from "./types";
 
 export interface UserSession {
@@ -34,8 +35,7 @@ export interface TransactionInput {
   amount: Cents;
   payee: string;
   memo: string;
-  isTransfer: boolean;
-  /** null = Uncategorized. */
+  /** null = Uncategorized. Transfers are saved with saveTransfer. */
   envelopeId: string | null;
 }
 
@@ -78,6 +78,13 @@ export interface DataStore {
   importEnvelopePlan(householdId: string, month: Month, rows: EnvelopePlanRow[]): Promise<void>;
 
   saveTransaction(householdId: string, input: TransactionInput): Promise<void>;
+  /**
+   * Saves both sides of a transfer at once. Sides with an id update that
+   * transaction (e.g. link an imported bank row); others are added. When
+   * editing, a side the transfer no longer has is released: deleted if it
+   * was typed in, kept as an Uncategorized row if it was imported.
+   */
+  saveTransfer(input: TransferInput): Promise<void>;
   /**
    * All or nothing: adds imported rows to an open account as Uncategorized,
    * skipping any whose import key the account already has, and saves the

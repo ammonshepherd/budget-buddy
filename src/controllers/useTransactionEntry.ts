@@ -5,9 +5,15 @@ import {
   coverSources,
   type SpendCheck,
 } from "../models/budgetMath";
-import { UserFacingError, type TransactionInput } from "../models/dataStore";
+import { UserFacingError, type DataStore, type TransactionInput } from "../models/dataStore";
 import { monthOf, todayIso, type Month } from "../models/month";
-import type { BudgetData, Transaction } from "../models/types";
+import {
+  planTransfer,
+  transferPartner,
+  type OtherSide,
+  type TransferInput,
+} from "../models/transfers";
+import type { Account, BudgetData, Transaction } from "../models/types";
 import { requireCents } from "./input";
 import type { Budget } from "./useBudget";
 
@@ -25,12 +31,20 @@ export interface TransactionForm {
   memo: string;
   /** An envelope id, "" for Uncategorized, or TRANSFER. */
   category: string;
+  /** For a transfer: the other account ("" = the first one that fits). */
+  transferAccountId: string;
 }
+
+/** What saving will do: one transaction, or both sides of a transfer. */
+export type PendingSave =
+  { kind: "transaction"; input: TransactionInput } | { kind: "transfer"; input: TransferInput };
 
 /** The cover prompt shown when a transaction would overdraw its envelope. */
 export interface CoverPlan extends SpendCheck {
-  input: TransactionInput;
+  save: PendingSave;
   envelopeId: string;
+  /** A card's payment envelope: a payment it cannot cover is never Uncategorized. */
+  isCardPayment: boolean;
   envelopeName: string;
   month: Month;
   /** Step 2 choices: envelopes with enough Remaining this month. */
@@ -45,7 +59,7 @@ export type CoverChoice = { fromEnvelopeId: string } | "available" | null;
 
 export type PrepareResult = { kind: "saved" } | { kind: "cover"; plan: CoverPlan };
 
-export function formFromTransaction(tx: Transaction): TransactionForm {
+export function formFromTransaction(tx: Transaction, data: BudgetData): TransactionForm {
   return {
     id: tx.id,
     accountId: tx.accountId,
@@ -55,6 +69,7 @@ export function formFromTransaction(tx: Transaction): TransactionForm {
     payee: tx.payee,
     memo: tx.memo,
     category: tx.isTransfer ? TRANSFER : (tx.allocations[0]?.envelopeId ?? ""),
+    transferAccountId: transferPartner(data, tx)?.accountId ?? "",
   };
 }
 
@@ -68,6 +83,7 @@ export function blankTransactionForm(data: BudgetData): TransactionForm {
     payee: "",
     memo: "",
     category: "",
+    transferAccountId: "",
   };
 }
 
@@ -79,6 +95,17 @@ export function blankTransactionForm(data: BudgetData): TransactionForm {
 export function useTransactionEntry(budget: Budget, data: BudgetData) {
   const envelopeNames = useMemo(() => new Map(data.envelopes.map((e) => [e.id, e.name])), [data]);
   const householdId = data.household.id;
+
+  const openAccounts = data.accounts.filter((a) => !a.closedAt);
+
+  /** Open accounts a transfer from `accountId` can go to (or come from). */
+  const otherAccounts = (accountId: string): Account[] =>
+    openAccounts.filter((a) => a.id !== accountId);
+  /** The form's other account, defaulting to the first that fits. */
+  const transferAccountOf = (form: TransactionForm): string => {
+    const others = otherAccounts(form.accountId);
+    return (others.find((a) => a.id === form.transferAccountId) ?? others[0])?.id ?? "";
+  };
 
   const toInput = (form: TransactionForm): TransactionInput => {
     if (!form.accountId) throw new UserFacingError("Choose an account");
@@ -93,13 +120,63 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
       amount: form.direction === "outflow" ? -cents : cents,
       payee: form.payee.trim(),
       memo: form.memo.trim(),
-      isTransfer: form.category === TRANSFER,
       envelopeId: form.category && form.category !== TRANSFER ? form.category : null,
     };
   };
 
+  /** Both sides of the transfer the form describes, and where the other side comes from. */
+  const toTransfer = (form: TransactionForm): { input: TransferInput; other: OtherSide } => {
+    const { id, accountId, date, amount, payee, memo } = toInput(form);
+    const side = { id, accountId, date, amount, payee, memo };
+    const otherAccountId = transferAccountOf(form);
+    if (!otherAccountId) throw new UserFacingError("Add another account to transfer to or from.");
+    const existing = data.transactions.find((t) => t.id === form.id);
+    return planTransfer(data, side, otherAccountId, existing);
+  };
+
+  /** The first envelope saving would overdraw (see checkTransactionSpend), with its month. */
+  const shortfallOf = (save: PendingSave) => {
+    const pending =
+      save.kind === "transaction"
+        ? [{ ...save.input, isTransfer: false }]
+        : save.input.sides.map((side) => ({ ...side, envelopeId: null, isTransfer: true }));
+    for (const tx of pending) {
+      const check = checkTransactionSpend(data, tx);
+      if (check) return { check, month: monthOf(tx.date) };
+    }
+    return null;
+  };
+
+  /** Saves a pending transaction or transfer with the given store. */
+  const store = (save: PendingSave) => (s: DataStore) =>
+    save.kind === "transaction"
+      ? s.saveTransaction(householdId, save.input)
+      : s.saveTransfer(save.input);
+
   return {
-    openAccounts: data.accounts.filter((a) => !a.closedAt),
+    openAccounts,
+    otherAccounts,
+    transferAccountOf,
+
+    /**
+     * For a transfer: what happens to the other account, in words, or null.
+     * Shown under the account choice so a matched bank row is no surprise.
+     */
+    describeTransfer: (form: TransactionForm): string | null => {
+      if (form.category !== TRANSFER) return null;
+      let other: OtherSide;
+      try {
+        other = toTransfer(form).other;
+      } catch {
+        return null;
+      }
+      const name = openAccounts.find((a) => a.id === transferAccountOf(form))?.name ?? "";
+      if (other.kind === "match") {
+        return `Links to the ${name} transaction on ${other.tx.date} (${other.tx.payee || "no description"}), so it is not added twice.`;
+      }
+      if (other.kind === "partner") return `Also updates the ${name} side.`;
+      return `Also adds the matching ${form.direction === "outflow" ? "inflow" : "outflow"} in ${name}.`;
+    },
     groups: [...data.groups]
       .sort((a, b) => a.position - b.position)
       .map((g) => ({
@@ -113,20 +190,26 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
 
     /** Saves the transaction, or returns a cover plan if its envelope would go negative. */
     prepare: async (form: TransactionForm): Promise<PrepareResult> => {
-      const input = toInput(form);
-      const check = checkTransactionSpend(data, input);
-      if (!check) {
-        await budget.change((store) => store.saveTransaction(householdId, input));
+      const save: PendingSave =
+        form.category === TRANSFER
+          ? { kind: "transfer", input: toTransfer(form).input }
+          : { kind: "transaction", input: toInput(form) };
+      const short = shortfallOf(save);
+      if (!short) {
+        await budget.change(store(save));
         return { kind: "saved" };
       }
-      const month = monthOf(input.date);
+      const { check, month } = short;
       const view = buildBudgetMonth(data, month);
       return {
         kind: "cover",
         plan: {
           ...check,
-          input,
+          save,
           envelopeId: check.envelopeId,
+          isCardPayment: Boolean(
+            data.envelopes.find((e) => e.id === check.envelopeId)?.cardAccountId,
+          ),
           envelopeName: envelopeNames.get(check.envelopeId) ?? "This envelope",
           month,
           sources:
@@ -152,19 +235,19 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
       if (plan.stillShort > 0 && !choice) {
         throw new UserFacingError("Choose where the rest of the money comes from.");
       }
-      await budget.change(async (store) => {
+      await budget.change(async (s) => {
         if (plan.fromSaved > 0) {
-          await store.adjustEnvelopeMonth(plan.envelopeId, plan.month, {
+          await s.adjustEnvelopeMonth(plan.envelopeId, plan.month, {
             released: plan.fromSaved,
           });
         }
         if (plan.stillShort > 0) {
           if (choice === "available") {
-            await store.adjustEnvelopeMonth(plan.envelopeId, plan.month, {
+            await s.adjustEnvelopeMonth(plan.envelopeId, plan.month, {
               assigned: plan.stillShort,
             });
           } else if (choice) {
-            await store.moveBetweenEnvelopes(
+            await s.moveBetweenEnvelopes(
               choice.fromEnvelopeId,
               plan.envelopeId,
               plan.month,
@@ -172,7 +255,7 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
             );
           }
         }
-        await store.saveTransaction(householdId, plan.input);
+        await store(plan.save)(s);
       });
     },
   };

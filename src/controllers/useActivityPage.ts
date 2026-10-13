@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import type { BudgetData } from "../models/types";
+import { transferPartner } from "../models/transfers";
+import type { BudgetData, Transaction } from "../models/types";
 import type { Budget } from "./useBudget";
 
 /**
@@ -9,13 +10,18 @@ import type { Budget } from "./useBudget";
 export function useActivityPage(budget: Budget, data: BudgetData) {
   const accountNames = useMemo(() => new Map(data.accounts.map((a) => [a.id, a.name])), [data]);
   const envelopeNames = useMemo(() => new Map(data.envelopes.map((e) => [e.id, e.name])), [data]);
+  const transferLabel = (tx: Transaction) => {
+    const other = transferPartner(data, tx);
+    const name = other ? (accountNames.get(other.accountId) ?? "another account") : "";
+    return other ? `Transfer ${tx.amount < 0 ? "to" : "from"} ${name}` : "Transfer";
+  };
 
   return {
     rows: data.transactions.map((tx) => ({
       tx,
       accountName: accountNames.get(tx.accountId) ?? "Unknown account",
       category: tx.isTransfer
-        ? "Transfer"
+        ? transferLabel(tx)
         : tx.allocations.length === 0
           ? "Uncategorized"
           : tx.allocations.map((a) => envelopeNames.get(a.envelopeId) ?? "Unknown").join(", "),

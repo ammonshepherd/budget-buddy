@@ -110,21 +110,13 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await expect(envelope(page, "Groceries").locator(".envelope-remaining")).toHaveText("$60.00");
   await expect(available(page)).toContainText("$900.00");
 
-  // Pay $140: a Transfer out of checking, then a Transfer into the card.
-  const transfer = "Transfer (not spending or income)";
+  // Pay $140 from checking: one entry, a Transfer to the Visa.
   dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").fill("140");
   await dialog.getByLabel("Payee").fill("Visa payment");
-  await dialog.getByLabel("Envelope").selectOption({ label: transfer });
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
-  await expect(dialog).toBeHidden();
-
-  dialog = await openAddTransaction(page);
-  await dialog.getByRole("radio", { name: "Inflow" }).check();
-  await dialog.getByLabel("Account").selectOption({ label: "Visa" });
-  await dialog.getByLabel("Amount").fill("140");
-  await dialog.getByLabel("Payee").fill("Payment from checking");
-  await dialog.getByLabel("Envelope").selectOption({ label: transfer });
+  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await expect(dialog.getByLabel("To account")).toHaveValue(/.+/);
+  await expect(dialog.getByRole("note")).toHaveText("Also adds the matching inflow in Visa.");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
 
   // Visa payment holds only $40, so the other $100 must be covered.
@@ -138,4 +130,31 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
   await expect(payment).toContainText("Owed $100.00");
   await expect(payment).toContainText("Uncovered $100.00");
+  await goTo(page, "Accounts");
+  await expect(page.locator(".item", { hasText: "Visa" })).toContainText("-$100.00");
+  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$860.00");
+});
+
+test("a payment nothing can cover is not suggested as Uncategorized", async ({ page }) => {
+  await signInWithHousehold(page);
+  await goTo(page, "Accounts");
+  await page.getByLabel("Account name").fill("Checking");
+  await page.getByRole("button", { name: "Add account" }).click();
+  const add = page.getByRole("form", { name: "Add an account" });
+  await add.getByRole("radio", { name: "Credit card" }).check();
+  await add.getByLabel("Account name").fill("Visa");
+  await add.getByLabel("Amount owed on the opening date").fill("300");
+  await add.getByRole("button", { name: "Add account" }).click();
+
+  // Checking holds $0, so nothing can cover an extra $300 payment.
+  const dialog = await openAddTransaction(page);
+  await dialog.getByLabel("Amount").fill("300");
+  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  const cover = dialog.getByRole("alertdialog");
+  await expect(cover).toContainText(
+    "There isn’t enough money to cover this payment yet. Assign more to Visa payment or add income first",
+  );
+  await expect(cover).not.toContainText("Uncategorized");
+  await expect(cover.getByRole("button", { name: "Cover and save" })).toBeDisabled();
 });

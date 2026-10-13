@@ -61,7 +61,6 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       amount: -12_345,
       payee: "Market",
       memo: run,
-      isTransfer: false,
       envelopeId: food.id,
     });
 
@@ -85,7 +84,6 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       amount: -500,
       payee: "Market",
       memo: run,
-      isTransfer: false,
       envelopeId: null,
     });
     data = (await store.load())!;
@@ -96,14 +94,12 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
 
     // Database rules surface as readable errors.
     await expect(
-      store.saveTransaction(householdId, {
-        accountId: account.id,
-        date: "2026-10-07",
-        amount: -100,
-        payee: "x",
-        memo: run,
-        isTransfer: true,
-        envelopeId: food.id,
+      store.saveTransfer({
+        transferId: null,
+        sides: [
+          { accountId: account.id, date: "2026-10-07", amount: -100, payee: "x", memo: run },
+          { accountId: account.id, date: "2026-10-07", amount: 90, payee: "x", memo: run },
+        ],
       }),
     ).rejects.toThrow(UserFacingError);
     // Put the transaction in Fun so Fun and its group are "in use".
@@ -114,7 +110,6 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       amount: -500,
       payee: "Market",
       memo: run,
-      isTransfer: false,
       envelopeId: fun.id,
     });
     await expect(store.deleteEnvelope(fun.id)).rejects.toThrow(/still in use/);

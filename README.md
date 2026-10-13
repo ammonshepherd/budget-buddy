@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.8.0** (kept in `package.json`).
+The current application version is **0.9.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -103,14 +103,25 @@ group) that holds the cash set aside to pay it:
 
 - A card purchase in an envelope moves that money into the payment envelope; one left
   Uncategorized takes it from Available to Assign.
-- A card payment is a **Transfer** in both the paying account and the card. It takes
-  money out of the payment envelope; if the envelope holds too little, the usual cover
-  prompt asks where the rest comes from.
+- A card payment is a **Transfer** from checking to the card (see Transfers below). It
+  takes money out of the payment envelope; if the envelope holds too little, the cover
+  prompt asks where the rest comes from (assign more first to pay extra toward the debt).
 - What the card owed when you added it does **not** lower Available to Assign. It shows
   on the payment envelope as **Uncovered**; assign money there to pay it down.
 
 Transactions cannot be categorized to a payment envelope, and it cannot be deleted
 while the card is open.
+
+## Transfers
+
+Choose **Transfer** as the envelope, then the account the money goes **to** (outflow) or
+comes **from** (inflow). One entry saves both sides, linked: editing one updates the
+other, and deleting one deletes the other. Neither side is spending or income.
+
+If the other account already has the matching bank row (imported, Uncategorized, the
+opposite amount, within 7 days), the transfer links to it instead of adding a copy;
+the form says which row it will use. Deleting a transfer keeps an imported side as an
+Uncategorized bank row.
 
 ## Transaction import
 

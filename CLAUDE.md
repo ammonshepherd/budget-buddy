@@ -113,7 +113,16 @@ Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Pl
   change. A credit card is a budget account with a normally negative balance
   (owed); the form takes the amount owed as positive and stores it negated
   (`src/models/accounts.ts`). Its payment envelope is described under
-  "Credit cards" above; a card payment is a Transfer on both accounts.
+  "Credit cards" above; a card payment is a transfer from the paying account.
+- Transfers are linked pairs: two transactions sharing `transfer_id`, in different
+  accounts, cancelling out (checked at commit). Both are `is_transfer`; there are
+  no one-sided transfers. One entry saves both (`save_transfer`), linking the other
+  account's matching bank row when there is one (`findTransferMatch` in
+  `src/models/transfers.ts`: unlinked, uncategorized, opposite amount, within 7
+  days). Deleting or un-transferring one side deletes a typed-in other side and
+  keeps an imported one as an Uncategorized row.
+- A card payment the cover prompt cannot cover is never suggested as Uncategorized
+  (that would hide the cash it spent): assign or add income first.
 
 ## v1 scope
 
@@ -122,7 +131,7 @@ prevention (bank ID, else date+amount+description fingerprint); transaction
 add/edit/delete; envelope groups and envelopes add/edit/delete/reorder;
 assign transactions to envelopes; Budget page as the main screen showing
 Plan / Assign / Spent / Remaining / Saved per envelope; month picker kept in the URL;
-a "Transfer" marking so transfers are not spending.
+linked transfers (both sides in one entry) so transfers are not spending.
 
 Later: split UI,
 manual/imported matching, reconciliation, tithing/fast-offering rules.
@@ -136,7 +145,7 @@ category_groups, categories (= envelopes), category_months, transactions,
 transaction_allocations. Every table has household-scoped RLS; multi-row
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
-`import_envelope_plan`, `import_transactions`). Triggers create, rename and protect
+`import_envelope_plan`, `import_transactions`, `save_transfer`). Triggers create, rename and protect
 each credit card's payment envelope and reject allocations to it. Imported transactions carry an
 `import_key` (unique per account) for duplicate prevention; each account keeps
 its CSV column mapping in `import_format`. Budget math stays in
