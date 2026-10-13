@@ -35,8 +35,9 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   await expect(page.getByRole("region", { name: "Credit card payments" })).toContainText(
     "Visa payment",
   );
-  await expect(payment).toContainText("Owed $200.00");
-  await expect(payment).toContainText("Uncovered $200.00");
+  await expect(payment).toContainText("Available to pay $0.00");
+  await expect(payment).toContainText("Remaining debt $200.00");
+  await expect(payment).not.toContainText("Assigned");
 
   // A purchase on the card, entered from the Budget page.
   const dialog = await openAddTransaction(page);
@@ -48,8 +49,7 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   // Uncategorized card spending waits for review: only what is owed changes.
   await expect(available(page)).toContainText("$1,000.00");
   await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
-  await expect(payment).toContainText("Owed $230.00");
-  await expect(payment).toContainText("Uncovered $230.00");
+  await expect(payment).toContainText("Remaining debt $230.00");
 
   // Editing keeps the type and shows the amount owed.
   await goTo(page, "Accounts");
@@ -68,7 +68,7 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   await page.getByRole("form", { name: "Edit Visa" }).getByLabel("Account name").fill("Visa Gold");
   await page.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");
-  await expect(envelope(page, "Visa Gold payment")).toContainText("Owed $280.00");
+  await expect(envelope(page, "Visa Gold payment")).toContainText("Remaining debt $280.00");
 });
 
 test("pay a card from checking, covering what the payment envelope lacks", async ({ page }) => {
@@ -125,8 +125,8 @@ test("pay a card from checking, covering what the payment envelope lacks", async
 
   await expect(available(page)).toContainText("$800.00");
   await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
-  await expect(payment).toContainText("Owed $100.00");
-  await expect(payment).toContainText("Uncovered $100.00");
+  await expect(payment).toContainText("Available to pay $0.00");
+  await expect(payment).toContainText("Remaining debt $100.00");
   await goTo(page, "Accounts");
   await expect(page.locator(".item", { hasText: "Visa" })).toContainText("-$100.00");
   await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$860.00");

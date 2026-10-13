@@ -147,47 +147,51 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
           {envelope.name}
           {!envelope.inUse && <small> · not used this month</small>}
         </span>
-        <span className="envelope-remaining">
-          <Money cents={envelope.remaining} />
-        </span>
-        <span className="envelope-figures">
-          <span>
-            Plan <Money cents={envelope.planned} />
-          </span>
-          <span>
-            Assigned <Money cents={envelope.assigned} />
-          </span>
-          {envelope.card?.open ? (
-            // Card purchases move money in (negative Spent); payments take it out.
-            <span>
-              From card <Money cents={-envelope.spent} />
+        {envelope.card ? (
+          // A card's payment envelope: what can be paid now, and what is left after that.
+          <>
+            <span className="envelope-remaining">
+              <Money cents={envelope.envelopeMoney} />
             </span>
-          ) : (
-            <span>
-              Spent <Money cents={envelope.spent} />
-            </span>
-          )}
-          <span>
-            Saved <Money cents={envelope.saved} />
-          </span>
-          {envelope.card && (
-            <>
+            <span className="envelope-figures">
               <span>
-                Owed <Money cents={envelope.card.owed} />
+                Available to pay <Money cents={envelope.envelopeMoney} />
               </span>
-              {envelope.card.uncovered > 0 && (
+              <span className={envelope.card.uncovered > 0 ? "short" : undefined}>
+                Remaining debt <Money cents={envelope.card.uncovered} />
+              </span>
+              {envelope.shortfall > 0 && (
                 <span className="short">
-                  Uncovered <Money cents={envelope.card.uncovered} />
+                  Short <Money cents={envelope.shortfall} />
                 </span>
               )}
-            </>
-          )}
-          {envelope.shortfall > 0 && (
-            <span className="short">
-              Short <Money cents={envelope.shortfall} />
             </span>
-          )}
-        </span>
+          </>
+        ) : (
+          <>
+            <span className="envelope-remaining">
+              <Money cents={envelope.remaining} />
+            </span>
+            <span className="envelope-figures">
+              <span>
+                Plan <Money cents={envelope.planned} />
+              </span>
+              <span>
+                Assigned <Money cents={envelope.assigned} />
+              </span>
+              {/* Refunds are not spending: they only raise Remaining. */}
+              <span>
+                Spent <Money cents={envelope.outflow} />
+              </span>
+              <SavedAmount cents={envelope.saved} />
+              {envelope.shortfall > 0 && (
+                <span className="short">
+                  Short <Money cents={envelope.shortfall} />
+                </span>
+              )}
+            </span>
+          </>
+        )}
       </summary>
       <div className="envelope-actions">
         <SingleFieldForm
@@ -213,7 +217,7 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
         {envelope.card ? (
           <p className="empty-state">
             Card purchases move money in here from their envelopes; payments to the card (a Transfer
-            on both accounts) take it out. Assign here to pay down what is uncovered.
+            on both accounts) take it out. Assign here to pay down the remaining debt.
           </p>
         ) : (
           <div className="button-row">
@@ -237,5 +241,27 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
         <ErrorMessage error={remove.error} />
       </div>
     </details>
+  );
+}
+
+/**
+ * Saved stays a plain figure at $0.00. Once money is saved it stands out
+ * (bigger, purple and sparkling) to encourage saving.
+ */
+function SavedAmount({ cents }: { cents: number }) {
+  if (cents <= 0) {
+    return (
+      <span>
+        Saved <Money cents={cents} />
+      </span>
+    );
+  }
+  return (
+    <span className="saved-amount sparkle">
+      <span className="sparkle-icon" aria-hidden="true">
+        ✨
+      </span>
+      Saved <Money cents={cents} />
+    </span>
   );
 }

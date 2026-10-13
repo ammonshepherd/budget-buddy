@@ -997,3 +997,76 @@ a:focus-visible {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* ---- v0.14.1: Saved stands out; payment envelopes ----------------------- */
+
+.envelope-figures {
+  align-items: baseline;
+}
+
+.saved-amount {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.saved-amount .money {
+  font-weight: 850;
+}
+
+/* Some saved: a purple shimmer runs through the text, and the ✨ twinkles. */
+.saved-amount.sparkle {
+  background: linear-gradient(
+    100deg,
+    var(--brand) 0%,
+    var(--accent) 35%,
+    #c9a0ee 50%,
+    var(--accent) 65%,
+    var(--brand) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: saved-shimmer 3.5s linear infinite;
+}
+
+.saved-amount.sparkle .money {
+  color: transparent;
+}
+
+.sparkle-icon {
+  display: inline-block;
+  margin-inline-end: 0.15rem;
+  color: initial;
+  animation: saved-twinkle 1.8s ease-in-out infinite;
+}
+
+@keyframes saved-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@keyframes saved-twinkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85) rotate(12deg);
+  }
+}
+
+/* No movement for people who ask their device for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .saved-amount.sparkle,
+  .sparkle-icon {
+    animation: none;
+  }
+}

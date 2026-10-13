@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.14.0** (kept in `package.json`).
+The current application version is **0.14.1** (kept in `package.json`).
 
 Versions follow:
 
@@ -94,6 +94,12 @@ It disappears when there is nothing left to assign ($0.00) and comes back as a w
 when you are over assigned. The month picker sits just above it. Each group has a **+** button to add an
 envelope; groups themselves are added and deleted (when empty) in **Settings →
 Envelope groups**. Tap an envelope to assign, release from Saved or set its plan.
+
+Each envelope shows Plan, Assigned, Spent and **Saved**. Spent is only money that went
+out: a refund into the envelope just raises what is left. Once there is money in
+Saved it turns larger, purple and sparkly, to encourage leaving money unspent. A credit
+card's payment envelope shows only **Available to pay** and the **Remaining debt**
+after that.
 
 ## Income and Available to Assign
 
