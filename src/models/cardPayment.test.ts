@@ -17,6 +17,7 @@ function tx(partial: Partial<Transaction> & Pick<Transaction, "id" | "amount">):
     payee: "",
     memo: "",
     isTransfer: false,
+    isIncome: false,
     transferId: null,
     voided: false,
     allocations: [],
@@ -163,11 +164,24 @@ describe("card-payment envelope", () => {
     expect(buildBudgetMonth(data, M).totals.spent).toBe(5_000);
   });
 
-  it("counts an uncategorized card refund as income only as far as the envelope reaches", () => {
+  it("leaves a card refund still to review out of both Available and the envelope", () => {
     const data = household();
     data.transactions.push(
       tx({ id: "uncat", accountId: "visa", amount: -3_000 }),
       tx({ id: "refund", accountId: "visa", amount: 5_000 }),
+    );
+    const view = buildBudgetMonth(data, M);
+    expect(view.availableToAssign).toBe(1_000_000 - 3_000);
+    expect(row(view, "visa-pay").remaining).toBe(3_000);
+    expect(row(view, "visa-pay").card!.owed).toBe(1_200_000 - 2_000);
+    expect(view.toReview).toEqual({ count: 1, amount: 5_000 });
+  });
+
+  it("counts a card refund marked Income only as far as the envelope reaches", () => {
+    const data = household();
+    data.transactions.push(
+      tx({ id: "uncat", accountId: "visa", amount: -3_000 }),
+      tx({ id: "refund", accountId: "visa", amount: 5_000, isIncome: true }),
     );
     const view = expectIdentity(data);
     // $30 went into Visa payment; the $50 refund takes it back out as income,

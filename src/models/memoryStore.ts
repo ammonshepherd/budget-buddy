@@ -205,6 +205,9 @@ export function createMemoryStore(): DataStore {
           "A card's payment envelope fills itself; choose another envelope",
         );
       }
+      if (input.isIncome && (input.amount <= 0 || input.envelopeId)) {
+        throw new UserFacingError("Income is money coming in, without an envelope");
+      }
       if (input.id) releaseTransfer(input.id);
       const previous = b.transactions.find((t) => t.id === input.id);
       const tx = {
@@ -215,6 +218,7 @@ export function createMemoryStore(): DataStore {
         payee: input.payee,
         memo: input.memo,
         isTransfer: false,
+        isIncome: input.isIncome,
         transferId: null,
         voided: false,
         allocations: input.envelopeId
@@ -247,6 +251,7 @@ export function createMemoryStore(): DataStore {
           payee: row.payee,
           memo: row.memo,
           isTransfer: false,
+          isIncome: false,
           transferId: null,
           voided: false,
           allocations: [],
@@ -257,6 +262,23 @@ export function createMemoryStore(): DataStore {
       b.transactions.sort((x, y) => y.date.localeCompare(x.date));
       account.importFormat = structuredClone(format);
       return added;
+    },
+    async markIncome(transactionIds) {
+      let marked = 0;
+      for (const tx of budget().transactions) {
+        if (
+          transactionIds.includes(tx.id) &&
+          tx.amount > 0 &&
+          !tx.isTransfer &&
+          !tx.isIncome &&
+          !tx.voided &&
+          tx.allocations.length === 0
+        ) {
+          tx.isIncome = true;
+          marked++;
+        }
+      }
+      return marked;
     },
     async saveTransfer(input) {
       const b = budget();
@@ -296,6 +318,7 @@ export function createMemoryStore(): DataStore {
           payee: side.payee,
           memo: side.memo,
           isTransfer: true,
+          isIncome: false,
           transferId,
           voided: false,
           allocations: [],

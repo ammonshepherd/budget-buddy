@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.10.0** (kept in `package.json`).
+The current application version is **0.11.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -85,6 +85,21 @@ One-time setup:
   `.env.local`.
 - **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
   and as a redirect URL.
+
+## Income and Available to Assign
+
+Mark paychecks and other income as **Income (to Available to Assign)** in the Envelope
+choice. Only income marked this way goes into Available to Assign; you then assign it
+to envelopes. Spending not yet in an envelope lowers Available to Assign straight away.
+
+An inflow left Uncategorized (an imported deposit, a refund) is an **inflow to review**:
+it counts toward nothing until you decide what it is. The Budget page shows how many
+are waiting, and Activity lists them with **Mark as Income** (or Mark all), or use
+Edit to give a refund its envelope or make it a Transfer.
+
+```
+Available to Assign = opening balances + income − assigned − spending not in an envelope
+```
 
 ## Adding and editing transactions
 

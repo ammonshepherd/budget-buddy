@@ -23,6 +23,8 @@ import type { Budget } from "./useBudget";
 
 /** The category choice for a transfer: it is neither spending nor income. */
 export const TRANSFER = "transfer";
+/** The category choice for income: an inflow to Available to Assign. */
+export const INCOME = "income";
 
 /** What the transaction form holds, as typed. */
 export interface TransactionForm {
@@ -33,7 +35,7 @@ export interface TransactionForm {
   amount: string;
   payee: string;
   memo: string;
-  /** An envelope id, "" for Uncategorized, or TRANSFER. */
+  /** An envelope id, "" for Uncategorized, TRANSFER or INCOME. */
   category: string;
   /** For a transfer: the other account ("" = the first one that fits). */
   transferAccountId: string;
@@ -74,7 +76,11 @@ export function formFromTransaction(tx: Transaction, data: BudgetData): Transact
     amount: (Math.abs(tx.amount) / 100).toFixed(2),
     payee: tx.payee,
     memo: tx.memo,
-    category: tx.isTransfer ? TRANSFER : (tx.allocations[0]?.envelopeId ?? ""),
+    category: tx.isTransfer
+      ? TRANSFER
+      : tx.isIncome
+        ? INCOME
+        : (tx.allocations[0]?.envelopeId ?? ""),
     transferAccountId: transferPartner(data, tx)?.accountId ?? "",
     transferMatch: "auto",
   };
@@ -121,6 +127,10 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
     const cents = requireCents(form.amount);
     if (cents <= 0)
       throw new UserFacingError("Enter an amount above zero, then pick Outflow or Inflow.");
+    const isIncome = form.category === INCOME;
+    if (isIncome && form.direction === "outflow") {
+      throw new UserFacingError("Income is money coming in: choose Inflow, or another envelope.");
+    }
     return {
       id: form.id,
       accountId: form.accountId,
@@ -128,7 +138,8 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
       amount: form.direction === "outflow" ? -cents : cents,
       payee: form.payee.trim(),
       memo: form.memo.trim(),
-      envelopeId: form.category && form.category !== TRANSFER ? form.category : null,
+      isIncome,
+      envelopeId: form.category && form.category !== TRANSFER && !isIncome ? form.category : null,
     };
   };
 

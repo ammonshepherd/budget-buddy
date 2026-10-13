@@ -74,6 +74,12 @@ export interface Transaction {
   memo: string;
   /** Both sides of a transfer are marked; neither is spending or income. */
   isTransfer: boolean;
+  /**
+   * Marked Income: an inflow that goes to Available to Assign. An inflow
+   * that is neither Income, in an envelope nor a transfer is "to review" and
+   * does not count yet.
+   */
+  isIncome: boolean;
   /** Shared by the two sides of a transfer (see transfers.ts); null otherwise. */
   transferId: string | null;
   voided: boolean;

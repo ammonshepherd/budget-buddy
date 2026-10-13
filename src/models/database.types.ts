@@ -277,6 +277,7 @@ export type Database = {
           household_id: string
           id: string
           import_key: string | null
+          is_income: boolean
           is_transfer: boolean
           memo: string
           payee: string
@@ -292,6 +293,7 @@ export type Database = {
           household_id: string
           id?: string
           import_key?: string | null
+          is_income?: boolean
           is_transfer?: boolean
           memo?: string
           payee?: string
@@ -307,6 +309,7 @@ export type Database = {
           household_id?: string
           id?: string
           import_key?: string | null
+          is_income?: boolean
           is_transfer?: boolean
           memo?: string
           payee?: string
@@ -354,6 +357,7 @@ export type Database = {
         Args: { p_account_id: string; p_format: Json; p_rows: Json }
         Returns: number
       }
+      mark_income: { Args: { p_ids: string[] }; Returns: number }
       move_between_envelopes: {
         Args: {
           p_amount: number
@@ -370,6 +374,7 @@ export type Database = {
           p_category_id: string
           p_date: string
           p_id: string
+          p_is_income?: boolean
           p_is_transfer: boolean
           p_memo: string
           p_payee: string

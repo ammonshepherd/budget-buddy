@@ -61,6 +61,7 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       amount: -12_345,
       payee: "Market",
       memo: run,
+      isIncome: false,
       envelopeId: food.id,
     });
 
@@ -84,6 +85,7 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       amount: -500,
       payee: "Market",
       memo: run,
+      isIncome: false,
       envelopeId: null,
     });
     data = (await store.load())!;
@@ -110,6 +112,7 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       amount: -500,
       payee: "Market",
       memo: run,
+      isIncome: false,
       envelopeId: fun.id,
     });
     await expect(store.deleteEnvelope(fun.id)).rejects.toThrow(/still in use/);
