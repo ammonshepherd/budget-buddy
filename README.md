@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.9.0** (kept in `package.json`).
+The current application version is **0.10.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -120,7 +120,10 @@ other, and deleting one deletes the other. Neither side is spending or income.
 
 If the other account already has the matching bank row (imported, Uncategorized, the
 opposite amount, within 7 days), the transfer links to it instead of adding a copy;
-the form says which row it will use. Deleting a transfer keeps an imported side as an
+the form says which row it will use. When there is more than one candidate, **Other
+side** lets you pick a different bank row (up to 31 days away, closest first) or add a
+new transaction instead. Editing a transfer can also swap a side you typed in for the
+bank's row once it is imported. Deleting a transfer keeps an imported side as an
 Uncategorized bank row.
 
 ## Transaction import

@@ -132,6 +132,7 @@ function TransactionEditor({
   const save = useAsyncAction(entry.prepare);
   const transfer = form.category === TRANSFER;
   const transferNote = entry.describeTransfer(form);
+  const transferOptions = entry.transferOptions(form);
   const update = (change: Partial<TransactionForm>) => {
     setForm({ ...form, ...change });
     save.clearError();
@@ -219,6 +220,21 @@ function TransactionEditor({
               ))}
             </select>
           </label>
+          {transferOptions && (
+            <label className="field">
+              Other side
+              <select
+                value={transferOptions.selected}
+                onChange={(e) => update({ transferMatch: e.target.value })}
+              >
+                {transferOptions.options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {transferNote && (
             <p className="empty-state" role="note">
               {transferNote}
