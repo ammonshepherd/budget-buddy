@@ -80,6 +80,10 @@ Releasing Saved does not change Available to Assign (money stays in the envelope
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount.
 - Accounts are closed (soft delete), never deleted with their transactions.
+- An account's opening balance is its balance on the opening date, before any
+  of its transactions, so the opening date can be edited only up to the date
+  of its first transaction.
+- Only open accounts can be edited (closing requires a $0.00 balance).
 
 ## v1 scope
 
