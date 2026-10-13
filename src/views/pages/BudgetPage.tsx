@@ -167,12 +167,31 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
           <span>
             Assigned <Money cents={envelope.assigned} />
           </span>
-          <span>
-            Spent <Money cents={envelope.spent} />
-          </span>
+          {envelope.card?.open ? (
+            // Card purchases move money in (negative Spent); payments take it out.
+            <span>
+              From card <Money cents={-envelope.spent} />
+            </span>
+          ) : (
+            <span>
+              Spent <Money cents={envelope.spent} />
+            </span>
+          )}
           <span>
             Saved <Money cents={envelope.saved} />
           </span>
+          {envelope.card && (
+            <>
+              <span>
+                Owed <Money cents={envelope.card.owed} />
+              </span>
+              {envelope.card.uncovered > 0 && (
+                <span className="short">
+                  Uncovered <Money cents={envelope.card.uncovered} />
+                </span>
+              )}
+            </>
+          )}
           {envelope.shortfall > 0 && (
             <span className="short">
               Short <Money cents={envelope.shortfall} />
@@ -201,23 +220,30 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
           placeholder="0.00"
           onSubmit={(text) => page.setPlanned(envelope.id, text)}
         />
-        <div className="button-row">
-          <button
-            className="text-button danger"
-            type="button"
-            disabled={remove.pending}
-            onClick={() => {
-              if (
-                window.confirm(
-                  `Delete the ${envelope.name} envelope? Money assigned to it returns to Available to Assign.`,
+        {envelope.card ? (
+          <p className="empty-state">
+            Card purchases move money in here from their envelopes; payments to the card (a Transfer
+            on both accounts) take it out. Assign here to pay down what is uncovered.
+          </p>
+        ) : (
+          <div className="button-row">
+            <button
+              className="text-button danger"
+              type="button"
+              disabled={remove.pending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Delete the ${envelope.name} envelope? Money assigned to it returns to Available to Assign.`,
+                  )
                 )
-              )
-                void remove.run();
-            }}
-          >
-            Delete envelope
-          </button>
-        </div>
+                  void remove.run();
+              }}
+            >
+              Delete envelope
+            </button>
+          </div>
+        )}
         <ErrorMessage error={remove.error} />
       </div>
     </details>

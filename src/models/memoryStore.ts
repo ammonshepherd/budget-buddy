@@ -3,6 +3,7 @@
  * (`VITE_DATA_STORE=memory`), so Playwright can exercise every screen without
  * a real Supabase project. It mirrors the database rules the UI relies on.
  */
+import { paymentEnvelopeName } from "./accounts";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
 import { nameKey } from "./envelopePlan";
 import type { BudgetData } from "./types";
@@ -73,18 +74,40 @@ export function createMemoryStore(): DataStore {
     },
 
     async addAccount(_householdId, account) {
-      budget().accounts.push({
-        id: id(),
+      const b = budget();
+      const accountId = id();
+      b.accounts.push({
+        id: accountId,
         ...account,
         onBudget: true,
         closedAt: null,
         importFormat: null,
       });
+      // Like the database trigger: a card gets its payment envelope.
+      if (account.type === "credit_card") {
+        let group = b.groups.find((g) => nameKey(g.name) === "credit card payments");
+        if (!group) {
+          group = { id: id(), name: "Credit card payments", position: nextPosition(b.groups) };
+          b.groups.push(group);
+        }
+        const groupId = group.id;
+        b.envelopes.push({
+          id: id(),
+          groupId,
+          name: paymentEnvelopeName(account.name),
+          position: nextPosition(b.envelopes.filter((e) => e.groupId === groupId)),
+          cardAccountId: accountId,
+        });
+      }
     },
     async updateAccount(accountId, { name, openingBalance, openingDate }) {
-      const account = budget().accounts.find((a) => a.id === accountId);
+      const b = budget();
+      const account = b.accounts.find((a) => a.id === accountId);
       if (!account) throw new UserFacingError("Account not found");
       Object.assign(account, { name, openingBalance, openingDate });
+      for (const envelope of b.envelopes) {
+        if (envelope.cardAccountId === accountId) envelope.name = paymentEnvelopeName(name);
+      }
     },
     async closeAccount(accountId) {
       const account = budget().accounts.find((a) => a.id === accountId);
@@ -95,10 +118,16 @@ export function createMemoryStore(): DataStore {
       budget().groups.push({ id: id(), name, position });
     },
     async addEnvelope(_householdId, groupId, name, position) {
-      budget().envelopes.push({ id: id(), groupId, name, position });
+      budget().envelopes.push({ id: id(), groupId, name, position, cardAccountId: null });
     },
     async deleteEnvelope(envelopeId) {
       const b = budget();
+      const card = b.envelopes.find((e) => e.id === envelopeId)?.cardAccountId;
+      if (card && !b.accounts.find((a) => a.id === card)?.closedAt) {
+        throw new UserFacingError(
+          "A card's payment envelope cannot be deleted while the card is open",
+        );
+      }
       if (b.transactions.some((tx) => tx.allocations.some((a) => a.envelopeId === envelopeId))) {
         throw new UserFacingError("It is still in use. Move or delete what uses it first.");
       }
@@ -144,6 +173,7 @@ export function createMemoryStore(): DataStore {
             groupId: group.id,
             name: row.envelope.trim(),
             position: nextPosition(siblings),
+            cardAccountId: null,
           };
           b.envelopes.push(envelope);
         }
@@ -155,6 +185,11 @@ export function createMemoryStore(): DataStore {
       const b = budget();
       if (input.isTransfer && input.envelopeId) {
         throw new UserFacingError("A transfer cannot be assigned to an envelope");
+      }
+      if (b.envelopes.find((e) => e.id === input.envelopeId)?.cardAccountId) {
+        throw new UserFacingError(
+          "A card's payment envelope fills itself; choose another envelope",
+        );
       }
       const previous = b.transactions.find((t) => t.id === input.id);
       const tx = {

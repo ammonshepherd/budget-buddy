@@ -207,9 +207,9 @@ function AccountForm({
       </label>
       {card && (
         <p className="empty-state">
-          Card purchases come out of envelopes like any spending, and the amount owed lowers
-          Available to Assign. Record a card payment as a Transfer in both the paying account and
-          the card.
+          The card gets a payment envelope on the Budget page. Purchases move money into it from
+          their envelopes, and what is owed today shows there as Uncovered until you assign money to
+          pay it down. Record a card payment as a Transfer in both the paying account and the card.
         </p>
       )}
       <label className="field">

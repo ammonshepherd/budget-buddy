@@ -112,6 +112,7 @@ export function createSupabaseStore(
           groupId: c.group_id,
           name: c.name,
           position: c.position,
+          cardAccountId: c.card_account_id,
         })),
         envelopeMonths: (months.data ?? []).map((m) => ({
           envelopeId: m.category_id,

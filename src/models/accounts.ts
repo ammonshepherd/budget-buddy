@@ -18,3 +18,8 @@ export function openingBalanceFromEntry(type: AccountType, entered: Cents): Cent
 export function openingBalanceToEntry(type: AccountType, openingBalance: Cents): Cents {
   return type === "credit_card" ? -openingBalance : openingBalance;
 }
+
+/** A card's payment envelope is named after it (the database trigger does the same). */
+export function paymentEnvelopeName(cardName: string): string {
+  return `${cardName} payment`.slice(0, 100);
+}

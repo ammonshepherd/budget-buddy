@@ -8,7 +8,7 @@ function household(): BudgetData {
     household: { id: "h", name: "Home" },
     accounts: [],
     groups: [{ id: "bills", name: "Bills", position: 0 }],
-    envelopes: [{ id: "rent", groupId: "bills", name: "Rent", position: 0 }],
+    envelopes: [{ id: "rent", groupId: "bills", name: "Rent", position: 0, cardAccountId: null }],
     envelopeMonths: [
       { envelopeId: "rent", month: "2026-10", assigned: 0, released: 0, planned: 100_000 },
     ],

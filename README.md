@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.7.0** (kept in `package.json`).
+The current application version is **0.8.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -96,10 +96,21 @@ On Activity, **Edit** turns that row into the form in place; Cancel puts it back
 
 Accounts → **Add an account** → **Credit card**, then enter the amount owed on the
 opening date (as a positive number). The card's balance is negative while money is
-owed, and that debt lowers Available to Assign. Card purchases come out of envelopes
-like any spending. Record a card payment as a **Transfer** in both the paying account
-and the card, so it is neither spending nor income. A dedicated card-payment envelope
-is still planned.
+owed.
+
+Each card gets a **payment envelope** ("Visa payment", in the **Credit card payments**
+group) that holds the cash set aside to pay it:
+
+- A card purchase in an envelope moves that money into the payment envelope; one left
+  Uncategorized takes it from Available to Assign.
+- A card payment is a **Transfer** in both the paying account and the card. It takes
+  money out of the payment envelope; if the envelope holds too little, the usual cover
+  prompt asks where the rest comes from.
+- What the card owed when you added it does **not** lower Available to Assign. It shows
+  on the payment envelope as **Uncovered**; assign money there to pay it down.
+
+Transactions cannot be categorized to a payment envelope, and it cannot be deleted
+while the card is open.
 
 ## Transaction import
 

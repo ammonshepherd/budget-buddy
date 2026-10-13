@@ -42,6 +42,11 @@ export interface Envelope {
   groupId: string;
   name: string;
   position: number;
+  /**
+   * Set on a credit card's payment envelope: the card it pays. Card activity
+   * fills and empties it; transactions are never categorized to it.
+   */
+  cardAccountId: string | null;
 }
 
 /** What was stored for one envelope in one month. */

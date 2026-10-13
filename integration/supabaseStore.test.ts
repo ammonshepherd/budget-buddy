@@ -187,6 +187,8 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
     data = (await store.load())!;
     const account = data.accounts.find((a) => a.name === run)!;
     expect(account.type).toBe("credit_card");
+    // The database trigger gave the card its payment envelope.
+    expect(data.envelopes.find((e) => e.cardAccountId === account.id)?.name).toBe(`${run} payment`);
 
     const table = readTable(
       parseCsv(
