@@ -42,12 +42,13 @@ test("add a transaction from the Budget page without leaving it", async ({ page 
   dialog = await openAddTransaction(page);
   await dialog.getByRole("radio", { name: "Inflow" }).check();
   await dialog.getByLabel("Amount").fill("75");
-  await dialog.getByLabel("Payee").fill("Refund");
+  await dialog.getByLabel("Payee").fill("Paycheck");
+  await dialog.getByLabel("Envelope").selectOption({ label: "Income (to Available to Assign)" });
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { level: 1, name: "Budget" })).toBeVisible();
   await expect(available(page)).toContainText("$575.00");
 
   await goTo(page, "Activity");
-  await expect(page.locator(".item", { hasText: "Refund" })).toContainText("$75.00");
+  await expect(page.locator(".item", { hasText: "Paycheck" })).toContainText("Income");
 });

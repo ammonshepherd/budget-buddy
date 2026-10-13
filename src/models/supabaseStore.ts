@@ -129,6 +129,7 @@ export function createSupabaseStore(
           payee: t.payee,
           memo: t.memo,
           isTransfer: t.is_transfer,
+          isIncome: t.is_income,
           transferId: t.transfer_id,
           voided: t.voided,
           allocations: t.transaction_allocations.map((a) => ({
@@ -251,8 +252,15 @@ export function createSupabaseStore(
         p_payee: input.payee,
         p_memo: input.memo,
         p_is_transfer: false,
+        p_is_income: input.isIncome,
       });
       check(error);
+    },
+
+    async markIncome(transactionIds) {
+      const { data, error } = await db().rpc("mark_income", { p_ids: transactionIds });
+      check(error);
+      return data ?? 0;
     },
 
     async saveTransfer(input) {

@@ -11,6 +11,7 @@ import { TransactionEntry } from "../TransactionEntry";
 export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetData }) {
   const page = useActivityPage(budget, data);
   const remove = useAsyncAction(page.deleteTransaction);
+  const mark = useAsyncAction(page.markIncome);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
@@ -27,6 +28,60 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
         </p>
       )}
 
+      {page.toReview.length > 0 && (
+        <section className="list-card" aria-labelledby="review-title">
+          <div className="section-heading">
+            <h2 id="review-title">Inflows to review</h2>
+            <span className="section-count">{page.toReview.length}</span>
+          </div>
+          <p className="empty-state">
+            <Money cents={page.toReviewTotal} /> came in but is not in Available to Assign yet. Mark
+            paychecks and other income as Income; give refunds an envelope, or make a move between
+            accounts a Transfer, with Edit below.
+          </p>
+          <ul className="item-list" aria-label="Inflows to review">
+            {page.toReview.map(({ tx, accountName }) => (
+              <li className="item" key={tx.id}>
+                <span className="item-title">{tx.payee || "(no payee)"}</span>
+                <strong>
+                  <Money cents={tx.amount} />
+                </strong>
+                <span className="item-detail">
+                  {tx.date} · {accountName}
+                </span>
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={mark.pending}
+                  onClick={() => void mark.run([tx.id])}
+                >
+                  Mark as Income
+                </button>
+              </li>
+            ))}
+          </ul>
+          {page.toReview.length > 1 && (
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={mark.pending}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Mark all ${page.toReview.length} inflows as Income? They will count toward Available to Assign.`,
+                  )
+                ) {
+                  void mark.run(page.toReview.map(({ tx }) => tx.id));
+                }
+              }}
+            >
+              Mark all {page.toReview.length} as Income
+            </button>
+          )}
+          <ErrorMessage error={mark.error} />
+        </section>
+      )}
+
       <section className="list-card">
         <div className="section-heading">
           <h2>Transactions</h2>
@@ -35,7 +90,7 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
         {page.rows.length === 0 ? (
           <p className="empty-state">No transactions yet. Add one with the + button.</p>
         ) : (
-          <ul className="item-list">
+          <ul className="item-list" aria-label="Transactions">
             {page.rows.map(({ tx, accountName, category }) =>
               tx.id === editingId ? (
                 <li className="item-editing" key={tx.id}>

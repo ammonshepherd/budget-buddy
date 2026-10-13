@@ -50,11 +50,28 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
   await card.getByRole("button", { name: "Import 3 transactions" }).click();
   await expect(status).toContainText("Imported 3 transactions into Checking");
 
-  // They arrive Uncategorized: payroll is income, spending lowers Available to Assign.
+  // They arrive Uncategorized: spending lowers Available to Assign straight away,
+  // but the payroll deposit waits for review until it is marked Income.
   await card.getByRole("link", { name: "Give them envelopes on Activity" }).click();
   await expect(page.locator(".item", { hasText: "HARDWARE STORE" })).toContainText("Uncategorized");
   await page.goto("./#budget/2030-01");
+  await expect(available(page)).toContainText("$981.38");
+  await expect(
+    page.getByText("1 inflow ($500.00) is not in Available to Assign yet."),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Review them on Activity" }).click();
+  const review = page.getByRole("list", { name: "Inflows to review" });
+  await review
+    .locator(".item", { hasText: "PAYROLL" })
+    .getByRole("button", { name: "Mark as Income" })
+    .click();
+  await expect(page.getByRole("heading", { name: "Inflows to review" })).toHaveCount(0);
+  await expect(
+    page.getByRole("list", { name: "Transactions" }).locator(".item", { hasText: "PAYROLL" }),
+  ).toContainText("Income");
+  await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,481.38");
+  await expect(available(page)).toContainText("Income this month $500.00");
   await goTo(page, "Accounts");
   await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$1,481.38");
 

@@ -257,9 +257,10 @@ export function envelopeHistories(data: BudgetData): Map<string, EnvelopeMonth[]
  * categorized to, from Available to Assign if Uncategorized, or from the
  * transfer itself) and each card inflow takes money out of P (a payment, a
  * refund back to its envelope). As a Spent figure that is simply −amount
- * reversed: Spent_P += amount. An uncategorized card inflow (refund,
- * cashback) leaves P only as far as P's Remaining reaches; that part becomes
- * income, and the rest just lowers what is owed.
+ * reversed: Spent_P += amount. A card inflow marked Income (cashback, an
+ * unassigned refund) leaves P only as far as P's Remaining reaches; that part
+ * becomes income, and the rest just lowers what is owed. A card inflow still
+ * to review touches neither P nor Available to Assign.
  */
 function ledgerFor(data: BudgetData): Ledger {
   const inputs = new Map<string, Map<Month, EnvelopeMonthInput>>();
@@ -277,7 +278,7 @@ function ledgerFor(data: BudgetData): Ledger {
     input.released += record.released;
   }
   const cards = cardPaymentEnvelopes(data);
-  /** Uncategorized card inflows waiting to leave P: envelope → month → amount. */
+  /** Card inflows marked Income, waiting to leave P: envelope → month → amount. */
   const refunds = new Map<string, Map<Month, Cents>>();
   for (const tx of budgetTransactions(data)) {
     const month = monthOf(tx.date);
@@ -287,6 +288,7 @@ function ledgerFor(data: BudgetData): Ledger {
     const payment = cards.get(tx.accountId);
     if (!payment) continue;
     if (tx.amount > 0 && !tx.isTransfer && tx.allocations.length === 0) {
+      if (!tx.isIncome) continue; // to review: it only lowers what is owed
       let months = refunds.get(payment);
       if (!months) refunds.set(payment, (months = new Map()));
       months.set(month, (months.get(month) ?? 0) + tx.amount);
@@ -316,18 +318,27 @@ function ledgerFor(data: BudgetData): Ledger {
   return { histories, cardIncome };
 }
 
+/** An inflow that is not yet Income, in an envelope or a transfer: it waits for review. */
+export function isInflowToReview(tx: Transaction): boolean {
+  return (
+    tx.amount > 0 && !tx.voided && !tx.isTransfer && !tx.isIncome && tx.allocations.length === 0
+  );
+}
+
 /**
  * Available to Assign for a month, from loaded data.
- * Income = uncategorized inflows; uncategorized outflows reduce it.
+ * Income = inflows marked Income; uncategorized outflows reduce it.
+ * Uncategorized inflows wait for review and count as neither.
  * Transfers count as neither. Accounts count from their opening month.
  *
  * Credit cards (with a payment envelope): the opening balance (what was
  * owed) is left out; it shows as Uncovered on the payment envelope instead.
  * Their uncategorized outflows count as usual (that money moves into the
- * payment envelope); their uncategorized inflows count only as far as they
- * came out of the payment envelope (see ledgerFor).
+ * payment envelope); their Income inflows count only as far as they came
+ * out of the payment envelope (see ledgerFor).
  *
- * Equivalently: non-card budget balances − all envelope money.
+ * Equivalently: non-card budget balances − all envelope money − non-card
+ * inflows to review.
  */
 export function availableToAssignFor(
   data: BudgetData,
@@ -347,7 +358,7 @@ export function availableToAssignFor(
   for (const tx of budgetTransactions(data)) {
     if (tx.isTransfer || tx.allocations.length > 0 || monthOf(tx.date) > month) continue;
     if (tx.amount < 0) uncategorizedSpent -= tx.amount;
-    else if (!cards.has(tx.accountId)) income += tx.amount;
+    else if (tx.isIncome && !cards.has(tx.accountId)) income += tx.amount;
   }
   for (const [incomeMonth, amount] of cardIncome) {
     if (incomeMonth <= month) income += amount;
@@ -357,6 +368,16 @@ export function availableToAssignFor(
     if (record.month <= month) assigned += record.assigned;
   }
   return availableToAssign({ openingBalances, income, assigned, uncategorizedSpent });
+}
+
+/** Income counted in `month` alone (see availableToAssignFor). */
+function incomeIn(data: BudgetData, month: Month, { cardIncome }: Ledger): Cents {
+  const cards = cardPaymentEnvelopes(data);
+  let income = cardIncome.get(month) ?? 0;
+  for (const tx of budgetTransactions(data)) {
+    if (tx.isIncome && !cards.has(tx.accountId) && monthOf(tx.date) === month) income += tx.amount;
+  }
+  return income;
 }
 
 /** The latest month that has any data, or `atLeast` if that is later. */
@@ -432,6 +453,10 @@ export interface GroupRows {
 export interface BudgetMonthView {
   month: Month;
   availableToAssign: Cents;
+  /** Income received this month (what was marked Income and counted). */
+  income: Cents;
+  /** Inflows still to review, from any month: they are not in Available to Assign. */
+  toReview: { count: number; amount: Cents };
   overAssigned: Cents;
   /** What the Assign action may add this month (see assignableIn). */
   assignable: Cents;
@@ -543,9 +568,12 @@ export function buildBudgetMonth(data: BudgetData, month: Month): BudgetMonthVie
   }));
 
   const available = availableToAssignFor(data, month, ledger);
+  const toReview = budgetTransactions(data).filter(isInflowToReview);
   return {
     month,
     availableToAssign: available,
+    income: incomeIn(data, month, ledger),
+    toReview: { count: toReview.length, amount: toReview.reduce((sum, tx) => sum + tx.amount, 0) },
     overAssigned: overAssigned(available),
     assignable: assignableIn(data, month, ledger),
     totals,

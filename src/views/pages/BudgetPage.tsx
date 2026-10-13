@@ -42,6 +42,9 @@ export function BudgetPage({
           <Money cents={view.availableToAssign} />
         </strong>
         <span className="card-helper">
+          Income this month <Money cents={view.income} />
+        </span>
+        <span className="card-helper">
           {view.overAssigned > 0 ? (
             <>
               Over assigned by <Money cents={view.overAssigned} />
@@ -69,6 +72,15 @@ export function BudgetPage({
           </article>
         ))}
       </section>
+
+      {view.toReview.count > 0 && (
+        <p className="notice">
+          {view.toReview.count} {view.toReview.count === 1 ? "inflow" : "inflows"} (
+          <Money cents={view.toReview.amount} />) {view.toReview.count === 1 ? "is" : "are"} not in
+          Available to Assign yet. <a href="#activity">Review them on Activity</a>: mark income as
+          Income.
+        </p>
+      )}
 
       {data.accounts.length === 0 && (
         <p className="notice">

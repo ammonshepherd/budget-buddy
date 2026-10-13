@@ -3,6 +3,7 @@ import { useAsyncAction } from "../controllers/useAsyncAction";
 import type { Budget } from "../controllers/useBudget";
 import {
   blankTransactionForm,
+  INCOME,
   TRANSFER,
   useTransactionEntry,
   type CoverChoice,
@@ -181,6 +182,9 @@ function TransactionEditor({
         Envelope
         <select value={form.category} onChange={(e) => update({ category: e.target.value })}>
           <option value="">Uncategorized</option>
+          <option value={INCOME} disabled={form.direction === "outflow"}>
+            Income (to Available to Assign)
+          </option>
           {entry.groups.map((group) => (
             <optgroup key={group.id} label={group.name}>
               {group.envelopes.map((envelope) => (

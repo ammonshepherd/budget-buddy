@@ -35,6 +35,8 @@ export interface TransactionInput {
   amount: Cents;
   payee: string;
   memo: string;
+  /** An inflow to Available to Assign (needs envelopeId null and a positive amount). */
+  isIncome: boolean;
   /** null = Uncategorized. Transfers are saved with saveTransfer. */
   envelopeId: string | null;
 }
@@ -85,6 +87,11 @@ export interface DataStore {
    * was typed in, kept as an Uncategorized row if it was imported.
    */
   saveTransfer(input: TransferInput): Promise<void>;
+  /**
+   * Marks Uncategorized inflows as Income in one step; anything else in the
+   * list is left alone. Resolves to how many were marked.
+   */
+  markIncome(transactionIds: string[]): Promise<number>;
   /**
    * All or nothing: adds imported rows to an open account as Uncategorized,
    * skipping any whose import key the account already has, and saves the

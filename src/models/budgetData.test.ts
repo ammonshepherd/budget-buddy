@@ -18,6 +18,7 @@ function tx(
     payee: "",
     memo: "",
     isTransfer: false,
+    isIncome: false,
     transferId: null,
     voided: false,
     allocations: [],
@@ -63,7 +64,7 @@ function household(): BudgetData {
       { envelopeId: "fun", month: "2026-10", assigned: 10_000, released: 0, planned: 0 },
     ],
     transactions: [
-      tx({ id: "pay", date: "2026-10-01", amount: 200_000, payee: "Paycheck" }),
+      tx({ id: "pay", date: "2026-10-01", amount: 200_000, payee: "Paycheck", isIncome: true }),
       tx({
         id: "g1",
         date: "2026-09-20",
@@ -238,6 +239,7 @@ describe("checkTransactionSpend", () => {
     amount: 0,
     envelopeId: null,
     isTransfer: false,
+    isIncome: false,
     transferId: null,
   };
 
@@ -375,5 +377,51 @@ describe("envelopes in use per month", () => {
       ["Extras", ["Trip"]],
       ["Empty", []],
     ]);
+  });
+});
+
+describe("income and inflows to review", () => {
+  it("counts an inflow only once it is marked Income", () => {
+    const data = household();
+    const before = availableToAssignFor(data, "2026-10");
+    data.transactions.push(
+      tx({ id: "deposit", date: "2026-10-20", amount: 7_500, payee: "Deposit" }),
+    );
+
+    // Still to review: not in Available to Assign, listed for review.
+    let view = buildBudgetMonth(data, "2026-10");
+    expect(view.availableToAssign).toBe(before);
+    expect(view.toReview).toEqual({ count: 1, amount: 7_500 });
+    expect(view.income).toBe(200_000);
+
+    // Marked Income: it counts, and shows in this month's income.
+    data.transactions.find((t) => t.id === "deposit")!.isIncome = true;
+    view = buildBudgetMonth(data, "2026-10");
+    expect(view.availableToAssign).toBe(before + 7_500);
+    expect(view.toReview).toEqual({ count: 0, amount: 0 });
+    expect(view.income).toBe(207_500);
+    expect(buildBudgetMonth(data, "2026-11").income).toBe(0);
+  });
+
+  it("still lowers Available to Assign for spending not yet in an envelope", () => {
+    const data = household();
+    const before = availableToAssignFor(data, "2026-10");
+    data.transactions.push(tx({ id: "shop", date: "2026-10-20", amount: -1_000 }));
+    expect(availableToAssignFor(data, "2026-10")).toBe(before - 1_000);
+  });
+
+  it("keeps every dollar accounted for: Available + to review = balances − envelope money", () => {
+    const data = household();
+    data.transactions.push(
+      tx({ id: "deposit", date: "2026-10-20", amount: 7_500 }),
+      tx({ id: "gift", date: "2026-10-21", amount: 2_500, accountId: "savings" }),
+    );
+    const view = buildBudgetMonth(data, "2026-10");
+    const balances = accountBalance("checking", data) + accountBalance("savings", data);
+    const envelopeMoney = view.groups
+      .flatMap((g) => g.envelopes)
+      .reduce((sum, e) => sum + e.envelopeMoney, 0);
+    expect(view.toReview.amount).toBe(10_000);
+    expect(view.availableToAssign + view.toReview.amount).toBe(balances - envelopeMoney);
   });
 });
