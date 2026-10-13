@@ -129,6 +129,7 @@ export function createSupabaseStore(
           payee: t.payee,
           memo: t.memo,
           isTransfer: t.is_transfer,
+          transferId: t.transfer_id,
           voided: t.voided,
           allocations: t.transaction_allocations.map((a) => ({
             envelopeId: a.category_id,
@@ -249,7 +250,23 @@ export function createSupabaseStore(
         p_amount: input.amount,
         p_payee: input.payee,
         p_memo: input.memo,
-        p_is_transfer: input.isTransfer,
+        p_is_transfer: false,
+      });
+      check(error);
+    },
+
+    async saveTransfer(input) {
+      const { error } = await db().rpc("save_transfer", {
+        // null = a new transfer (the generated types mark it non-null).
+        p_transfer_id: input.transferId ?? (null as unknown as string),
+        p_legs: input.sides.map((side) => ({
+          id: side.id ?? null,
+          account_id: side.accountId,
+          date: side.date,
+          amount: side.amount,
+          payee: side.payee,
+          memo: side.memo,
+        })),
       });
       check(error);
     },

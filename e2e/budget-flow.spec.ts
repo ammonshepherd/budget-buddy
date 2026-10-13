@@ -59,12 +59,19 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   // Uncategorized spending and a transfer.
   await addTransaction(page, { amount: "20", payee: "Coffee" });
   await expect(page.locator(".item", { hasText: "Coffee" })).toContainText("Uncategorized");
+  await goTo(page, "Accounts");
+  await page.getByLabel("Account name").fill("Savings");
+  await page.getByRole("button", { name: "Add account" }).click();
+  // One entry records both sides: out of Checking, into Savings.
   await addTransaction(page, {
     amount: "5",
     payee: "To savings",
     envelope: "Transfer (not spending or income)",
   });
-  await expect(page.locator(".item", { hasText: "To savings" })).toContainText("Transfer");
+  const sides = page.locator(".item", { hasText: "To savings" });
+  await expect(sides).toHaveCount(2);
+  await expect(sides.filter({ hasText: "Transfer to Savings" })).toContainText("-$5.00");
+  await expect(sides.filter({ hasText: "Transfer from Checking" })).toContainText("$5.00");
 
   // Budget: 1,000 − 300 − 100 − 150 (cover) − 20 (uncategorized); transfer ignored.
   await goTo(page, "Budget");
@@ -73,7 +80,10 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
 
   // Account balance = 1,000 − 50 − 400 − 20 − 5.
   await goTo(page, "Accounts");
-  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$525.00");
+  const account = (name: string) =>
+    page.locator(".item").filter({ has: page.locator(".item-title", { hasText: name }) });
+  await expect(account("Checking")).toContainText("$525.00");
+  await expect(account("Savings")).toContainText("$5.00");
 
   // Next month: Fun's unspent $100 is now Saved, and the month is in the URL.
   await goTo(page, "Budget");

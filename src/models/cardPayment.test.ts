@@ -17,6 +17,7 @@ function tx(partial: Partial<Transaction> & Pick<Transaction, "id" | "amount">):
     payee: "",
     memo: "",
     isTransfer: false,
+    transferId: null,
     voided: false,
     allocations: [],
     importKey: null,

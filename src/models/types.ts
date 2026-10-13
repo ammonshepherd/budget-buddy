@@ -72,7 +72,10 @@ export interface Transaction {
   amount: Cents;
   payee: string;
   memo: string;
+  /** Both sides of a transfer are marked; neither is spending or income. */
   isTransfer: boolean;
+  /** Shared by the two sides of a transfer (see transfers.ts); null otherwise. */
+  transferId: string | null;
   voided: boolean;
   /** Empty = Uncategorized. */
   allocations: Allocation[];

@@ -6,7 +6,7 @@
 import { paymentEnvelopeName } from "./accounts";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
 import { nameKey } from "./envelopePlan";
-import type { BudgetData } from "./types";
+import type { BudgetData, Transaction } from "./types";
 
 export function createMemoryStore(): DataStore {
   let session: UserSession | null = null;
@@ -24,6 +24,23 @@ export function createMemoryStore(): DataStore {
   };
   const nextPosition = (items: { position: number }[]) =>
     items.reduce((max, item) => Math.max(max, item.position + 1), 0);
+  /** Unlinks a transfer side: a typed-in one is deleted, an imported one becomes Uncategorized. */
+  const release = (tx: Transaction) => {
+    tx.transferId = null;
+    tx.isTransfer = false;
+    if (tx.importKey === null) {
+      budget().transactions = budget().transactions.filter((t) => t !== tx);
+    }
+  };
+  /** Like the SQL release_transfer: unlinks a transaction and releases its other side. */
+  const releaseTransfer = (transactionId: string) => {
+    const tx = budget().transactions.find((t) => t.id === transactionId);
+    if (!tx?.transferId) return;
+    const others = budget().transactions.filter((t) => t.transferId === tx.transferId && t !== tx);
+    tx.transferId = null;
+    tx.isTransfer = false;
+    others.forEach(release);
+  };
   const envelopeMonth = (envelopeId: string, month: string) => {
     const b = budget();
     if (!b.envelopes.some((e) => e.id === envelopeId)) {
@@ -183,14 +200,12 @@ export function createMemoryStore(): DataStore {
 
     async saveTransaction(_householdId, input) {
       const b = budget();
-      if (input.isTransfer && input.envelopeId) {
-        throw new UserFacingError("A transfer cannot be assigned to an envelope");
-      }
       if (b.envelopes.find((e) => e.id === input.envelopeId)?.cardAccountId) {
         throw new UserFacingError(
           "A card's payment envelope fills itself; choose another envelope",
         );
       }
+      if (input.id) releaseTransfer(input.id);
       const previous = b.transactions.find((t) => t.id === input.id);
       const tx = {
         id: input.id ?? id(),
@@ -199,7 +214,8 @@ export function createMemoryStore(): DataStore {
         amount: input.amount,
         payee: input.payee,
         memo: input.memo,
-        isTransfer: input.isTransfer,
+        isTransfer: false,
+        transferId: null,
         voided: false,
         allocations: input.envelopeId
           ? [{ envelopeId: input.envelopeId, amount: input.amount }]
@@ -231,6 +247,7 @@ export function createMemoryStore(): DataStore {
           payee: row.payee,
           memo: row.memo,
           isTransfer: false,
+          transferId: null,
           voided: false,
           allocations: [],
           importKey: row.importKey,
@@ -241,7 +258,56 @@ export function createMemoryStore(): DataStore {
       account.importFormat = structuredClone(format);
       return added;
     },
+    async saveTransfer(input) {
+      const b = budget();
+      const [first, second] = input.sides;
+      const accounts = input.sides.map((side) =>
+        b.accounts.find((a) => a.id === side.accountId && !a.closedAt),
+      );
+      if (accounts.some((a) => !a)) throw new UserFacingError("Account not found or closed");
+      if (first.accountId === second.accountId || first.amount + second.amount !== 0) {
+        throw new UserFacingError(
+          "A transfer needs two sides in different accounts that cancel out",
+        );
+      }
+      const transferId = input.transferId ?? id();
+      const ids = input.sides.map((side) => side.id).filter(Boolean);
+      if (
+        b.transactions.some(
+          (t) => ids.includes(t.id) && t.transferId && t.transferId !== transferId,
+        )
+      ) {
+        throw new UserFacingError("That transaction is already part of another transfer");
+      }
+      // Sides this transfer had that it no longer has.
+      for (const old of b.transactions.filter(
+        (t) => t.transferId === transferId && !ids.includes(t.id),
+      )) {
+        release(old);
+      }
+      for (const side of input.sides) {
+        const existing = side.id ? b.transactions.find((t) => t.id === side.id) : undefined;
+        if (side.id && !existing) throw new UserFacingError("Transaction not found");
+        const tx = {
+          id: side.id ?? id(),
+          accountId: side.accountId,
+          date: side.date,
+          amount: side.amount,
+          payee: side.payee,
+          memo: side.memo,
+          isTransfer: true,
+          transferId,
+          voided: false,
+          allocations: [],
+          importKey: existing?.importKey ?? null,
+        };
+        if (existing) Object.assign(existing, tx);
+        else b.transactions.push(tx);
+      }
+      b.transactions.sort((x, y) => y.date.localeCompare(x.date));
+    },
     async deleteTransaction(transactionId) {
+      releaseTransfer(transactionId);
       const b = budget();
       b.transactions = b.transactions.filter((t) => t.id !== transactionId);
     },

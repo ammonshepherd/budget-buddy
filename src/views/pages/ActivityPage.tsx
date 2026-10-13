@@ -42,7 +42,7 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
                   <TransactionEntry
                     budget={budget}
                     data={data}
-                    initial={formFromTransaction(tx)}
+                    initial={formFromTransaction(tx, data)}
                     heading="Edit transaction"
                     onDone={() => setEditingId(null)}
                     onCancel={() => setEditingId(null)}
@@ -71,7 +71,10 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
                       type="button"
                       disabled={remove.pending}
                       onClick={() => {
-                        if (window.confirm("Delete this transaction?")) void remove.run(tx.id);
+                        const question = tx.transferId
+                          ? "Delete this transfer? Its other side goes too (an imported bank row is kept, as Uncategorized)."
+                          : "Delete this transaction?";
+                        if (window.confirm(question)) void remove.run(tx.id);
                       }}
                     >
                       Delete

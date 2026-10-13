@@ -130,6 +130,8 @@ function TransactionEditor({
   onCancel: () => void;
 }) {
   const save = useAsyncAction(entry.prepare);
+  const transfer = form.category === TRANSFER;
+  const transferNote = entry.describeTransfer(form);
   const update = (change: Partial<TransactionForm>) => {
     setForm({ ...form, ...change });
     save.clearError();
@@ -187,7 +189,9 @@ function TransactionEditor({
               ))}
             </optgroup>
           ))}
-          <option value={TRANSFER}>Transfer (not spending or income)</option>
+          <option value={TRANSFER} disabled={entry.openAccounts.length < 2}>
+            Transfer (not spending or income)
+          </option>
         </select>
       </label>
       <label className="field">
@@ -200,6 +204,28 @@ function TransactionEditor({
           ))}
         </select>
       </label>
+      {transfer && (
+        <>
+          <label className="field">
+            {form.direction === "outflow" ? "To account" : "From account"}
+            <select
+              value={entry.transferAccountOf(form)}
+              onChange={(e) => update({ transferAccountId: e.target.value })}
+            >
+              {entry.otherAccounts(form.accountId).map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {transferNote && (
+            <p className="empty-state" role="note">
+              {transferNote}
+            </p>
+          )}
+        </>
+      )}
       <label className="field">
         Date
         <input type="date" value={form.date} onChange={(e) => update({ date: e.target.value })} />
@@ -283,12 +309,19 @@ function CoverCard({
           </li>
         )}
       </ol>
-      {noWayToCover && (
-        <p className="error-message">
-          There isn’t enough money to cover this. Go back and save it as Uncategorized, or add
-          income first.
-        </p>
-      )}
+      {noWayToCover &&
+        (plan.isCardPayment ? (
+          // Saving a payment as Uncategorized would hide the cash it spent.
+          <p className="error-message">
+            There isn’t enough money to cover this payment yet. Assign more to {plan.envelopeName}{" "}
+            or add income first, then record the payment.
+          </p>
+        ) : (
+          <p className="error-message">
+            There isn’t enough money to cover this. Go back and save it as Uncategorized, or add
+            income first.
+          </p>
+        ))}
       <div className="button-row">
         <button
           className="primary-button"

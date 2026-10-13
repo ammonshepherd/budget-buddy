@@ -18,6 +18,7 @@ function tx(
     payee: "",
     memo: "",
     isTransfer: false,
+    transferId: null,
     voided: false,
     allocations: [],
     importKey: null,
@@ -237,6 +238,7 @@ describe("checkTransactionSpend", () => {
     amount: 0,
     envelopeId: null,
     isTransfer: false,
+    transferId: null,
   };
 
   it("is null for an uncategorized transaction", () => {

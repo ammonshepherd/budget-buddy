@@ -281,6 +281,7 @@ export type Database = {
           memo: string
           payee: string
           source: string
+          transfer_id: string | null
           voided: boolean
         }
         Insert: {
@@ -295,6 +296,7 @@ export type Database = {
           memo?: string
           payee?: string
           source?: string
+          transfer_id?: string | null
           voided?: boolean
         }
         Update: {
@@ -309,6 +311,7 @@ export type Database = {
           memo?: string
           payee?: string
           source?: string
+          transfer_id?: string | null
           voided?: boolean
         }
         Relationships: [
@@ -371,6 +374,10 @@ export type Database = {
           p_memo: string
           p_payee: string
         }
+        Returns: string
+      }
+      save_transfer: {
+        Args: { p_legs: Json; p_transfer_id: string }
         Returns: string
       }
     }
