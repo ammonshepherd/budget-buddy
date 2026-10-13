@@ -13,6 +13,8 @@ import { describe, expect, it } from "vitest";
 import { buildBudgetMonth } from "../src/models/budgetMath";
 import { UserFacingError } from "../src/models/dataStore";
 import { createSupabaseStore } from "../src/models/supabaseStore";
+import { detectFormat, previewTransactionImport, readTable } from "../src/models/transactionImport";
+import { parseCsv } from "../src/models/csv";
 
 const email = process.env.SUPABASE_TEST_EMAIL;
 const password = process.env.SUPABASE_TEST_PASSWORD;
@@ -167,6 +169,45 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
 
     for (const envelope of envelopes) await store.deleteEnvelope(envelope.id);
     await store.deleteGroup(groups[0]!.id);
+    await store.signOut();
+  }, 30_000);
+  it("imports transactions once, remembering the account's columns", async () => {
+    const store = createSupabaseStore(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
+    await store.signIn(email!, password!);
+    if (!(await store.load())) await store.createHousehold("Integration test");
+    let data = (await store.load())!;
+    const run = `import-${Date.now()}`;
+    await store.addAccount(data.household.id, {
+      name: run,
+      openingBalance: 0,
+      openingDate: "2030-01-01",
+    });
+    data = (await store.load())!;
+    const account = data.accounts.find((a) => a.name === run)!;
+
+    const table = readTable(
+      parseCsv(
+        `Transaction ID,Date,Description,Amount\n${run}-1,01/02/30,Coffee,-4.50\n${run}-2,01/03/30,Pay,100`,
+      ),
+    );
+    const format = detectFormat(table);
+    const rows = previewTransactionImport(data, account, table, format).rows.map(
+      ({ date, amount, payee, memo, importKey }) => ({ date, amount, payee, memo, importKey }),
+    );
+    expect(await store.importTransactions(account.id, format, rows)).toBe(2);
+    // Sending the same rows again adds nothing: the database also refuses duplicates.
+    expect(await store.importTransactions(account.id, format, rows)).toBe(0);
+
+    data = (await store.load())!;
+    const imported = data.transactions.filter((t) => t.accountId === account.id);
+    expect(imported.map((t) => [t.amount, t.importKey, t.allocations.length]).sort()).toEqual([
+      [-450, `id:${run}-1`, 0],
+      [10_000, `id:${run}-2`, 0],
+    ]);
+    expect(data.accounts.find((a) => a.id === account.id)?.importFormat).toEqual(format);
+
+    for (const tx of imported) await store.deleteTransaction(tx.id);
+    await store.closeAccount(account.id);
     await store.signOut();
   }, 30_000);
 });

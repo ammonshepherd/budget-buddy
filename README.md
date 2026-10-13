@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.4.0** (kept in `package.json`).
+The current application version is **0.5.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -86,6 +86,24 @@ One-time setup:
 - **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
   and as a redirect URL.
 
+## Transaction import
+
+Settings → **Import transactions**: choose an account and a CSV downloaded from the bank
+or card website. Banks format these differently, so the app:
+
+1. **Detects** the columns from the header names (Date / Posted Date, Description / Payee,
+   Amount or separate Debit and Credit columns, Transaction ID) and the date style
+   (month-first, day-first, year-first). Lines above the header and files without a
+   header are handled.
+2. **Lets you correct** any column, the date style, or flip signs for cards that list
+   purchases as positive (a hint appears when most amounts are positive).
+3. **Remembers** the columns per account, so the next file from that bank needs no setup.
+
+The preview lists invalid rows by line, rows dated before the account's opening date
+(already part of its opening balance) and duplicates. Duplicates are recognised by the
+bank's transaction ID, or by date + amount + description when the file has none.
+Imported transactions arrive Uncategorized.
+
 ## Envelope plan import
 
 Settings → **Import envelope plan** takes a CSV for one month with the columns
@@ -109,6 +127,5 @@ assignment or imported row for the month, spending that month, or money still in
 
 ## Planned next steps
 
-1. Transaction CSV import with preview, invalid-row report and duplicate prevention.
-2. Rename and reorder envelopes and groups; "copy last month's spending into Planned".
-3. Inviting a second household member.
+1. Rename and reorder envelopes and groups; "copy last month's spending into Planned".
+2. Inviting a second household member.

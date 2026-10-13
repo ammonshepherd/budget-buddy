@@ -73,7 +73,13 @@ export function createMemoryStore(): DataStore {
     },
 
     async addAccount(_householdId, account) {
-      budget().accounts.push({ id: id(), ...account, onBudget: true, closedAt: null });
+      budget().accounts.push({
+        id: id(),
+        ...account,
+        onBudget: true,
+        closedAt: null,
+        importFormat: null,
+      });
     },
     async closeAccount(accountId) {
       const account = budget().accounts.find((a) => a.id === accountId);
@@ -145,6 +151,7 @@ export function createMemoryStore(): DataStore {
       if (input.isTransfer && input.envelopeId) {
         throw new UserFacingError("A transfer cannot be assigned to an envelope");
       }
+      const previous = b.transactions.find((t) => t.id === input.id);
       const tx = {
         id: input.id ?? id(),
         accountId: input.accountId,
@@ -157,11 +164,42 @@ export function createMemoryStore(): DataStore {
         allocations: input.envelopeId
           ? [{ envelopeId: input.envelopeId, amount: input.amount }]
           : [],
+        importKey: previous?.importKey ?? null,
       };
       const index = b.transactions.findIndex((t) => t.id === tx.id);
       if (index >= 0) b.transactions[index] = tx;
       else b.transactions.unshift(tx);
       b.transactions.sort((x, y) => y.date.localeCompare(x.date));
+    },
+    async importTransactions(accountId, format, rows) {
+      const b = budget();
+      const account = b.accounts.find((a) => a.id === accountId);
+      if (!account) throw new UserFacingError("Account not found");
+      if (account.closedAt) throw new UserFacingError("That account is closed");
+      const keys = new Set(
+        b.transactions.filter((t) => t.accountId === accountId).map((t) => t.importKey),
+      );
+      let added = 0;
+      for (const row of rows) {
+        if (keys.has(row.importKey)) continue;
+        keys.add(row.importKey);
+        b.transactions.push({
+          id: id(),
+          accountId,
+          date: row.date,
+          amount: row.amount,
+          payee: row.payee,
+          memo: row.memo,
+          isTransfer: false,
+          voided: false,
+          allocations: [],
+          importKey: row.importKey,
+        });
+        added++;
+      }
+      b.transactions.sort((x, y) => y.date.localeCompare(x.date));
+      account.importFormat = structuredClone(format);
+      return added;
     },
     async deleteTransaction(transactionId) {
       const b = budget();

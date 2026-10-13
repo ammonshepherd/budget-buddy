@@ -3,8 +3,9 @@
  * each user to their own household, so these queries need no household filter.
  */
 import { createClient, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "./database.types";
+import type { Database, Json } from "./database.types";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
+import { asImportFormat } from "./transactionImport";
 
 type Client = SupabaseClient<Database>;
 
@@ -102,6 +103,7 @@ export function createSupabaseStore(
           openingDate: a.opening_date,
           onBudget: a.on_budget,
           closedAt: a.closed_at,
+          importFormat: asImportFormat(a.import_format),
         })),
         groups: (groups.data ?? []).map((g) => ({ id: g.id, name: g.name, position: g.position })),
         envelopes: (envelopes.data ?? []).map((c) => ({
@@ -130,6 +132,7 @@ export function createSupabaseStore(
             envelopeId: a.category_id,
             amount: a.amount,
           })),
+          importKey: t.import_key,
         })),
       };
     },
@@ -231,6 +234,22 @@ export function createSupabaseStore(
         p_is_transfer: input.isTransfer,
       });
       check(error);
+    },
+
+    async importTransactions(accountId, format, rows) {
+      const { data, error } = await db().rpc("import_transactions", {
+        p_account_id: accountId,
+        p_format: format as unknown as Json,
+        p_rows: rows.map((r) => ({
+          date: r.date,
+          amount: r.amount,
+          payee: r.payee,
+          memo: r.memo,
+          import_key: r.importKey,
+        })),
+      });
+      check(error);
+      return data ?? 0;
     },
 
     async deleteTransaction(transactionId) {

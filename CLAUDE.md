@@ -102,7 +102,9 @@ category_groups, categories (= envelopes), category_months, transactions,
 transaction_allocations. Every table has household-scoped RLS; multi-row
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
-`import_envelope_plan`). Budget math stays in
+`import_envelope_plan`, `import_transactions`). Imported transactions carry an
+`import_key` (unique per account) for duplicate prevention; each account keeps
+its CSV column mapping in `import_format`. Budget math stays in
 `budgetMath.ts`, not SQL. Inspect the live schema before writing a migration,
 keep every schema change as a file in `supabase/migrations/`, and regenerate
 `src/models/database.types.ts` afterwards.

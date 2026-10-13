@@ -6,6 +6,7 @@
 import type { EnvelopePlanRow } from "./envelopePlan";
 import type { Cents } from "./money";
 import type { Month } from "./month";
+import type { ImportedTransaction, ImportFormat } from "./transactionImport";
 import type { BudgetData, IsoDate } from "./types";
 
 export interface UserSession {
@@ -69,6 +70,16 @@ export interface DataStore {
   importEnvelopePlan(householdId: string, month: Month, rows: EnvelopePlanRow[]): Promise<void>;
 
   saveTransaction(householdId: string, input: TransactionInput): Promise<void>;
+  /**
+   * All or nothing: adds imported rows to an open account as Uncategorized,
+   * skipping any whose import key the account already has, and saves the
+   * column mapping on the account. Resolves to how many rows were added.
+   */
+  importTransactions(
+    accountId: string,
+    format: ImportFormat,
+    rows: ImportedTransaction[],
+  ): Promise<number>;
   deleteTransaction(transactionId: string): Promise<void>;
 }
 
