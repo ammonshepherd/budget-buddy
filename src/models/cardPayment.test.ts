@@ -125,29 +125,33 @@ describe("card-payment envelope", () => {
       card: { owed: 1_205_000, uncovered: 1_200_000 },
     });
 
-    // 4. $20 left Uncategorized on the Visa comes from Available to Assign.
+    // 4. $20 left Uncategorized on the Visa waits for review: only what is owed changes.
     data.transactions.push(tx({ id: "uncat", accountId: "visa", amount: -2_000 }));
     view = expectIdentity(data);
-    expect(view.availableToAssign).toBe(958_000);
-    expect(row(view, "visa-pay").remaining).toBe(7_000);
+    expect(view.availableToAssign).toBe(960_000);
+    expect(row(view, "visa-pay")).toMatchObject({
+      remaining: 5_000,
+      card: { owed: 1_207_000, uncovered: 1_202_000 },
+    });
+    expect(view.toReview).toEqual({ count: 1, inflow: 0, outflow: 2_000 });
 
     // 5. Assign $1,000 to Visa payment.
     assign(data, "visa-pay", 100_000);
     view = expectIdentity(data);
-    expect(view.availableToAssign).toBe(858_000);
-    expect(row(view, "visa-pay").card!.uncovered).toBe(1_100_000);
+    expect(view.availableToAssign).toBe(860_000);
+    expect(row(view, "visa-pay").card!.uncovered).toBe(1_102_000);
 
-    // 6. Pay $1,070 from checking: a Transfer on both accounts.
+    // 6. Pay $1,050 from checking: a Transfer on both accounts.
     data.transactions.push(
-      tx({ id: "pay-out", amount: -107_000, isTransfer: true }),
-      tx({ id: "pay-in", accountId: "visa", amount: 107_000, isTransfer: true }),
+      tx({ id: "pay-out", amount: -105_000, isTransfer: true }),
+      tx({ id: "pay-in", accountId: "visa", amount: 105_000, isTransfer: true }),
     );
     view = expectIdentity(data);
-    expect(view.availableToAssign).toBe(858_000);
-    expect(accountBalance("checking", data)).toBe(893_000);
+    expect(view.availableToAssign).toBe(860_000);
+    expect(accountBalance("checking", data)).toBe(895_000);
     expect(row(view, "visa-pay")).toMatchObject({
       remaining: 0,
-      card: { owed: 1_100_000, uncovered: 1_100_000 },
+      card: { owed: 1_102_000, uncovered: 1_102_000 },
     });
   });
 
@@ -165,31 +169,40 @@ describe("card-payment envelope", () => {
     expect(buildBudgetMonth(data, M).totals.spent).toBe(5_000);
   });
 
-  it("leaves a card refund still to review out of both Available and the envelope", () => {
+  it("treats a card credit as only lowering what is owed", () => {
     const data = household();
     data.transactions.push(
       tx({ id: "uncat", accountId: "visa", amount: -3_000 }),
-      tx({ id: "refund", accountId: "visa", amount: 5_000 }),
-    );
-    const view = buildBudgetMonth(data, M);
-    expect(view.availableToAssign).toBe(1_000_000 - 3_000);
-    expect(row(view, "visa-pay").remaining).toBe(3_000);
-    expect(row(view, "visa-pay").card!.owed).toBe(1_200_000 - 2_000);
-    expect(view.toReview).toEqual({ count: 1, amount: 5_000 });
-  });
-
-  it("counts a card refund marked Income only as far as the envelope reaches", () => {
-    const data = household();
-    data.transactions.push(
-      tx({ id: "uncat", accountId: "visa", amount: -3_000 }),
-      tx({ id: "refund", accountId: "visa", amount: 5_000, isIncome: true }),
+      tx({ id: "credit", accountId: "visa", amount: 5_000 }),
     );
     const view = expectIdentity(data);
-    // $30 went into Visa payment; the $50 refund takes it back out as income,
-    // and the other $20 only lowers what is owed.
+    expect(view.availableToAssign).toBe(1_000_000);
     expect(row(view, "visa-pay").remaining).toBe(0);
-    expect(view.availableToAssign).toBe(1_000_000 - 3_000 + 3_000);
-    expect(row(view, "visa-pay").card!.owed).toBe(1_200_000 - 2_000);
+    expect(row(view, "visa-pay").card!.owed).toBe(1_200_000 + 3_000 - 5_000);
+    // The purchase waits for review; the credit never does.
+    expect(view.toReview).toEqual({ count: 1, inflow: 0, outflow: 3_000 });
+  });
+
+  it("leaves a refunded purchase's money in the payment envelope", () => {
+    const data = household();
+    assign(data, "groceries", 10_000);
+    data.transactions.push(
+      tx({
+        id: "buy",
+        accountId: "visa",
+        amount: -3_000,
+        allocations: [{ envelopeId: "groceries", amount: -3_000 }],
+      }),
+      tx({ id: "refund", accountId: "visa", amount: 3_000 }),
+    );
+    const view = expectIdentity(data);
+    expect(view.availableToAssign).toBe(990_000);
+    expect(row(view, "groceries").remaining).toBe(7_000);
+    // Visa payment keeps the $30, which now goes toward the rest of the debt.
+    expect(row(view, "visa-pay")).toMatchObject({
+      remaining: 3_000,
+      card: { owed: 1_200_000, uncovered: 1_197_000 },
+    });
   });
 
   it("puts a cash advance into the payment envelope without changing Available", () => {
@@ -265,7 +278,7 @@ describe("checkTransactionSpend for cards", () => {
     });
   });
 
-  it("checks the payment envelope for a categorized refund on the card", () => {
+  it("never asks to cover a card credit, even with an empty payment envelope", () => {
     const data = household();
     expect(
       checkTransactionSpend(data, {
@@ -274,7 +287,7 @@ describe("checkTransactionSpend for cards", () => {
         isTransfer: false,
         envelopeId: "groceries",
       }),
-    ).toMatchObject({ envelopeId: "visa-pay", shortfall: 2_500 });
+    ).toBeNull();
   });
 
   it("never stops an uncategorized refund or a purchase on the card for the payment envelope", () => {

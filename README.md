@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.13.1** (kept in `package.json`).
+The current application version is **0.14.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -99,15 +99,18 @@ Envelope groups**. Tap an envelope to assign, release from Saved or set its plan
 
 Mark paychecks and other income as **Income (to Available to Assign)** in the Envelope
 choice. Only income marked this way goes into Available to Assign; you then assign it
-to envelopes. Spending not yet in an envelope lowers Available to Assign straight away.
+to envelopes.
 
-An inflow left Uncategorized (an imported deposit, a refund) is an **inflow to review**:
-it counts toward nothing until you decide what it is. The Budget page shows how many
-are waiting, and Activity lists them with **Mark as Income** (or Mark all), or use
-Edit to give a refund its envelope or make it a Transfer.
+A transaction left **Uncategorized** (an imported purchase, deposit or refund) is
+**to review**: it counts toward nothing until you decide what it is. Giving it an
+envelope takes the money from (or, for a refund, adds it to) that envelope and never
+changes Available to Assign. If the envelope is short, the cover prompt can take the
+rest from Available to Assign, which then goes down by exactly that much. The Budget
+page shows how many transactions wait, and Activity lists them under **To review**
+with **Mark as Income** for inflows.
 
 ```
-Available to Assign = opening balances + income − assigned − spending not in an envelope
+Available to Assign = opening balances + income − assigned
 ```
 
 **Income rules** (Settings) mark paychecks for you: a deposit whose description contains
@@ -134,12 +137,15 @@ Each card gets a **payment envelope** ("Visa payment", in the **Credit card paym
 group) that holds the cash set aside to pay it:
 
 - A card purchase in an envelope moves that money into the payment envelope; one left
-  Uncategorized takes it from Available to Assign.
+  Uncategorized waits for review and only adds to what is owed.
 - A card payment is a **Transfer** from checking to the card (see Transfers below). It
   takes money out of the payment envelope; if the envelope holds too little, the cover
   prompt asks where the rest comes from (assign more first to pay extra toward the debt).
 - What the card owed when you added it does **not** lower Available to Assign. It shows
   on the payment envelope as **Uncovered**; assign money there to pay it down.
+- Money coming into a card that is not a payment (a refund, cashback, a statement
+  credit) is a **card credit**: it just lowers what you owe. It is never in an
+  envelope, never Income and never waits for review.
 
 Transactions cannot be categorized to a payment envelope, and it cannot be deleted
 while the card is open.

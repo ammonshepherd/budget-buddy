@@ -11,6 +11,7 @@ import { TransactionDialog } from "../TransactionEntry";
 export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetData }) {
   const page = useActivityPage(budget, data);
   const mark = useAsyncAction(page.markIncome);
+  const incomeable = page.toReview.filter((r) => r.canBeIncome);
   /** The transaction open in the edit dialog. */
   const [editing, setEditing] = useState<Transaction | null>(null);
 
@@ -31,33 +32,40 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
       {page.toReview.length > 0 && (
         <section className="list-card" aria-labelledby="review-title">
           <div className="section-heading">
-            <h2 id="review-title">Inflows to review</h2>
+            <h2 id="review-title">To review</h2>
             <span className="section-count">{page.toReview.length}</span>
           </div>
           <p className="empty-state">
-            <Money cents={page.toReviewTotal} /> came in but is not in Available to Assign yet. Mark
-            paychecks and other income as Income; give refunds an envelope, or make a move between
-            accounts a Transfer, with Edit below. <a href="#settings">Income rules</a> can mark
-            paychecks for you.
+            <Money cents={page.toReviewIn} /> in and <Money cents={page.toReviewOut} /> out are not
+            in Available to Assign yet. Tap one to give it an envelope or make it a Transfer; mark
+            paychecks as Income. <a href="#settings">Income rules</a> can mark paychecks for you.
           </p>
-          <ul className="item-list" aria-label="Inflows to review">
-            {page.toReview.map(({ tx, accountName }) => (
-              <li className="item" key={tx.id}>
-                <span className="item-title">{tx.payee || "(no payee)"}</span>
-                <strong>
-                  <Money cents={tx.amount} />
-                </strong>
-                <span className="item-detail">
-                  {tx.date} · {accountName}
-                </span>
+          <ul className="item-list" aria-label="To review">
+            {page.toReview.map(({ tx, accountName, canBeIncome }) => (
+              <li className="review-item" key={tx.id}>
                 <button
-                  className="text-button"
+                  className="review-row item-button"
                   type="button"
-                  disabled={mark.pending}
-                  onClick={() => void mark.run([tx.id])}
+                  onClick={() => setEditing(tx)}
                 >
-                  Mark as Income
+                  <span className="item-title">{tx.payee || "(no payee)"}</span>
+                  <strong>
+                    <Money cents={tx.amount} />
+                  </strong>
+                  <span className="item-detail">
+                    {tx.date} · {accountName}
+                  </span>
                 </button>
+                {canBeIncome && (
+                  <button
+                    className="text-button"
+                    type="button"
+                    disabled={mark.pending}
+                    onClick={() => void mark.run([tx.id])}
+                  >
+                    Mark as Income
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -72,7 +80,7 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
               {page.ruleMatches.length === 1 ? "match" : "matches"})
             </button>
           )}
-          {page.toReview.length > 1 && (
+          {incomeable.length > 1 && (
             <button
               className="secondary-button"
               type="button"
@@ -80,14 +88,14 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
               onClick={() => {
                 if (
                   window.confirm(
-                    `Mark all ${page.toReview.length} inflows as Income? They will count toward Available to Assign.`,
+                    `Mark all ${incomeable.length} inflows as Income? They will count toward Available to Assign.`,
                   )
                 ) {
-                  void mark.run(page.toReview.map(({ tx }) => tx.id));
+                  void mark.run(incomeable.map(({ tx }) => tx.id));
                 }
               }}
             >
-              Mark all {page.toReview.length} as Income
+              Mark all {incomeable.length} inflows as Income
             </button>
           )}
           <ErrorMessage error={mark.error} />

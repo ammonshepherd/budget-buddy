@@ -57,10 +57,12 @@ test("a rule marks payroll deposits as Income when importing", async ({ page }) 
 
   // The paycheck is in Available to Assign; the refund still waits for review.
   await page.goto("./#budget/2030-01");
-  await expect(available(page)).toContainText("$1,500.00"); // 100 + 1,500 − 100
+  await expect(available(page)).toContainText("$1,600.00"); // 100 + 1,500 (the rest waits)
   await expect(available(page)).toContainText("Income this month $1,500.00");
   await expect(
-    page.getByText("1 inflow ($20.00) is not in Available to Assign yet."),
+    page.getByText(
+      "2 transactions to review ($20.00 in, $100.00 out) are not in Available to Assign yet.",
+    ),
   ).toBeVisible();
 });
 
@@ -84,14 +86,14 @@ test("a rule added later marks the inflows already waiting", async ({ page }) =>
   await expect(status).toHaveCount(0);
 
   await page.goto("./#budget/2030-01");
-  await expect(available(page)).toContainText("$1,500.00");
+  await expect(available(page)).toContainText("$1,600.00");
 
   // Deleting the rule leaves what it marked alone.
   await goTo(page, "Settings");
   await rules(page).getByRole("button", { name: "Delete" }).click();
   await expect(rules(page).getByRole("list", { name: "Income rules" })).toHaveCount(0);
   await page.goto("./#budget/2030-01");
-  await expect(available(page)).toContainText("$1,500.00");
+  await expect(available(page)).toContainText("$1,600.00");
 });
 
 test("Activity applies the rules to the review list", async ({ page }) => {
@@ -102,9 +104,9 @@ test("Activity applies the rules to the review list", async ({ page }) => {
   await addRule(page, "refund");
 
   await goTo(page, "Activity");
-  const review = page.getByRole("region", { name: "Inflows to review" });
-  await expect(review.getByRole("listitem")).toHaveCount(2);
+  const review = page.getByRole("region", { name: "To review" });
+  await expect(review.getByRole("listitem")).toHaveCount(3); // payroll, refund, grocery
   await review.getByRole("button", { name: "Apply income rules (1 match)" }).click();
-  await expect(review.getByRole("listitem")).toHaveCount(1);
+  await expect(review.getByRole("listitem")).toHaveCount(2);
   await expect(review).toContainText("ACME PAYROLL");
 });

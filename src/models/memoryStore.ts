@@ -209,6 +209,12 @@ export function createMemoryStore(): DataStore {
       if (input.isIncome && (input.amount <= 0 || input.envelopeId)) {
         throw new UserFacingError("Income is money coming in, without an envelope");
       }
+      const onCard = b.accounts.find((a) => a.id === input.accountId)?.type === "credit_card";
+      if (onCard && input.amount > 0 && (input.envelopeId || input.isIncome)) {
+        throw new UserFacingError(
+          "A card credit lowers what you owe; it cannot go in an envelope or be Income",
+        );
+      }
       if (input.id) releaseTransfer(input.id);
       const previous = b.transactions.find((t) => t.id === input.id);
       const tx = {
@@ -252,7 +258,7 @@ export function createMemoryStore(): DataStore {
           payee: row.payee,
           memo: row.memo,
           isTransfer: false,
-          isIncome: row.isIncome && row.amount > 0,
+          isIncome: row.isIncome && row.amount > 0 && account.type !== "credit_card",
           transferId: null,
           voided: false,
           allocations: [],
@@ -273,9 +279,15 @@ export function createMemoryStore(): DataStore {
     },
     async markIncome(transactionIds) {
       let marked = 0;
+      const cards = new Set(
+        budget()
+          .accounts.filter((a) => a.type === "credit_card")
+          .map((a) => a.id),
+      );
       for (const tx of budget().transactions) {
         if (
           transactionIds.includes(tx.id) &&
+          !cards.has(tx.accountId) &&
           tx.amount > 0 &&
           !tx.isTransfer &&
           !tx.isIncome &&

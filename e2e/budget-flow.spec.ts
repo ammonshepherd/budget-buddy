@@ -68,9 +68,10 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await expect(sides.filter({ hasText: "Transfer to Savings" })).toContainText("-$5.00");
   await expect(sides.filter({ hasText: "Transfer from Checking" })).toContainText("$5.00");
 
-  // Budget: 1,000 − 300 − 100 − 150 (cover) − 20 (uncategorized); transfer ignored.
+  // Budget: 1,000 − 300 − 100 − 150 (cover); the $20 coffee is still to review
+  // and the transfer is neither spending nor income.
   await goTo(page, "Budget");
-  await expect(available(page)).toContainText("$430.00");
+  await expect(available(page)).toContainText("$450.00");
   await expect(envelope(page, "Groceries").locator(".envelope-remaining")).toHaveText("$0.00");
 
   // Account balance = 1,000 − 50 − 400 − 20 − 5.
@@ -91,7 +92,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await envelopeAction(page, "Fun", "Release from Saved", "40");
   await expect(envelope(page, "Fun").locator(".envelope-remaining")).toHaveText("$40.00");
   await expect(envelope(page, "Fun")).toContainText("Saved $60.00");
-  await expect(available(page)).toContainText("$430.00");
+  await expect(available(page)).toContainText("$450.00");
 });
 
 test("edit and delete a transaction", async ({ page }) => {

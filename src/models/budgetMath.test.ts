@@ -138,19 +138,14 @@ describe("envelopeAsOf", () => {
 });
 
 describe("availableToAssign", () => {
-  it("is opening balances + income − assigned − uncategorized outflows", () => {
+  it("is opening balances + income − assigned", () => {
     expect(
-      availableToAssign({
-        openingBalances: 100_000,
-        income: 300_000,
-        assigned: 250_000,
-        uncategorizedSpent: 20_000,
-      }),
-    ).toBe(130_000);
+      availableToAssign({ openingBalances: 100_000, income: 300_000, assigned: 250_000 }),
+    ).toBe(150_000);
   });
 
-  it("equals budget account balances minus all envelope money", () => {
-    // Two envelopes over two months, plus one uncategorized purchase.
+  it("equals budget account balances minus envelope money, plus spending to review", () => {
+    // Two envelopes over two months, plus one purchase still to review.
     const rent = computeEnvelopeHistory([
       { month: "2026-09", assigned: 120_000, released: 0, spent: 120_000 },
       { month: "2026-10", assigned: 120_000, released: 0, spent: 120_000 },
@@ -171,9 +166,8 @@ describe("availableToAssign", () => {
       openingBalances: opening,
       income,
       assigned: 120_000 + 120_000 + 10_000 + 5_000,
-      uncategorizedSpent: uncategorized,
     });
-    expect(available).toBe(accountBalance - envelopeMoney);
+    expect(available).toBe(accountBalance - envelopeMoney + uncategorized);
   });
 });
 
