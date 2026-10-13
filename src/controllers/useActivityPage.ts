@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { isInflowToReview } from "../models/budgetMath";
+import { inflowsMatchingRules } from "../models/incomeRules";
 import { transferPartner } from "../models/transfers";
 import type { BudgetData, Transaction } from "../models/types";
 import type { Budget } from "./useBudget";
@@ -40,6 +41,8 @@ export function useActivityPage(budget: Budget, data: BudgetData) {
     /** Uncategorized inflows: not in Available to Assign until marked Income (or given an envelope). */
     toReview: toReview.map(row),
     toReviewTotal: toReview.reduce((sum, tx) => sum + tx.amount, 0),
+    /** Inflows to review that an income rule matches (see Settings → Income rules). */
+    ruleMatches: inflowsMatchingRules(data).map((tx) => tx.id),
     hasOpenAccounts: data.accounts.some((a) => !a.closedAt),
 
     deleteTransaction: async (id: string) => {

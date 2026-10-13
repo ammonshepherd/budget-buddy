@@ -4,6 +4,7 @@ import { APP_VERSION } from "../../models/appInfo";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage } from "../components";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
+import { IncomeRules } from "../IncomeRules";
 import { TransactionImport } from "../TransactionImport";
 import { ActivityIcon, SettingsIcon } from "../icons";
 
@@ -58,6 +59,7 @@ export function SettingsPage({
       </section>
 
       <TransactionImport budget={budget} data={data} />
+      <IncomeRules budget={budget} data={data} />
       <EnvelopePlanImport budget={budget} data={data} />
     </section>
   );

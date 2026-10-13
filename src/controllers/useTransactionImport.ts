@@ -98,12 +98,13 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
       if (!account || !format || !preview || preview.rows.length === 0) {
         throw new UserFacingError("There are no new transactions to import.");
       }
-      const rows = preview.rows.map(({ date, amount, payee, memo, importKey }) => ({
+      const rows = preview.rows.map(({ date, amount, payee, memo, importKey, isIncome }) => ({
         date,
         amount,
         payee,
         memo,
         importKey,
+        isIncome,
       }));
       let added = 0;
       await budget.change(async (store) => {

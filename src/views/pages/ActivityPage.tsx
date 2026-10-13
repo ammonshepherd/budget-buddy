@@ -37,7 +37,8 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
           <p className="empty-state">
             <Money cents={page.toReviewTotal} /> came in but is not in Available to Assign yet. Mark
             paychecks and other income as Income; give refunds an envelope, or make a move between
-            accounts a Transfer, with Edit below.
+            accounts a Transfer, with Edit below. <a href="#settings">Income rules</a> can mark
+            paychecks for you.
           </p>
           <ul className="item-list" aria-label="Inflows to review">
             {page.toReview.map(({ tx, accountName }) => (
@@ -60,6 +61,17 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
               </li>
             ))}
           </ul>
+          {page.ruleMatches.length > 0 && (
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={mark.pending}
+              onClick={() => void mark.run(page.ruleMatches)}
+            >
+              Apply income rules ({page.ruleMatches.length}{" "}
+              {page.ruleMatches.length === 1 ? "match" : "matches"})
+            </button>
+          )}
           {page.toReview.length > 1 && (
             <button
               className="secondary-button"

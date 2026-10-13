@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.11.0** (kept in `package.json`).
+The current application version is **0.12.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -100,6 +100,12 @@ Edit to give a refund its envelope or make it a Transfer.
 ```
 Available to Assign = opening balances + income − assigned − spending not in an envelope
 ```
+
+**Income rules** (Settings) mark paychecks for you: a deposit whose description contains
+a rule's text (ignoring case), optionally only in one account, is marked Income when you
+import it. The import preview says how many rows a rule marked. A new rule can also mark
+the inflows already waiting for review, and Activity has **Apply income rules**. Rules
+never touch outflows, transfers or transactions already in an envelope.
 
 ## Adding and editing transactions
 

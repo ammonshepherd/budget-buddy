@@ -31,6 +31,7 @@ function tx(
 function household(): BudgetData {
   return {
     household: { id: "h", name: "Home" },
+    incomeRules: [],
     accounts: [
       {
         id: "checking",

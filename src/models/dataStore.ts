@@ -7,6 +7,7 @@ import type { EnvelopePlanRow } from "./envelopePlan";
 import type { Cents } from "./money";
 import type { Month } from "./month";
 import type { ImportedTransaction, ImportFormat } from "./transactionImport";
+import type { NewIncomeRule } from "./incomeRules";
 import type { TransferInput } from "./transfers";
 import type { AccountType, BudgetData, IsoDate } from "./types";
 
@@ -92,6 +93,9 @@ export interface DataStore {
    * list is left alone. Resolves to how many were marked.
    */
   markIncome(transactionIds: string[]): Promise<number>;
+
+  addIncomeRule(householdId: string, rule: NewIncomeRule): Promise<void>;
+  deleteIncomeRule(ruleId: string): Promise<void>;
   /**
    * All or nothing: adds imported rows to an open account as Uncategorized,
    * skipping any whose import key the account already has, and saves the
