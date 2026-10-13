@@ -4,6 +4,7 @@
  * (supabaseStore.ts, memoryStore.ts) convert to and from these.
  */
 import type { Cents } from "./money";
+import type { ImportFormat } from "./transactionImport";
 
 /** "YYYY-MM-DD" in the household's local calendar. */
 export type IsoDate = string;
@@ -21,6 +22,8 @@ export interface Account {
   onBudget: boolean;
   /** Set when the account is closed; accounts are never deleted. */
   closedAt: string | null;
+  /** Column mapping from this account's last CSV import. */
+  importFormat: ImportFormat | null;
 }
 
 export interface EnvelopeGroup {
@@ -63,6 +66,8 @@ export interface Transaction {
   voided: boolean;
   /** Empty = Uncategorized. */
   allocations: Allocation[];
+  /** Set on imported transactions, to recognise the same bank row again. */
+  importKey: string | null;
 }
 
 /** Everything one household's budget needs, loaded at once. */

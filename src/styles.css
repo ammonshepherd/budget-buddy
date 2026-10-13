@@ -729,3 +729,22 @@ a:focus-visible {
 .envelope.unused small {
   font-weight: 500;
 }
+
+.import-columns,
+.import-skipped {
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.import-columns > summary,
+.import-skipped > summary {
+  cursor: pointer;
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.import-columns[open] > summary,
+.import-skipped[open] > summary {
+  margin-block-end: 0.75rem;
+}

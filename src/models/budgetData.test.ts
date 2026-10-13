@@ -20,6 +20,7 @@ function tx(
     isTransfer: false,
     voided: false,
     allocations: [],
+    importKey: null,
     ...partial,
   };
 }
@@ -36,6 +37,7 @@ function household(): BudgetData {
         openingDate: "2026-09-15",
         onBudget: true,
         closedAt: null,
+        importFormat: null,
       },
       {
         id: "savings",
@@ -44,6 +46,7 @@ function household(): BudgetData {
         openingDate: "2026-09-15",
         onBudget: true,
         closedAt: null,
+        importFormat: null,
       },
     ],
     groups: [{ id: "g", name: "Everyday", position: 0 }],

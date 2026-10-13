@@ -6,6 +6,9 @@ node_modules/
 .env.*
 !.env.example
 
+#ignore private files
+private/
+
 # Build and tool output
 dist/
 coverage/

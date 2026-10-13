@@ -25,6 +25,7 @@ export type Database = {
           created_at: string
           household_id: string
           id: string
+          import_format: Json | null
           name: string
           on_budget: boolean
           opening_balance: number
@@ -36,6 +37,7 @@ export type Database = {
           created_at?: string
           household_id: string
           id?: string
+          import_format?: Json | null
           name: string
           on_budget?: boolean
           opening_balance?: number
@@ -47,6 +49,7 @@ export type Database = {
           created_at?: string
           household_id?: string
           id?: string
+          import_format?: Json | null
           name?: string
           on_budget?: boolean
           opening_balance?: number
@@ -263,6 +266,7 @@ export type Database = {
           date: string
           household_id: string
           id: string
+          import_key: string | null
           is_transfer: boolean
           memo: string
           payee: string
@@ -276,6 +280,7 @@ export type Database = {
           date: string
           household_id: string
           id?: string
+          import_key?: string | null
           is_transfer?: boolean
           memo?: string
           payee?: string
@@ -289,6 +294,7 @@ export type Database = {
           date?: string
           household_id?: string
           id?: string
+          import_key?: string | null
           is_transfer?: boolean
           memo?: string
           payee?: string
@@ -330,6 +336,10 @@ export type Database = {
       import_envelope_plan: {
         Args: { p_household_id: string; p_month: string; p_rows: Json }
         Returns: undefined
+      }
+      import_transactions: {
+        Args: { p_account_id: string; p_format: Json; p_rows: Json }
+        Returns: number
       }
       move_between_envelopes: {
         Args: {
