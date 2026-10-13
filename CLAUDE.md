@@ -116,6 +116,10 @@ envelope money (P included)`.
   envelopes always show). Others sit behind a "show unused" toggle. Money is
   never hidden. Rule lives in `envelopeInUse` in `budgetMath.ts`.
 - Imported transactions arrive Uncategorized (imported inflows are to review).
+- The Budget page is for envelopes: no page title or summary totals; Available
+  to Assign is a sticky bar at the top, hidden when it is exactly $0.00 (shown
+  when positive or over assigned); the month picker sits above it; envelopes
+  are added with each group's + button; groups are added/deleted in Settings.
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount.
 - Accounts are closed (soft delete), never deleted with their transactions.

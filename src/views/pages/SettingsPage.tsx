@@ -3,6 +3,7 @@ import type { Budget } from "../../controllers/useBudget";
 import { APP_VERSION } from "../../models/appInfo";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage } from "../components";
+import { EnvelopeGroups } from "../EnvelopeGroups";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { IncomeRules } from "../IncomeRules";
 import { TransactionImport } from "../TransactionImport";
@@ -58,6 +59,7 @@ export function SettingsPage({
         <ErrorMessage error={signOut.error} />
       </section>
 
+      <EnvelopeGroups budget={budget} data={data} />
       <TransactionImport budget={budget} data={data} />
       <IncomeRules budget={budget} data={data} />
       <EnvelopePlanImport budget={budget} data={data} />

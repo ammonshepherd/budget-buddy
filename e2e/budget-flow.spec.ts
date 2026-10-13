@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  addGroupWithEnvelopes,
   addTransaction,
   available,
   envelope,
@@ -24,13 +25,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   // Group and envelopes.
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$1,000.00");
-  await page.getByLabel("Group name").fill("Everyday");
-  await page.getByRole("button", { name: "Add group" }).click();
-  for (const name of ["Groceries", "Fun"]) {
-    await page.getByLabel("New envelope").fill(name);
-    await page.getByRole("button", { name: "Add envelope" }).click();
-    await expect(envelope(page, name)).toBeVisible();
-  }
+  await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
 
   // Assign, and the block when Available to Assign is insufficient.
   await envelopeAction(page, "Groceries", "Assign (negative to take back)", "300");

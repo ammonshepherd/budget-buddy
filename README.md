@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.12.0** (kept in `package.json`).
+The current application version is **0.13.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -85,6 +85,15 @@ One-time setup:
   `.env.local`.
 - **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
   and as a redirect URL.
+
+## The Budget page
+
+The Budget page is built to show as many envelopes as possible. **Available to Assign**
+(with this month's income) stays fixed at the top while the envelopes scroll under it.
+It disappears when there is nothing left to assign ($0.00) and comes back as a warning
+when you are over assigned. The month picker sits just above it. Each group has a **+** button to add an
+envelope; groups themselves are added and deleted (when empty) in **Settings →
+Envelope groups**. Tap an envelope to assign, release from Saved or set its plan.
 
 ## Income and Available to Assign
 
