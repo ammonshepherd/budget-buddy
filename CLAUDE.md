@@ -126,7 +126,7 @@ non-card budget balances − all envelope money (P included)`.
   when positive or over assigned); the month picker sits above it; envelopes
   are added with each group's + button; groups are added/deleted in Settings.
 - Envelope rows show Spent without refunds (`outflow`; refunds only raise
-  Remaining, math unchanged) and a prominent, sparkling Saved. A card's payment
+  Remaining, math unchanged) and a Saved that turns large, purple and sparkling once above $0.00. A card's payment
   envelope shows only Available to pay (Saved + Remaining) and Remaining debt
   (Uncovered).
 - Categories are applied through `transaction_allocations` (one row for a normal

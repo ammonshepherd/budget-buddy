@@ -96,8 +96,8 @@ envelope; groups themselves are added and deleted (when empty) in **Settings →
 Envelope groups**. Tap an envelope to assign, release from Saved or set its plan.
 
 Each envelope shows Plan, Assigned, Spent and **Saved**. Spent is only money that went
-out: a refund into the envelope just raises what is left. Saved is larger and purple,
-with a sparkle once there is money in it, to encourage leaving money unspent. A credit
+out: a refund into the envelope just raises what is left. Once there is money in
+Saved it turns larger, purple and sparkly, to encourage leaving money unspent. A credit
 card's payment envelope shows only **Available to pay** and the **Remaining debt**
 after that.
 

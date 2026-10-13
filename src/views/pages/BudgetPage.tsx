@@ -244,15 +244,23 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
   );
 }
 
-/** Saved stands out (bigger, purple, and sparkling when there is some) to encourage saving. */
+/**
+ * Saved stays a plain figure at $0.00. Once money is saved it stands out
+ * (bigger, purple and sparkling) to encourage saving.
+ */
 function SavedAmount({ cents }: { cents: number }) {
+  if (cents <= 0) {
+    return (
+      <span>
+        Saved <Money cents={cents} />
+      </span>
+    );
+  }
   return (
-    <span className={cents > 0 ? "saved-amount sparkle" : "saved-amount"}>
-      {cents > 0 && (
-        <span className="sparkle-icon" aria-hidden="true">
-          ✨
-        </span>
-      )}
+    <span className="saved-amount sparkle">
+      <span className="sparkle-icon" aria-hidden="true">
+        ✨
+      </span>
       Saved <Money cents={cents} />
     </span>
   );
