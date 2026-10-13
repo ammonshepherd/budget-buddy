@@ -7,10 +7,14 @@ import {
 } from "../models/budgetMath";
 import { UserFacingError, type DataStore, type TransactionInput } from "../models/dataStore";
 import { monthOf, todayIso, type Month } from "../models/month";
+import { formatCents } from "../models/money";
 import {
+  daysBetween,
   planTransfer,
+  transferChoices,
   transferPartner,
   type OtherSide,
+  type OtherSideChoice,
   type TransferInput,
 } from "../models/transfers";
 import type { Account, BudgetData, Transaction } from "../models/types";
@@ -33,6 +37,8 @@ export interface TransactionForm {
   category: string;
   /** For a transfer: the other account ("" = the first one that fits). */
   transferAccountId: string;
+  /** For a transfer: which transaction is the other side (see OtherSideChoice). */
+  transferMatch: OtherSideChoice;
 }
 
 /** What saving will do: one transaction, or both sides of a transfer. */
@@ -70,6 +76,7 @@ export function formFromTransaction(tx: Transaction, data: BudgetData): Transact
     memo: tx.memo,
     category: tx.isTransfer ? TRANSFER : (tx.allocations[0]?.envelopeId ?? ""),
     transferAccountId: transferPartner(data, tx)?.accountId ?? "",
+    transferMatch: "auto",
   };
 }
 
@@ -84,6 +91,7 @@ export function blankTransactionForm(data: BudgetData): TransactionForm {
     memo: "",
     category: "",
     transferAccountId: "",
+    transferMatch: "auto",
   };
 }
 
@@ -131,7 +139,7 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
     const otherAccountId = transferAccountOf(form);
     if (!otherAccountId) throw new UserFacingError("Add another account to transfer to or from.");
     const existing = data.transactions.find((t) => t.id === form.id);
-    return planTransfer(data, side, otherAccountId, existing);
+    return planTransfer(data, side, otherAccountId, existing, form.transferMatch);
   };
 
   /** The first envelope saving would overdraw (see checkTransactionSpend), with its month. */
@@ -159,6 +167,51 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
     transferAccountOf,
 
     /**
+     * For a transfer with more than one possible other side: the choices, and
+     * which one saving would use. Null when there is nothing to choose.
+     */
+    transferOptions: (
+      form: TransactionForm,
+    ): { selected: string; options: { value: string; label: string }[] } | null => {
+      if (form.category !== TRANSFER) return null;
+      let side: TransactionInput;
+      let other: OtherSide;
+      try {
+        side = toInput(form);
+        other = toTransfer(form).other;
+      } catch {
+        return null;
+      }
+      const existing = data.transactions.find((t) => t.id === form.id);
+      const choices = transferChoices(data, side, transferAccountOf(form), existing);
+      const describe = (tx: Transaction) => {
+        const days = daysBetween(side.date, tx.date);
+        const when =
+          days === 0
+            ? "same day"
+            : `${Math.abs(days)} ${Math.abs(days) === 1 ? "day" : "days"} ${days < 0 ? "earlier" : "later"}`;
+        return `${tx.date} · ${tx.payee || "no description"} · ${formatCents(tx.amount)} (${when})`;
+      };
+      const options = [
+        ...(choices.partner
+          ? [
+              {
+                value: choices.partner.id,
+                label:
+                  choices.partner.importKey === null
+                    ? "Keep the side you typed in (updated to match)"
+                    : `Keep ${describe(choices.partner)}`,
+              },
+            ]
+          : []),
+        ...choices.matches.map((tx) => ({ value: tx.id, label: describe(tx) })),
+        ...(choices.canAddNew ? [{ value: "new", label: "Add a new transaction instead" }] : []),
+      ];
+      if (options.length < 2) return null;
+      return { selected: other.kind === "new" ? "new" : other.tx.id, options };
+    },
+
+    /**
      * For a transfer: what happens to the other account, in words, or null.
      * Shown under the account choice so a matched bank row is no surprise.
      */
@@ -174,7 +227,11 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
       if (other.kind === "match") {
         return `Links to the ${name} transaction on ${other.tx.date} (${other.tx.payee || "no description"}), so it is not added twice.`;
       }
-      if (other.kind === "partner") return `Also updates the ${name} side.`;
+      if (other.kind === "partner") {
+        return other.tx.importKey === null
+          ? `Also updates the ${name} side.`
+          : `Stays linked to the ${name} bank row from ${other.tx.date}.`;
+      }
       return `Also adds the matching ${form.direction === "outflow" ? "inflow" : "outflow"} in ${name}.`;
     },
     groups: [...data.groups]

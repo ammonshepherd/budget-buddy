@@ -16,6 +16,12 @@ async function addAccount(page: Page, name: string, balance: string) {
   await expect(page.locator(".item", { hasText: name }).first()).toBeVisible();
 }
 
+/** The Activity row whose title is exactly `title` (text matching ignores case). */
+const row = (page: Page, title: string) =>
+  page
+    .locator(".item")
+    .filter({ has: page.locator(".item-title", { hasText: new RegExp(`^${title}$`) }) });
+
 async function importCsv(page: Page, account: string, name: string, text: string) {
   await goTo(page, "Settings");
   const card = page.getByRole("region", { name: "Import transactions" });
@@ -114,4 +120,101 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
   await form.getByRole("button", { name: "Save changes" }).click();
   await expect(rows).toHaveCount(1);
   await expect(rows).toContainText("Checking · Uncategorized");
+});
+
+test("pick a different bank row, or a new transaction, as the other side", async ({ page }) => {
+  await signInWithHousehold(page);
+  await addAccount(page, "Checking", "1000");
+  await addAccount(page, "Savings", "0");
+  await importCsv(
+    page,
+    "Checking",
+    "checking.csv",
+    "Date,Description,Amount\n01/05/2030,TO SAVINGS,-200.00",
+  );
+  // Two made-up $200 rows: the closest is not the right one.
+  await importCsv(
+    page,
+    "Savings",
+    "savings.csv",
+    "Date,Description,Amount\n01/06/2030,BIRTHDAY GIFT,200.00\n01/20/2030,FROM CHECKING,200.00",
+  );
+
+  await goTo(page, "Activity");
+  const out = page.locator(".item", { hasText: "TO SAVINGS" });
+  await out.getByRole("button", { name: "Edit" }).click();
+  const form = page.getByRole("form", { name: "Edit transaction" });
+  await form.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  const otherSide = form.getByLabel("Other side");
+  // The closest row is chosen first; the later one and "new" are offered.
+  await expect(otherSide.locator("option:checked")).toHaveText(
+    "2030-01-06 · BIRTHDAY GIFT · $200.00 (1 day later)",
+  );
+  await expect(otherSide.locator("option")).toHaveText([
+    "2030-01-06 · BIRTHDAY GIFT · $200.00 (1 day later)",
+    "2030-01-20 · FROM CHECKING · $200.00 (15 days later)",
+    "Add a new transaction instead",
+  ]);
+  await otherSide.selectOption({ label: "2030-01-20 · FROM CHECKING · $200.00 (15 days later)" });
+  await expect(form.getByRole("note")).toHaveText(
+    "Links to the Savings transaction on 2030-01-20 (FROM CHECKING), so it is not added twice.",
+  );
+  await form.getByRole("button", { name: "Save changes" }).click();
+  await expect(row(page, "FROM CHECKING")).toContainText("Transfer from Checking");
+  await expect(row(page, "BIRTHDAY GIFT")).toContainText("Uncategorized");
+
+  // Change it to a new transaction: the bank row goes back to Uncategorized.
+  await out.getByRole("button", { name: "Edit" }).click();
+  await expect(otherSide.locator("option:checked")).toHaveText(
+    "Keep 2030-01-20 · FROM CHECKING · $200.00 (15 days later)",
+  );
+  await otherSide.selectOption({ label: "Add a new transaction instead" });
+  await expect(form.getByRole("note")).toHaveText("Also adds the matching inflow in Savings.");
+  await form.getByRole("button", { name: "Save changes" }).click();
+  await expect(row(page, "FROM CHECKING")).toContainText("Uncategorized");
+  await expect(page.locator(".item", { hasText: "Transfer from Checking" })).toContainText(
+    "2030-01-05 · Savings",
+  );
+  await expect(page.locator(".item")).toHaveCount(4);
+});
+
+test("swap a typed-in side for the bank row that arrives later", async ({ page }) => {
+  await signInWithHousehold(page);
+  await addAccount(page, "Checking", "1000");
+  await addAccount(page, "Savings", "0");
+
+  await goTo(page, "Activity");
+  await page.getByRole("button", { name: "Add transaction", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add a transaction" });
+  await dialog.getByLabel("Amount").fill("50");
+  await dialog.getByLabel("Payee").fill("Typed move");
+  await dialog.getByLabel("Date").fill("2030-01-10");
+  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await expect(dialog.getByLabel("Other side")).toHaveCount(0); // nothing to choose yet
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+
+  await importCsv(
+    page,
+    "Savings",
+    "savings.csv",
+    "Date,Description,Amount\n01/11/2030,ONLINE TRANSFER,50.00",
+  );
+  await goTo(page, "Activity");
+  await page
+    .locator(".item", { hasText: "Transfer to Savings" })
+    .getByRole("button", { name: "Edit" })
+    .click();
+  const form = page.getByRole("form", { name: "Edit transaction" });
+  await expect(form.getByLabel("Other side").locator("option")).toHaveText([
+    "Keep the side you typed in (updated to match)",
+    "2030-01-11 · ONLINE TRANSFER · $50.00 (1 day later)",
+  ]);
+  await form.getByLabel("Other side").selectOption({ index: 1 });
+  await form.getByRole("button", { name: "Save changes" }).click();
+
+  // The typed-in Savings side is gone; the bank row is now the other side.
+  await expect(page.locator(".item")).toHaveCount(2);
+  await expect(page.locator(".item", { hasText: "ONLINE TRANSFER" })).toContainText(
+    "Transfer from Checking",
+  );
 });

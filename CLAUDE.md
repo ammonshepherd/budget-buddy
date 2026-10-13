@@ -119,7 +119,9 @@ Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Pl
   no one-sided transfers. One entry saves both (`save_transfer`), linking the other
   account's matching bank row when there is one (`findTransferMatch` in
   `src/models/transfers.ts`: unlinked, uncategorized, opposite amount, within 7
-  days). Deleting or un-transferring one side deletes a typed-in other side and
+  days). The form's "Other side" can pick another candidate (within 31 days) or a
+  new transaction (`OtherSideChoice`); a stale choice falls back to automatic.
+  Deleting or un-transferring one side deletes a typed-in other side and
   keeps an imported one as an Uncategorized row.
 - A card payment the cover prompt cannot cover is never suggested as Uncategorized
   (that would hide the cash it spent): assign or add income first.
