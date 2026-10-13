@@ -62,10 +62,10 @@ export function BudgetPage({
 
       {view.toReview.count > 0 && (
         <p className="notice compact">
-          {view.toReview.count} {view.toReview.count === 1 ? "inflow" : "inflows"} (
-          <Money cents={view.toReview.amount} />) {view.toReview.count === 1 ? "is" : "are"} not in
-          Available to Assign yet. <a href="#activity">Review them on Activity</a>: mark income as
-          Income.
+          {view.toReview.count} {view.toReview.count === 1 ? "transaction" : "transactions"} to
+          review (<Money cents={view.toReview.inflow} /> in, <Money cents={view.toReview.outflow} />{" "}
+          out) {view.toReview.count === 1 ? "is" : "are"} not in Available to Assign yet.{" "}
+          <a href="#activity">Review them on Activity</a>.
         </p>
       )}
 

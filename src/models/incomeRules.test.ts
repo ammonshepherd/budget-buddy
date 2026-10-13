@@ -56,6 +56,7 @@ describe("inflowsMatchingRules", () => {
 
   it("finds only inflows still to review", () => {
     const data = {
+      accounts: [],
       incomeRules: [rule],
       transactions: [
         tx({ id: "match", amount: 100, payee: "ACME PAYROLL" }),

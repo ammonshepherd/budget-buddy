@@ -180,10 +180,14 @@ function TransactionEditor({
   const save = useAsyncAction(entry.prepare);
   const remove = useAsyncAction(async () => onDelete?.());
   const transfer = form.category === TRANSFER;
+  const cardCredit = entry.isCardCredit(form);
   const transferNote = entry.describeTransfer(form);
   const transferOptions = entry.transferOptions(form);
   const update = (change: Partial<TransactionForm>) => {
-    setForm({ ...form, ...change });
+    const next = { ...form, ...change };
+    // A card credit has no envelope: drop one picked before switching to it.
+    const keep = next.category === "" || next.category === TRANSFER;
+    setForm(entry.isCardCredit(next) && !keep ? { ...next, category: "" } : next);
     save.clearError();
   };
 
@@ -229,19 +233,26 @@ function TransactionEditor({
       <label className="field">
         Envelope
         <select value={form.category} onChange={(e) => update({ category: e.target.value })}>
-          <option value="">Uncategorized</option>
-          <option value={INCOME} disabled={form.direction === "outflow"}>
-            Income (to Available to Assign)
-          </option>
-          {entry.groups.map((group) => (
-            <optgroup key={group.id} label={group.name}>
-              {group.envelopes.map((envelope) => (
-                <option key={envelope.id} value={envelope.id}>
-                  {envelope.name}
-                </option>
+          {cardCredit ? (
+            // Money into a card only lowers what is owed (or is a payment).
+            <option value="">Card credit (lowers what you owe)</option>
+          ) : (
+            <>
+              <option value="">Uncategorized</option>
+              <option value={INCOME} disabled={form.direction === "outflow"}>
+                Income (to Available to Assign)
+              </option>
+              {entry.groups.map((group) => (
+                <optgroup key={group.id} label={group.name}>
+                  {group.envelopes.map((envelope) => (
+                    <option key={envelope.id} value={envelope.id}>
+                      {envelope.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
-            </optgroup>
-          ))}
+            </>
+          )}
           <option value={TRANSFER} disabled={entry.openAccounts.length < 2}>
             Transfer (not spending or income)
           </option>

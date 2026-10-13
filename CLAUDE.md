@@ -51,24 +51,26 @@ Envelope money = Saved + Remaining
 - Planned is user input only; it affects no other number.
 - "Copy last month's spending into Planned" is supported.
 
-Available to Assign (equivalent to budget account balances − all envelope money −
-inflows to review, but valid for any month):
+Available to Assign (equivalent to non-card budget balances − all envelope money
+− inflows to review + outflows to review, but valid for any month):
 
 ```
-Available to Assign(M) = opening balances of budget accounts
+Available to Assign(M) = opening balances of budget accounts (cards excluded)
                        + income through end of M      (inflows marked Income only)
                        − all Assigned through M
-                       − uncategorized outflows through M
 Over Assigned = max(0, −Available to Assign)
 ```
 
-Income is explicit (decided in v0.11.0, option B): an inflow counts only once it
-is marked Income (`transactions.is_income`; never in an envelope, never a
-transfer, always positive). An inflow that is Uncategorized is an **inflow to
-review**: it counts toward nothing until it is marked Income, given an envelope
-(a refund) or made a transfer. Uncategorized outflows still lower Available to
-Assign at once. The Budget page shows this month's income and how many inflows
-are waiting for review; Activity lists them with "Mark as Income".
+Transactions to review (decided in v0.11.0 for inflows, v0.14.0 for outflows):
+an Uncategorized transaction counts toward nothing until it is decided. An
+inflow counts only once it is marked Income (`transactions.is_income`; never in
+an envelope, never a transfer, always positive) or given an envelope (a refund,
+which only adds to that envelope). An outflow counts only once it is given an
+envelope (the envelope pays; Available to Assign does not change) or made a
+transfer. So giving a transaction an envelope never moves Available to Assign;
+only income, assigning, and covering a shortfall from Available to Assign do.
+The Budget page shows this month's income and how many transactions wait for
+review (money in and out); Activity lists them ("To review", "Mark as Income").
 Income rules (`income_rules`, `src/models/incomeRules.ts`) mark inflows whose
 description contains a rule's text (case- and space-insensitive; optionally one
 account) as Income: at import (the preview sets `isIncome` per row) and, on
@@ -76,32 +78,35 @@ request, over inflows to review. They never change anything else.
 
 Releasing Saved does not change Available to Assign (money stays in the envelope).
 
-### Credit cards (decided in v0.8.0)
+### Credit cards (decided in v0.8.0, card credits in v0.14.0)
 
 Each credit card account C has one payment envelope P (`categories.card_account_id`,
 created by a database trigger in the "Credit card payments" group). P follows the
-envelope formulas above, with card activity as its Spent:
+envelope formulas above, with the card's settled activity as its Spent:
 
 ```
-Spent_P(M)   = Σ card transaction amounts in M   (outflows fill P, inflows empty it)
+Spent_P(M)   = Σ amounts in M of card purchases in an envelope and card transfers
 Owed         = −card balance
 Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Planned)
 ```
 
-- Card outflow in an envelope: money moves from that envelope into P. Uncategorized:
-  from Available to Assign into P. Transfer out of the card (cash advance): into P.
-- Card inflow marked Transfer (a payment) or categorized (a refund): out of P. If P
-  would go negative, the cover prompt runs (release P's Saved, move, assign).
-- Card inflow marked Income (cashback): leaves P only as far as P's Remaining reaches
-  and that part is income; the rest only lowers Owed. A card inflow still to review
-  touches neither P nor Available to Assign (it only lowers Owed).
-- Available to Assign leaves out card opening balances, and counts only that part of
-  Income card inflows as income. Identity:
-  `Available to Assign + non-card inflows to review = non-card budget balances − all
-envelope money (P included)`.
+- Card purchase in an envelope: money moves from that envelope into P. Transfer out
+  of the card (cash advance): into P. A card purchase still to review touches
+  neither P nor Available to Assign (it only raises Owed).
+- Card inflow marked Transfer (a payment): out of P. If P would go negative, the
+  cover prompt runs (release P's Saved, move, assign).
+- Any other card inflow is a **card credit** (refund, cashback, statement credit):
+  it only lowers Owed. Never in an envelope, never Income, never to review, never
+  prompts, and it leaves P alone (money P holds for a refunded purchase then
+  covers the rest of the debt). Enforced by the allocation trigger and the stores.
+- Available to Assign leaves out card opening balances. Identity:
+  `Available to Assign + non-card inflows to review − non-card outflows to review =
+non-card budget balances − all envelope money (P included)`.
 - Transactions are never categorized to P; P cannot be deleted while its card is open;
   an open card's P always shows on the Budget page. Card purchases filling P do not
   count in the month's Spent total.
+- Only money taken out can need covering: spending in an envelope, or a card
+  payment from P. Refunds and card credits never prompt.
 
 ## Rules
 
@@ -115,7 +120,7 @@ envelope money (P included)`.
   month record, spending that month, or money in Saved/Remaining; never-used
   envelopes always show). Others sit behind a "show unused" toggle. Money is
   never hidden. Rule lives in `envelopeInUse` in `budgetMath.ts`.
-- Imported transactions arrive Uncategorized (imported inflows are to review).
+- Imported transactions arrive Uncategorized (to review), except card credits.
 - The Budget page is for envelopes: no page title or summary totals; Available
   to Assign is a sticky bar at the top, hidden when it is exactly $0.00 (shown
   when positive or over assigned); the month picker sits above it; envelopes

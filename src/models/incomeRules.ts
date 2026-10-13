@@ -5,7 +5,7 @@
  * request over the inflows waiting for review. Only inflows that are still
  * to review (not in an envelope, not a transfer) are ever marked.
  */
-import { isInflowToReview } from "./budgetMath";
+import { isToReview } from "./budgetMath";
 import { UserFacingError } from "./dataStore";
 import type { Cents } from "./money";
 import type { BudgetData, Transaction } from "./types";
@@ -52,9 +52,14 @@ export function incomeRuleFor(
   return rules.find((rule) => matchesIncomeRule(rule, inflow)) ?? null;
 }
 
-/** Inflows waiting for review that a rule would mark as Income. */
+/** Inflows waiting for review (never on a card: those are card credits) that a rule would mark as Income. */
 export function inflowsMatchingRules(data: BudgetData, rules = data.incomeRules): Transaction[] {
+  const cards = new Set(data.accounts.filter((a) => a.type === "credit_card").map((a) => a.id));
   return data.transactions.filter(
-    (tx) => isInflowToReview(tx) && incomeRuleFor(rules, tx) !== null,
+    (tx) =>
+      !cards.has(tx.accountId) &&
+      tx.amount > 0 &&
+      isToReview(tx, false) &&
+      incomeRuleFor(rules, tx) !== null,
   );
 }

@@ -103,24 +103,26 @@ describe("accountBalance", () => {
 });
 
 describe("availableToAssignFor", () => {
-  it("counts opening balances, uncategorized income and outflows, ignoring transfers and voids", () => {
+  it("counts opening balances, income and assigned, ignoring transfers, voids and spending to review", () => {
     const data = household();
     expect(availableToAssignFor(data, "2026-09")).toBe(150_000 - 40_000);
-    expect(availableToAssignFor(data, "2026-10")).toBe(150_000 + 200_000 - 80_000 - 2_000);
+    // The $20 "cash" outflow is still to review, so it is not counted yet.
+    expect(availableToAssignFor(data, "2026-10")).toBe(150_000 + 200_000 - 80_000);
   });
 
   it("ignores accounts before their opening month", () => {
     expect(availableToAssignFor(household(), "2026-08")).toBe(0);
   });
 
-  it("equals on-budget balances minus all envelope money", () => {
+  it("equals on-budget balances minus all envelope money, plus spending to review", () => {
     const data = household();
     const view = buildBudgetMonth(data, "2026-10");
     const balances = accountBalance("checking", data) + accountBalance("savings", data);
     const envelopeMoney = view.groups
       .flatMap((g) => g.envelopes)
       .reduce((sum, e) => sum + e.envelopeMoney, 0);
-    expect(view.availableToAssign).toBe(balances - envelopeMoney);
+    expect(view.toReview).toEqual({ count: 1, inflow: 0, outflow: 2_000 });
+    expect(view.availableToAssign).toBe(balances - envelopeMoney + view.toReview.outflow);
   });
 
   it("counts a card without a payment envelope like any budget account", () => {
@@ -157,7 +159,7 @@ describe("availableToAssignFor", () => {
     );
 
     // The amount owed when the card opened is already out of Available to Assign.
-    expect(before).toBe(150_000 + 200_000 - 80_000 - 2_000 - 20_000);
+    expect(before).toBe(150_000 + 200_000 - 80_000 - 20_000);
     expect(availableToAssignFor(data, "2026-10")).toBe(before);
     expect(accountBalance("card", data)).toBe(-20_000 - 4_000 + 15_000);
     const view = buildBudgetMonth(data, "2026-10");
@@ -170,7 +172,7 @@ describe("availableToAssignFor", () => {
     const envelopeMoney = view.groups
       .flatMap((g) => g.envelopes)
       .reduce((sum, e) => sum + e.envelopeMoney, 0);
-    expect(view.availableToAssign).toBe(balances - envelopeMoney);
+    expect(view.availableToAssign).toBe(balances - envelopeMoney + view.toReview.outflow);
   });
 });
 
@@ -206,7 +208,7 @@ describe("buildBudgetMonth", () => {
 describe("assignableIn", () => {
   it("is limited by later months so assigning never over-assigns the future", () => {
     const data = household();
-    // September alone has 110,000 available, but October has only 68,000 left,
+    // September alone has 110,000 available, but October has only 70,000 left,
     // and assigning in September lowers October too.
     data.envelopeMonths.push({
       envelopeId: "fun",
@@ -216,8 +218,8 @@ describe("assignableIn", () => {
       planned: 0,
     });
     expect(availableToAssignFor(data, "2026-09")).toBe(110_000);
-    expect(availableToAssignFor(data, "2026-10")).toBe(68_000);
-    expect(assignableIn(data, "2026-09")).toBe(68_000);
+    expect(availableToAssignFor(data, "2026-10")).toBe(70_000);
+    expect(assignableIn(data, "2026-09")).toBe(70_000);
   });
 
   it("is never negative", () => {
@@ -381,7 +383,10 @@ describe("envelopes in use per month", () => {
   });
 });
 
-describe("income and inflows to review", () => {
+describe("income and transactions to review", () => {
+  // The fixture already has one outflow to review: the $20 "cash".
+  const cash = { count: 1, inflow: 0, outflow: 2_000 };
+
   it("counts an inflow only once it is marked Income", () => {
     const data = household();
     const before = availableToAssignFor(data, "2026-10");
@@ -392,37 +397,96 @@ describe("income and inflows to review", () => {
     // Still to review: not in Available to Assign, listed for review.
     let view = buildBudgetMonth(data, "2026-10");
     expect(view.availableToAssign).toBe(before);
-    expect(view.toReview).toEqual({ count: 1, amount: 7_500 });
+    expect(view.toReview).toEqual({ count: 2, inflow: 7_500, outflow: 2_000 });
     expect(view.income).toBe(200_000);
 
     // Marked Income: it counts, and shows in this month's income.
     data.transactions.find((t) => t.id === "deposit")!.isIncome = true;
     view = buildBudgetMonth(data, "2026-10");
     expect(view.availableToAssign).toBe(before + 7_500);
-    expect(view.toReview).toEqual({ count: 0, amount: 0 });
+    expect(view.toReview).toEqual(cash);
     expect(view.income).toBe(207_500);
     expect(buildBudgetMonth(data, "2026-11").income).toBe(0);
   });
 
-  it("still lowers Available to Assign for spending not yet in an envelope", () => {
+  it("does not change Available to Assign when spending to review gets an envelope", () => {
     const data = household();
     const before = availableToAssignFor(data, "2026-10");
     data.transactions.push(tx({ id: "shop", date: "2026-10-20", amount: -1_000 }));
-    expect(availableToAssignFor(data, "2026-10")).toBe(before - 1_000);
+    expect(availableToAssignFor(data, "2026-10")).toBe(before);
+
+    // Given the Fun envelope ($100 Remaining): Fun pays, Available to Assign stays.
+    data.transactions.find((t) => t.id === "shop")!.allocations = [
+      { envelopeId: "fun", amount: -1_000 },
+    ];
+    const view = buildBudgetMonth(data, "2026-10");
+    expect(view.availableToAssign).toBe(before);
+    expect(view.groups[0]!.envelopes.find((e) => e.id === "fun")!.remaining).toBe(9_000);
   });
 
-  it("keeps every dollar accounted for: Available + to review = balances − envelope money", () => {
+  it("lowers Available to Assign by exactly what is assigned to cover a shortfall", () => {
+    const data = household();
+    const before = availableToAssignFor(data, "2026-10");
+    // A $150 purchase into Fun ($100 Remaining), covered with $50 from Available to Assign.
+    data.transactions.push(
+      tx({
+        id: "big",
+        date: "2026-10-20",
+        amount: -15_000,
+        allocations: [{ envelopeId: "fun", amount: -15_000 }],
+      }),
+    );
+    data.envelopeMonths.find((r) => r.envelopeId === "fun" && r.month === "2026-10")!.assigned +=
+      5_000;
+    const view = buildBudgetMonth(data, "2026-10");
+    expect(view.availableToAssign).toBe(before - 5_000);
+    expect(view.groups[0]!.envelopes.find((e) => e.id === "fun")).toMatchObject({
+      assigned: 15_000,
+      remaining: 0,
+    });
+  });
+
+  it("adds a refund in an envelope to that envelope only", () => {
+    const data = household();
+    const before = availableToAssignFor(data, "2026-10");
+    data.transactions.push(
+      tx({
+        id: "refund",
+        date: "2026-10-20",
+        amount: 2_500,
+        allocations: [{ envelopeId: "fun", amount: 2_500 }],
+      }),
+    );
+    const view = buildBudgetMonth(data, "2026-10");
+    expect(view.availableToAssign).toBe(before);
+    expect(view.groups[0]!.envelopes.find((e) => e.id === "fun")!.remaining).toBe(12_500);
+    expect(
+      checkTransactionSpend(data, {
+        accountId: "checking",
+        date: "2026-10-21",
+        amount: 2_500,
+        envelopeId: "food",
+        isTransfer: false,
+      }),
+    ).toBeNull(); // a refund never needs covering, even into an empty envelope
+  });
+
+  it("keeps every dollar accounted for", () => {
     const data = household();
     data.transactions.push(
       tx({ id: "deposit", date: "2026-10-20", amount: 7_500 }),
       tx({ id: "gift", date: "2026-10-21", amount: 2_500, accountId: "savings" }),
+      tx({ id: "shop", date: "2026-10-22", amount: -1_000 }),
     );
     const view = buildBudgetMonth(data, "2026-10");
     const balances = accountBalance("checking", data) + accountBalance("savings", data);
     const envelopeMoney = view.groups
       .flatMap((g) => g.envelopes)
       .reduce((sum, e) => sum + e.envelopeMoney, 0);
-    expect(view.toReview.amount).toBe(10_000);
-    expect(view.availableToAssign + view.toReview.amount).toBe(balances - envelopeMoney);
+    expect(view.toReview).toEqual({ count: 4, inflow: 10_000, outflow: 3_000 });
+    // Available + inflows to review − outflows to review = balances − envelope money
+    expect(view.availableToAssign + view.toReview.inflow - view.toReview.outflow).toBe(
+      balances - envelopeMoney,
+    );
   });
 });

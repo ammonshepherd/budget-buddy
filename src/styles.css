@@ -603,7 +603,9 @@ a:focus-visible {
   padding: 0 0 1rem;
 }
 
-.item {
+/* .review-row: a row of Activity's To review list, laid out like .item. */
+.item,
+.review-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.15rem 0.75rem;
@@ -985,4 +987,13 @@ a:focus-visible {
 
 .group-card {
   padding-inline: 0.7rem;
+}
+
+/* ---- v0.14.0: review list rows (tap to edit, plus Mark as Income) -------- */
+
+.review-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
 }

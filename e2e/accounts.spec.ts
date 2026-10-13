@@ -26,10 +26,11 @@ test("edit an account's name, opening balance and opening date", async ({ page }
   await expect(edited).toContainText("$1,250.50");
   await expect(edited).toContainText("opened 2026-01-01 with $1,250.50");
 
-  // The new opening balance flows into the balance and Available to Assign.
+  // The new opening balance flows into Available to Assign. (The purchase is
+  // still to review, so it does not count until it gets an envelope.)
   await addTransaction(page, { amount: "50.50", payee: "Groceries" });
   await goTo(page, "Budget");
-  await expect(available(page)).toContainText("$1,200.00");
+  await expect(available(page)).toContainText("$1,250.50");
 
   // The opening date cannot move past the account's first transaction.
   await goTo(page, "Accounts");

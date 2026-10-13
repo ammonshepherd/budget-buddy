@@ -112,6 +112,11 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
 
   const openAccounts = data.accounts.filter((a) => !a.closedAt);
 
+  /** An inflow on a credit card: a card credit (or a payment, if Transfer). */
+  const isCardCredit = (form: TransactionForm) =>
+    form.direction === "inflow" &&
+    data.accounts.find((a) => a.id === form.accountId)?.type === "credit_card";
+
   /** Open accounts a transfer from `accountId` can go to (or come from). */
   const otherAccounts = (accountId: string): Account[] =>
     openAccounts.filter((a) => a.id !== accountId);
@@ -130,6 +135,11 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
     const isIncome = form.category === INCOME;
     if (isIncome && form.direction === "outflow") {
       throw new UserFacingError("Income is money coming in: choose Inflow, or another envelope.");
+    }
+    if (isCardCredit(form) && form.category !== "" && form.category !== TRANSFER) {
+      throw new UserFacingError(
+        "Money coming into a credit card is a card credit: it lowers what you owe, without an envelope.",
+      );
     }
     return {
       id: form.id,
@@ -174,6 +184,7 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
 
   return {
     openAccounts,
+    isCardCredit,
     /** Whether the transaction being edited is saved as a transfer (both sides). */
     isTransfer: (form: TransactionForm) =>
       Boolean(data.transactions.find((t) => t.id === form.id)?.transferId),

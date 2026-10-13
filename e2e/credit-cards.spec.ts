@@ -45,11 +45,11 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   await dialog.getByLabel("Payee").fill("Gas");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
-  // Uncategorized card spending comes from Available to Assign into Visa payment.
-  await expect(available(page)).toContainText("$970.00");
-  await expect(payment.locator(".envelope-remaining")).toHaveText("$30.00");
+  // Uncategorized card spending waits for review: only what is owed changes.
+  await expect(available(page)).toContainText("$1,000.00");
+  await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
   await expect(payment).toContainText("Owed $230.00");
-  await expect(payment).toContainText("Uncovered $200.00");
+  await expect(payment).toContainText("Uncovered $230.00");
 
   // Editing keeps the type and shows the amount owed.
   await goTo(page, "Accounts");
