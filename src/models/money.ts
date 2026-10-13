@@ -36,3 +36,10 @@ export function parseCents(text: string): Cents | null {
   if (!Number.isSafeInteger(value)) return null;
   return match[1] && value !== 0 ? -value : value;
 }
+
+/** Cents as plain text for an input field, e.g. -123456 → "-1234.56". */
+export function centsToInput(cents: Cents): string {
+  assertCents(cents);
+  const abs = Math.abs(cents);
+  return `${cents < 0 ? "-" : ""}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
+}

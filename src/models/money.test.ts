@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertCents, formatCents, parseCents } from "./money";
+import { assertCents, centsToInput, formatCents, parseCents } from "./money";
 
 describe("assertCents", () => {
   it("accepts whole cents and rejects fractions and non-numbers", () => {
@@ -32,5 +32,15 @@ describe("parseCents", () => {
     for (const bad of ["", "abc", "1.234", "1,23", "--1", "1e3", "."]) {
       expect(parseCents(bad), bad).toBeNull();
     }
+  });
+});
+
+describe("centsToInput", () => {
+  it("writes cents as plain dollars that parseCents reads back", () => {
+    for (const cents of [0, 5, 100, 123_456, -1_862, -5]) {
+      expect(parseCents(centsToInput(cents))).toBe(cents);
+    }
+    expect(centsToInput(123_456)).toBe("1234.56");
+    expect(centsToInput(-5)).toBe("-0.05");
   });
 });

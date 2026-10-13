@@ -47,6 +47,8 @@ export interface DataStore {
   createHousehold(name: string): Promise<void>;
 
   addAccount(householdId: string, account: NewAccount): Promise<void>;
+  /** Changes an account's name, opening balance and opening date. */
+  updateAccount(accountId: string, account: NewAccount): Promise<void>;
   closeAccount(accountId: string): Promise<void>;
 
   addGroup(householdId: string, name: string, position: number): Promise<void>;

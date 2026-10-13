@@ -151,6 +151,21 @@ export function createSupabaseStore(
       check(error);
     },
 
+    async updateAccount(accountId, account) {
+      const { data, error } = await db()
+        .from("accounts")
+        .update({
+          name: account.name,
+          opening_balance: account.openingBalance,
+          opening_date: account.openingDate,
+        })
+        .eq("id", accountId)
+        .select("id");
+      check(error);
+      // Row Level Security hides other households' accounts: no row, no update.
+      if (!data?.length) throw new UserFacingError("Account not found");
+    },
+
     async closeAccount(accountId) {
       const { error } = await db()
         .from("accounts")
