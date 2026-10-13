@@ -1,12 +1,15 @@
+import { openingBalanceFromEntry, openingBalanceToEntry } from "../models/accounts";
 import { accountBalance } from "../models/budgetMath";
 import { UserFacingError, type NewAccount } from "../models/dataStore";
 import { centsToInput } from "../models/money";
-import type { BudgetData, IsoDate } from "../models/types";
+import type { AccountType, BudgetData, IsoDate } from "../models/types";
 import { requireCents, requireName } from "./input";
 import type { Budget } from "./useBudget";
 
 export interface AccountForm {
+  type: AccountType;
   name: string;
+  /** As typed; for a card, the amount owed. */
   openingBalance: string;
   openingDate: IsoDate;
 }
@@ -14,9 +17,17 @@ export interface AccountForm {
 /** Checks the account form and turns it into what the store saves. */
 function readAccountForm(form: AccountForm): NewAccount {
   const name = requireName(form.name, "Account name");
-  const openingBalance = requireCents(form.openingBalance || "0", "Opening balance");
+  const entered = requireCents(
+    form.openingBalance || "0",
+    form.type === "credit_card" ? "Amount owed" : "Opening balance",
+  );
   if (!form.openingDate) throw new UserFacingError("Opening date is required");
-  return { name, openingBalance, openingDate: form.openingDate };
+  return {
+    type: form.type,
+    name,
+    openingBalance: openingBalanceFromEntry(form.type, entered),
+    openingDate: form.openingDate,
+  };
 }
 
 /** The Accounts page: accounts with their computed balances, plus add, edit and close. */
@@ -24,8 +35,8 @@ export function useAccountsPage(budget: Budget, data: BudgetData) {
   const withBalances = data.accounts.map((account) => ({
     ...account,
     balance: accountBalance(account.id, data),
-    /** Opening balance as text for the edit form. */
-    openingBalanceInput: centsToInput(account.openingBalance),
+    /** Opening balance as the edit form shows it (the amount owed, for a card). */
+    openingBalanceInput: centsToInput(openingBalanceToEntry(account.type, account.openingBalance)),
   }));
 
   return {
@@ -43,9 +54,14 @@ export function useAccountsPage(budget: Budget, data: BudgetData) {
      * opening date cannot move past the account's first transaction.
      */
     updateAccount: async (accountId: string, form: AccountForm) => {
-      const changes = readAccountForm(form);
       const account = data.accounts.find((a) => a.id === accountId);
       if (!account) throw new UserFacingError("Account not found");
+      // The type is fixed once added: it decides what the opening balance means.
+      const { name, openingBalance, openingDate } = readAccountForm({
+        ...form,
+        type: account.type,
+      });
+      const changes = { name, openingBalance, openingDate };
       if (account.closedAt) throw new UserFacingError("A closed account cannot be edited.");
       const first = data.transactions
         .filter((tx) => tx.accountId === accountId && !tx.voided)

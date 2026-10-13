@@ -2,8 +2,9 @@ import { useState, type FormEvent } from "react";
 import { useAccountsPage, type AccountForm as Fields } from "../../controllers/useAccountsPage";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import type { Budget } from "../../controllers/useBudget";
+import { ACCOUNT_TYPE_NAMES } from "../../models/accounts";
 import { todayIso } from "../../models/month";
-import type { BudgetData } from "../../models/types";
+import type { AccountType, BudgetData } from "../../models/types";
 import { ErrorMessage, Money } from "../components";
 
 type Page = ReturnType<typeof useAccountsPage>;
@@ -38,6 +39,7 @@ export function AccountsPage({ budget, data }: { budget: Budget; data: BudgetDat
                     heading={`Edit ${account.name}`}
                     button="Save changes"
                     initial={{
+                      type: account.type,
                       name: account.name,
                       openingBalance: account.openingBalanceInput,
                       openingDate: account.openingDate,
@@ -83,9 +85,10 @@ export function AccountsPage({ budget, data }: { budget: Budget; data: BudgetDat
 
       <section className="list-card">
         <AccountForm
-          heading="Add a checking account"
+          heading="Add an account"
           button="Add account"
-          initial={{ name: "", openingBalance: "", openingDate: todayIso() }}
+          initial={{ type: "checking", name: "", openingBalance: "", openingDate: todayIso() }}
+          chooseType
           resetAfterSubmit
           onSubmit={page.addAccount}
         />
@@ -119,17 +122,30 @@ function AccountSummary({ account }: { account: AccountRow }) {
         <Money cents={account.balance} />
       </strong>
       <span className="item-detail">
-        Checking · opened {account.openingDate} with <Money cents={account.openingBalance} />
+        {ACCOUNT_TYPE_NAMES[account.type]} · opened {account.openingDate}{" "}
+        {account.type === "credit_card" ? (
+          <>
+            owing <Money cents={-account.openingBalance} />
+          </>
+        ) : (
+          <>
+            with <Money cents={account.openingBalance} />
+          </>
+        )}
       </span>
     </>
   );
 }
 
-/** Name, opening balance and opening date; used to add and to edit an account. */
+/**
+ * Name, opening balance and opening date; used to add and to edit an account.
+ * The type is chosen only when adding (chooseType).
+ */
 function AccountForm({
   heading,
   button,
   initial,
+  chooseType = false,
   resetAfterSubmit = false,
   onSubmit,
   onCancel,
@@ -137,6 +153,7 @@ function AccountForm({
   heading: string;
   button: string;
   initial: Fields;
+  chooseType?: boolean;
   resetAfterSubmit?: boolean;
   onSubmit: (form: Fields) => Promise<void>;
   onCancel?: () => void;
@@ -148,7 +165,8 @@ function AccountForm({
     event.preventDefault();
     if ((await action.run(form)).ok && resetAfterSubmit) setForm(initial);
   };
-  const field = (key: keyof Fields) => ({
+  const card = form.type === "credit_card";
+  const field = (key: "name" | "openingBalance" | "openingDate") => ({
     value: form[key],
     onChange: (event: { target: { value: string } }) => {
       setForm({ ...form, [key]: event.target.value });
@@ -161,14 +179,39 @@ function AccountForm({
       <div className="section-heading">
         <h2>{heading}</h2>
       </div>
+      {chooseType && (
+        <div className="segmented" role="radiogroup" aria-label="Account type">
+          {(Object.keys(ACCOUNT_TYPE_NAMES) as AccountType[]).map((type) => (
+            <label key={type}>
+              <input
+                type="radio"
+                name="account-type"
+                checked={form.type === type}
+                onChange={() => {
+                  setForm({ ...form, type });
+                  action.clearError();
+                }}
+              />
+              {ACCOUNT_TYPE_NAMES[type]}
+            </label>
+          ))}
+        </div>
+      )}
       <label className="field">
         Account name
-        <input {...field("name")} placeholder="Everyday checking" />
+        <input {...field("name")} placeholder={card ? "Visa card" : "Everyday checking"} />
       </label>
       <label className="field">
-        Opening balance
+        {card ? "Amount owed on the opening date" : "Opening balance"}
         <input {...field("openingBalance")} inputMode="decimal" placeholder="0.00" />
       </label>
+      {card && (
+        <p className="empty-state">
+          Card purchases come out of envelopes like any spending, and the amount owed lowers
+          Available to Assign. Record a card payment as a Transfer in both the paying account and
+          the card.
+        </p>
+      )}
       <label className="field">
         Opening date
         <input {...field("openingDate")} type="date" />

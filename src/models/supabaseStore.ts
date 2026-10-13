@@ -99,6 +99,7 @@ export function createSupabaseStore(
         accounts: (accounts.data ?? []).map((a) => ({
           id: a.id,
           name: a.name,
+          type: a.type === "credit_card" ? "credit_card" : "checking",
           openingBalance: a.opening_balance,
           openingDate: a.opening_date,
           onBudget: a.on_budget,
@@ -145,6 +146,7 @@ export function createSupabaseStore(
       const { error } = await db().from("accounts").insert({
         household_id: householdId,
         name: account.name,
+        type: account.type,
         opening_balance: account.openingBalance,
         opening_date: account.openingDate,
       });

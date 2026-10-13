@@ -7,17 +7,23 @@ import type { EnvelopePlanRow } from "./envelopePlan";
 import type { Cents } from "./money";
 import type { Month } from "./month";
 import type { ImportedTransaction, ImportFormat } from "./transactionImport";
-import type { BudgetData, IsoDate } from "./types";
+import type { AccountType, BudgetData, IsoDate } from "./types";
 
 export interface UserSession {
   userId: string;
   email: string;
 }
 
-export interface NewAccount {
+/** The account details that can be edited after it is added. */
+export interface AccountDetails {
   name: string;
   openingBalance: Cents;
   openingDate: IsoDate;
+}
+
+/** The type is chosen once, when the account is added. */
+export interface NewAccount extends AccountDetails {
+  type: AccountType;
 }
 
 export interface TransactionInput {
@@ -48,7 +54,7 @@ export interface DataStore {
 
   addAccount(householdId: string, account: NewAccount): Promise<void>;
   /** Changes an account's name, opening balance and opening date. */
-  updateAccount(accountId: string, account: NewAccount): Promise<void>;
+  updateAccount(accountId: string, account: AccountDetails): Promise<void>;
   closeAccount(accountId: string): Promise<void>;
 
   addGroup(householdId: string, name: string, position: number): Promise<void>;

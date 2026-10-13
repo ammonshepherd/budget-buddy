@@ -19,3 +19,4 @@ export const SettingsIcon = () => (
 export const InstallIcon = () => (
   <Icon path="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
 );
+export const PlusIcon = () => <Icon path="M12 5v14M5 12h14" />;

@@ -127,7 +127,8 @@ a:focus-visible {
 
 .page-content {
   flex: 1;
-  padding: 1.5rem 1rem calc(7.75rem + env(safe-area-inset-bottom));
+  /* Room for the bottom navigation and the floating + button above it. */
+  padding: 1.5rem 1rem calc(11rem + env(safe-area-inset-bottom));
 }
 
 .page-view {
@@ -747,4 +748,66 @@ a:focus-visible {
 .import-columns[open] > summary,
 .import-skipped[open] > summary {
   margin-block-end: 0.75rem;
+}
+
+/* ---- v0.7.0: Add transaction button and dialog ------------------------- */
+
+/* Fixed to the bottom-right of the app column (centred on wide screens). */
+.fab {
+  position: fixed;
+  inset-block-end: calc(5.75rem + env(safe-area-inset-bottom));
+  inset-inline-end: max(1rem, calc(50% - 15rem + 1rem));
+  z-index: 11;
+  display: grid;
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #ffffff;
+  background: var(--brand);
+  box-shadow: 0 0.6rem 1.5rem rgba(75, 42, 104, 0.35);
+  cursor: pointer;
+}
+
+.fab:hover {
+  background: var(--accent);
+}
+
+.fab svg {
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.2;
+}
+
+.sheet {
+  inline-size: min(calc(100% - 2rem), 28rem);
+  max-block-size: calc(100dvh - 2rem);
+  padding: 1.1rem;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 1.25rem;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.sheet::backdrop {
+  background: rgba(40, 26, 53, 0.45);
+}
+
+.item-editing {
+  margin-inline: -0.6rem;
+  padding: 0.75rem 0.6rem;
+  border-radius: 0.9rem;
+  background: var(--surface-muted);
+}
+
+@media (min-width: 30.01rem) {
+  .fab {
+    inset-block-end: 6.75rem;
+  }
 }
