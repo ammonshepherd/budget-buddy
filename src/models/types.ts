@@ -4,6 +4,7 @@
  * (supabaseStore.ts, memoryStore.ts) convert to and from these.
  */
 import type { Cents } from "./money";
+import type { IncomeRule } from "./incomeRules";
 import type { ImportFormat } from "./transactionImport";
 
 /** "YYYY-MM-DD" in the household's local calendar. */
@@ -97,4 +98,6 @@ export interface BudgetData {
   envelopes: Envelope[];
   envelopeMonths: EnvelopeMonthRecord[];
   transactions: Transaction[];
+  /** Rules that mark matching inflows as Income (see incomeRules.ts). */
+  incomeRules: IncomeRule[];
 }

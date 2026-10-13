@@ -60,6 +60,7 @@ function account(partial: Partial<Account> = {}): Account {
 function budget(transactions: BudgetData["transactions"] = []): BudgetData {
   return {
     household: { id: "h", name: "Home" },
+    incomeRules: [],
     accounts: [account()],
     groups: [],
     envelopes: [],
@@ -202,6 +203,7 @@ describe("previewTransactionImport", () => {
         payee: "Withdrawal Debit Card HARDWARE STORE #12",
         memo: "",
         importKey: "id:20261012:1",
+        isIncome: false,
       },
       expect.objectContaining({ date: "2026-10-11", amount: 200_000 }),
       expect.objectContaining({ date: "2026-10-02", amount: -30_000 }),
@@ -213,6 +215,18 @@ describe("previewTransactionImport", () => {
       lastDate: "2026-10-12",
       mostlyPositive: false,
     });
+  });
+
+  it("marks inflows matching an income rule as Income", () => {
+    const t = table(CHECKING);
+    const rule = (accountId: string | null) => ({ id: "r", pattern: "payroll", accountId });
+    const withRule = { ...budget(), incomeRules: [rule(null)] };
+    const preview = previewTransactionImport(withRule, account(), t, detectFormat(t));
+    expect(preview.rows.map((r) => r.isIncome)).toEqual([false, true, false]);
+    expect(preview.markedIncome).toBe(1);
+    // A rule for another account does not apply.
+    const elsewhere = { ...budget(), incomeRules: [rule("savings")] };
+    expect(previewTransactionImport(elsewhere, account(), t, detectFormat(t)).markedIncome).toBe(0);
   });
 
   it("combines debit and credit columns", () => {

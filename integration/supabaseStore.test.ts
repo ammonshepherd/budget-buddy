@@ -195,7 +195,14 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
     );
     const format = detectFormat(table);
     const rows = previewTransactionImport(data, account, table, format).rows.map(
-      ({ date, amount, payee, memo, importKey }) => ({ date, amount, payee, memo, importKey }),
+      ({ date, amount, payee, memo, importKey, isIncome }) => ({
+        date,
+        amount,
+        payee,
+        memo,
+        importKey,
+        isIncome,
+      }),
     );
     expect(await store.importTransactions(account.id, format, rows)).toBe(2);
     // Sending the same rows again adds nothing: the database also refuses duplicates.

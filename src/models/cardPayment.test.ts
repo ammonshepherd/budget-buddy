@@ -30,6 +30,7 @@ function tx(partial: Partial<Transaction> & Pick<Transaction, "id" | "amount">):
 function household(): BudgetData {
   return {
     household: { id: "h", name: "Home" },
+    incomeRules: [],
     accounts: [
       {
         id: "checking",

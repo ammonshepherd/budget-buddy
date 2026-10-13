@@ -251,6 +251,8 @@ function PreviewDetails({ preview }: { preview: TransactionImportPreview }) {
         {preview.beforeOpening.length > 0 &&
           ` ${count(preview.beforeOpening.length, "row")} before the opening date skipped.`}
         {preview.invalid.length > 0 && ` ${count(preview.invalid.length, "invalid row")} skipped.`}
+        {preview.markedIncome > 0 &&
+          ` ${count(preview.markedIncome, "inflow")} will be marked Income by your rules.`}
       </p>
 
       {preview.mostlyPositive && (

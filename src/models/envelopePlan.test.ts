@@ -6,6 +6,7 @@ import type { BudgetData } from "./types";
 function household(): BudgetData {
   return {
     household: { id: "h", name: "Home" },
+    incomeRules: [],
     accounts: [],
     groups: [{ id: "bills", name: "Bills", position: 0 }],
     envelopes: [{ id: "rent", groupId: "bills", name: "Rent", position: 0, cardAccountId: null }],

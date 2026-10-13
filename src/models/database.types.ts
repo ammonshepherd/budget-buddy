@@ -229,6 +229,45 @@ export type Database = {
         }
         Relationships: []
       }
+      income_rules: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          household_id: string
+          id: string
+          pattern: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          household_id: string
+          id?: string
+          pattern: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          household_id?: string
+          id?: string
+          pattern?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_rules_household_id_account_id_fkey"
+            columns: ["household_id", "account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["household_id", "id"]
+          },
+          {
+            foreignKeyName: "income_rules_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_allocations: {
         Row: {
           amount: number

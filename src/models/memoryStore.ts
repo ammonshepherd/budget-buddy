@@ -87,6 +87,7 @@ export function createMemoryStore(): DataStore {
         envelopes: [],
         envelopeMonths: [],
         transactions: [],
+        incomeRules: [],
       };
     },
 
@@ -251,7 +252,7 @@ export function createMemoryStore(): DataStore {
           payee: row.payee,
           memo: row.memo,
           isTransfer: false,
-          isIncome: false,
+          isIncome: row.isIncome && row.amount > 0,
           transferId: null,
           voided: false,
           allocations: [],
@@ -262,6 +263,13 @@ export function createMemoryStore(): DataStore {
       b.transactions.sort((x, y) => y.date.localeCompare(x.date));
       account.importFormat = structuredClone(format);
       return added;
+    },
+    async addIncomeRule(_householdId, rule) {
+      budget().incomeRules.push({ id: id(), ...rule });
+    },
+    async deleteIncomeRule(ruleId) {
+      const b = budget();
+      b.incomeRules = b.incomeRules.filter((r) => r.id !== ruleId);
     },
     async markIncome(transactionIds) {
       let marked = 0;

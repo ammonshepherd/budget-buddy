@@ -69,6 +69,10 @@ review**: it counts toward nothing until it is marked Income, given an envelope
 (a refund) or made a transfer. Uncategorized outflows still lower Available to
 Assign at once. The Budget page shows this month's income and how many inflows
 are waiting for review; Activity lists them with "Mark as Income".
+Income rules (`income_rules`, `src/models/incomeRules.ts`) mark inflows whose
+description contains a rule's text (case- and space-insensitive; optionally one
+account) as Income: at import (the preview sets `isIncome` per row) and, on
+request, over inflows to review. They never change anything else.
 
 Releasing Saved does not change Available to Assign (money stays in the envelope).
 
@@ -154,7 +158,7 @@ The PR #4 prototype was replaced in v0.2.0 by the migrations in
 `supabase/migrations/` (applied to the dev project; file names match the
 project's migration history). Tables: households, household_members, accounts,
 category_groups, categories (= envelopes), category_months, transactions,
-transaction_allocations. Every table has household-scoped RLS; multi-row
+transaction_allocations, income_rules. Every table has household-scoped RLS; multi-row
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
 `import_envelope_plan`, `import_transactions`, `save_transfer`). Triggers create, rename and protect

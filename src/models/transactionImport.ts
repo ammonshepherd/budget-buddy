@@ -10,6 +10,7 @@
  * that exact row has appeared earlier in the file).
  */
 import { CsvError, type CsvRow } from "./csv";
+import { incomeRuleFor } from "./incomeRules";
 import { parseCents, type Cents } from "./money";
 import type { Account, BudgetData, IsoDate } from "./types";
 
@@ -57,6 +58,8 @@ export interface ImportedTransaction {
   payee: string;
   memo: string;
   importKey: string;
+  /** Marked Income by an income rule (inflows only). */
+  isIncome: boolean;
 }
 
 export interface ImportPreviewRow extends ImportedTransaction {
@@ -82,6 +85,8 @@ export interface TransactionImportPreview {
   lastDate: IsoDate | null;
   /** True when 70%+ of amounts are positive: a card export may need `flip`. */
   mostlyPositive: boolean;
+  /** New inflows an income rule marks as Income. */
+  markedIncome: number;
 }
 
 const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -413,6 +418,7 @@ export function previewTransactionImport(
     firstDate: null,
     lastDate: null,
     mostlyPositive: false,
+    markedIncome: 0,
   };
   let positives = 0;
   let amounts = 0;
@@ -481,7 +487,10 @@ export function previewTransactionImport(
       continue;
     }
 
-    preview.rows.push({ line: row.line, date, amount, payee, memo, importKey });
+    const isIncome =
+      incomeRuleFor(data.incomeRules, { accountId: account.id, amount, payee }) !== null;
+    if (isIncome) preview.markedIncome++;
+    preview.rows.push({ line: row.line, date, amount, payee, memo, importKey, isIncome });
     if (amount > 0) preview.inflow += amount;
     else preview.outflow -= amount;
     if (!preview.firstDate || date < preview.firstDate) preview.firstDate = date;

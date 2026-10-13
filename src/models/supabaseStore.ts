@@ -81,7 +81,7 @@ export function createSupabaseStore(
       check(household.error);
       if (!household.data) return null;
 
-      const [accounts, groups, envelopes, months, transactions] = await Promise.all([
+      const [accounts, groups, envelopes, months, transactions, rules] = await Promise.all([
         db().from("accounts").select("*").order("created_at"),
         db().from("category_groups").select("*"),
         db().from("categories").select("*"),
@@ -91,11 +91,19 @@ export function createSupabaseStore(
           .select("*, transaction_allocations(category_id, amount)")
           .order("date", { ascending: false })
           .order("created_at", { ascending: false }),
+        db().from("income_rules").select("id, pattern, account_id").order("created_at"),
       ]);
-      for (const result of [accounts, groups, envelopes, months, transactions]) check(result.error);
+      for (const result of [accounts, groups, envelopes, months, transactions, rules]) {
+        check(result.error);
+      }
 
       return {
         household: household.data,
+        incomeRules: (rules.data ?? []).map((r) => ({
+          id: r.id,
+          pattern: r.pattern,
+          accountId: r.account_id,
+        })),
         accounts: (accounts.data ?? []).map((a) => ({
           id: a.id,
           name: a.name,
@@ -257,6 +265,17 @@ export function createSupabaseStore(
       check(error);
     },
 
+    async addIncomeRule(householdId, rule) {
+      const { error } = await db()
+        .from("income_rules")
+        .insert({ household_id: householdId, pattern: rule.pattern, account_id: rule.accountId });
+      check(error);
+    },
+
+    async deleteIncomeRule(ruleId) {
+      check((await db().from("income_rules").delete().eq("id", ruleId)).error);
+    },
+
     async markIncome(transactionIds) {
       const { data, error } = await db().rpc("mark_income", { p_ids: transactionIds });
       check(error);
@@ -289,6 +308,7 @@ export function createSupabaseStore(
           payee: r.payee,
           memo: r.memo,
           import_key: r.importKey,
+          is_income: r.isIncome,
         })),
       });
       check(error);
