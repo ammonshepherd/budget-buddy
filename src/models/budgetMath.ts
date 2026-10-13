@@ -19,8 +19,10 @@ export interface EnvelopeMonthInput {
   assigned: Cents;
   /** Money moved from this envelope's Saved into Remaining this month. */
   released: Cents;
-  /** Money spent from the envelope this month (positive = spent). */
+  /** Money spent from the envelope this month, net of refunds (positive = spent). */
   spent: Cents;
+  /** Refunds into the envelope this month, already netted into `spent`. */
+  refunded?: Cents;
 }
 
 /** The numbers shown for one envelope in one month. */
@@ -28,7 +30,12 @@ export interface EnvelopeMonth {
   month: Month;
   assigned: Cents;
   released: Cents;
+  /** Net of refunds: what Remaining is computed from. */
   spent: Cents;
+  /** What was spent, refunds left out: what the Budget page shows as Spent. */
+  outflow: Cents;
+  /** Refunds into the envelope this month; they simply add to Remaining. */
+  refunded: Cents;
   /** Saved(M): the reserve carried in from earlier months, before releases. */
   savedAtStart: Cents;
   /**
@@ -73,11 +80,15 @@ export function computeEnvelopeMonth(
 
   const remaining = assigned + released - spent;
   const saved = savedAtStart - released;
+  const refunded = input.refunded ?? 0;
+  assertCents(refunded, "refunded");
   return {
     month,
     assigned,
     released,
     spent,
+    outflow: spent + refunded,
+    refunded,
     savedAtStart,
     saved,
     remaining,
@@ -275,7 +286,9 @@ function ledgerFor(data: BudgetData): Ledger {
   for (const tx of budgetTransactions(data)) {
     const month = monthOf(tx.date);
     for (const allocation of tx.allocations) {
-      row(allocation.envelopeId, month).spent -= allocation.amount;
+      const input = row(allocation.envelopeId, month);
+      input.spent -= allocation.amount;
+      if (allocation.amount > 0) input.refunded = (input.refunded ?? 0) + allocation.amount;
     }
     const payment = cards.get(tx.accountId);
     const settled = tx.isTransfer || (tx.amount < 0 && tx.allocations.length > 0);
@@ -534,7 +547,7 @@ export function buildBudgetMonth(data: BudgetData, month: Month): BudgetMonthVie
     totals.planned += row.planned;
     totals.assigned += row.assigned;
     // A payment envelope's "Spent" is card purchases moving in, not spending.
-    if (!card) totals.spent += row.spent;
+    if (!card) totals.spent += row.outflow;
     totals.remaining += row.remaining;
     totals.saved += row.saved;
     return row;

@@ -86,6 +86,9 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await page.getByRole("link", { name: "Next month" }).click();
   await expect(page).toHaveURL(/#budget\/\d{4}-\d{2}$/);
   await expect(envelope(page, "Fun")).toContainText("Saved $100.00");
+  // Saved stands out to encourage saving.
+  await expect(envelope(page, "Fun").locator(".saved-amount.sparkle")).toBeVisible();
+  await expect(envelope(page, "Groceries").locator(".saved-amount.sparkle")).toHaveCount(0);
   await expect(envelope(page, "Fun").locator(".envelope-remaining")).toHaveText("$0.00");
 
   // Releasing Saved makes it spendable without changing Available to Assign.

@@ -459,7 +459,13 @@ describe("income and transactions to review", () => {
     );
     const view = buildBudgetMonth(data, "2026-10");
     expect(view.availableToAssign).toBe(before);
-    expect(view.groups[0]!.envelopes.find((e) => e.id === "fun")!.remaining).toBe(12_500);
+    // Shown as Spent $0.00: the refund only raises Remaining.
+    expect(view.groups[0]!.envelopes.find((e) => e.id === "fun")).toMatchObject({
+      remaining: 12_500,
+      spent: -2_500,
+      outflow: 0,
+      refunded: 2_500,
+    });
     expect(
       checkTransactionSpend(data, {
         accountId: "checking",

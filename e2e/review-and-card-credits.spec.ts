@@ -68,6 +68,8 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await expect(dialog).toBeHidden();
   await expect(groceries.locator(".envelope-remaining")).toHaveText("$10.00");
   await expect(available(page)).toContainText("$320.00");
+  // A refund is not spending: Spent stays at the $180 that went out.
+  await expect(groceries).toContainText("Spent $180.00");
 });
 
 test("money into a credit card is a card credit that only lowers what is owed", async ({
@@ -103,7 +105,7 @@ test("money into a credit card is a card credit that only lowers what is owed", 
   await expect(page.getByText("to review")).toHaveCount(0);
   const payment = envelope(page, "Visa payment");
   await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
-  await expect(payment).toContainText("Owed $170.00");
+  await expect(payment).toContainText("Remaining debt $170.00");
   await goTo(page, "Activity");
   await expect(
     page
