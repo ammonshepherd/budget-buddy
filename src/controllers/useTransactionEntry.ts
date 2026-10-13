@@ -104,16 +104,18 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
       .sort((a, b) => a.position - b.position)
       .map((g) => ({
         ...g,
+        // A card's payment envelope fills itself, so it is never a choice here.
         envelopes: data.envelopes
-          .filter((e) => e.groupId === g.id)
+          .filter((e) => e.groupId === g.id && !e.cardAccountId)
           .sort((a, b) => a.position - b.position),
-      })),
+      }))
+      .filter((g) => g.envelopes.length > 0),
 
     /** Saves the transaction, or returns a cover plan if its envelope would go negative. */
     prepare: async (form: TransactionForm): Promise<PrepareResult> => {
       const input = toInput(form);
-      const check = checkTransactionSpend(data, { ...input, envelopeId: input.envelopeId });
-      if (!check || check.shortfall === 0 || !input.envelopeId) {
+      const check = checkTransactionSpend(data, input);
+      if (!check) {
         await budget.change((store) => store.saveTransaction(householdId, input));
         return { kind: "saved" };
       }
@@ -124,12 +126,12 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
         plan: {
           ...check,
           input,
-          envelopeId: input.envelopeId,
-          envelopeName: envelopeNames.get(input.envelopeId) ?? "This envelope",
+          envelopeId: check.envelopeId,
+          envelopeName: envelopeNames.get(check.envelopeId) ?? "This envelope",
           month,
           sources:
             check.stillShort > 0
-              ? coverSources(view, input.envelopeId, check.stillShort).map((e) => ({
+              ? coverSources(view, check.envelopeId, check.stillShort).map((e) => ({
                   id: e.id,
                   name: e.name,
                   remaining: e.remaining,

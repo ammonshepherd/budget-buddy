@@ -68,6 +68,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          card_account_id: string | null
           created_at: string
           group_id: string
           household_id: string
@@ -76,6 +77,7 @@ export type Database = {
           position: number
         }
         Insert: {
+          card_account_id?: string | null
           created_at?: string
           group_id: string
           household_id: string
@@ -84,6 +86,7 @@ export type Database = {
           position?: number
         }
         Update: {
+          card_account_id?: string | null
           created_at?: string
           group_id?: string
           household_id?: string
@@ -92,6 +95,13 @@ export type Database = {
           position?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "categories_card_account_fkey"
+            columns: ["household_id", "card_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["household_id", "id"]
+          },
           {
             foreignKeyName: "categories_household_id_fkey"
             columns: ["household_id"]

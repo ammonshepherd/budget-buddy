@@ -53,8 +53,8 @@ function household(): BudgetData {
     ],
     groups: [{ id: "g", name: "Everyday", position: 0 }],
     envelopes: [
-      { id: "food", groupId: "g", name: "Food", position: 0 },
-      { id: "fun", groupId: "g", name: "Fun", position: 1 },
+      { id: "food", groupId: "g", name: "Food", position: 0, cardAccountId: null },
+      { id: "fun", groupId: "g", name: "Fun", position: 1, cardAccountId: null },
     ],
     envelopeMonths: [
       { envelopeId: "food", month: "2026-09", assigned: 40_000, released: 0, planned: 0 },
@@ -120,7 +120,7 @@ describe("availableToAssignFor", () => {
     expect(view.availableToAssign).toBe(balances - envelopeMoney);
   });
 
-  it("treats a credit card as a budget account that owes money", () => {
+  it("counts a card without a payment envelope like any budget account", () => {
     const data = household();
     data.accounts.push({
       id: "card",
@@ -231,33 +231,44 @@ describe("assignableIn", () => {
 });
 
 describe("checkTransactionSpend", () => {
+  const pending = {
+    accountId: "checking",
+    date: "2026-10-09",
+    amount: 0,
+    envelopeId: null,
+    isTransfer: false,
+  };
+
   it("is null for an uncategorized transaction", () => {
     expect(
-      checkTransactionSpend(household(), { date: "2026-10-09", amount: -500, envelopeId: null }),
+      checkTransactionSpend(household(), { ...pending, amount: -500, envelopeId: null }),
     ).toBeNull();
   });
 
   it("covers a shortfall from Saved first, then reports what is still short", () => {
     // Food has 0 Remaining and 3,000 Saved in October.
     expect(
-      checkTransactionSpend(household(), {
-        date: "2026-10-09",
-        amount: -5_000,
-        envelopeId: "food",
-      }),
-    ).toEqual({ remainingAfter: -5_000, shortfall: 5_000, fromSaved: 3_000, stillShort: 2_000 });
+      checkTransactionSpend(household(), { ...pending, amount: -5_000, envelopeId: "food" }),
+    ).toEqual({
+      envelopeId: "food",
+      remainingAfter: -5_000,
+      shortfall: 5_000,
+      fromSaved: 3_000,
+      stillShort: 2_000,
+    });
   });
 
-  it("does not count the transaction being edited twice", () => {
+  it("does not count the transaction being edited twice (null: nothing goes negative)", () => {
     // g2 already spent 35,000 of Food; editing it to 34,000 frees 1,000.
     expect(
       checkTransactionSpend(household(), {
+        ...pending,
         id: "g2",
         date: "2026-10-03",
         amount: -34_000,
         envelopeId: "food",
       }),
-    ).toMatchObject({ remainingAfter: 1_000, shortfall: 0 });
+    ).toBeNull();
   });
 });
 
@@ -278,9 +289,9 @@ describe("envelopes in use per month", () => {
       { id: "empty", name: "Empty", position: 2 },
     );
     data.envelopes.push(
-      { id: "trip", groupId: "extra", name: "Trip", position: 0 },
-      { id: "gifts", groupId: "extra", name: "Gifts", position: 1 },
-      { id: "new", groupId: "extra", name: "New", position: 2 },
+      { id: "trip", groupId: "extra", name: "Trip", position: 0, cardAccountId: null },
+      { id: "gifts", groupId: "extra", name: "Gifts", position: 1, cardAccountId: null },
+      { id: "new", groupId: "extra", name: "New", position: 2, cardAccountId: null },
     );
     data.envelopeMonths.push(
       // Planned in September only, never funded.

@@ -64,6 +64,31 @@ Over Assigned = max(0, −Available to Assign)
 
 Releasing Saved does not change Available to Assign (money stays in the envelope).
 
+### Credit cards (decided in v0.8.0)
+
+Each credit card account C has one payment envelope P (`categories.card_account_id`,
+created by a database trigger in the "Credit card payments" group). P follows the
+envelope formulas above, with card activity as its Spent:
+
+```
+Spent_P(M)   = Σ card transaction amounts in M   (outflows fill P, inflows empty it)
+Owed         = −card balance
+Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Planned)
+```
+
+- Card outflow in an envelope: money moves from that envelope into P. Uncategorized:
+  from Available to Assign into P. Transfer out of the card (cash advance): into P.
+- Card inflow marked Transfer (a payment) or categorized (a refund): out of P. If P
+  would go negative, the cover prompt runs (release P's Saved, move, assign).
+- Uncategorized card inflow: leaves P only as far as P's Remaining reaches and that
+  part is income; the rest only lowers Owed.
+- Available to Assign leaves out card opening balances, and counts only that part of
+  uncategorized card inflows as income. Identity:
+  `Available to Assign = non-card budget balances − all envelope money (P included)`.
+- Transactions are never categorized to P; P cannot be deleted while its card is open;
+  an open card's P always shows on the Budget page. Card purchases filling P do not
+  count in the month's Spent total.
+
 ## Rules
 
 - No envelope may go negative. When categorizing a transaction would push
@@ -87,9 +112,8 @@ Releasing Saved does not change Available to Assign (money stays in the envelope
 - Account type (`checking` or `credit_card`) is chosen when adding and cannot
   change. A credit card is a budget account with a normally negative balance
   (owed); the form takes the amount owed as positive and stores it negated
-  (`src/models/accounts.ts`). No envelope-math change: card purchases spend
-  from envelopes, card debt lowers Available to Assign, and a card payment is a
-  Transfer on both accounts.
+  (`src/models/accounts.ts`). Its payment envelope is described under
+  "Credit cards" above; a card payment is a Transfer on both accounts.
 
 ## v1 scope
 
@@ -100,7 +124,7 @@ assign transactions to envelopes; Budget page as the main screen showing
 Plan / Assign / Spent / Remaining / Saved per envelope; month picker kept in the URL;
 a "Transfer" marking so transfers are not spending.
 
-Later: a card-payment envelope per credit card, split UI,
+Later: split UI,
 manual/imported matching, reconciliation, tithing/fast-offering rules.
 
 ## Supabase state
@@ -112,7 +136,8 @@ category_groups, categories (= envelopes), category_months, transactions,
 transaction_allocations. Every table has household-scoped RLS; multi-row
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
-`import_envelope_plan`, `import_transactions`). Imported transactions carry an
+`import_envelope_plan`, `import_transactions`). Triggers create, rename and protect
+each credit card's payment envelope and reject allocations to it. Imported transactions carry an
 `import_key` (unique per account) for duplicate prevention; each account keeps
 its CSV column mapping in `import_format`. Budget math stays in
 `budgetMath.ts`, not SQL. Inspect the live schema before writing a migration,

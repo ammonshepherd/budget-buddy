@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { available, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
+import {
+  available,
+  envelope,
+  envelopeAction,
+  goTo,
+  openAddTransaction,
+  signInWithHousehold,
+} from "./helpers";
 
-test("a credit card account owes money and lowers Available to Assign", async ({ page }) => {
+test("a credit card account owes money and gets a payment envelope", async ({ page }) => {
   await signInWithHousehold(page);
   await goTo(page, "Accounts");
   await page.getByLabel("Account name").fill("Checking");
@@ -20,8 +27,15 @@ test("a credit card account owes money and lowers Available to Assign", async ({
   // The add form goes back to Checking for the next account.
   await expect(add.getByRole("radio", { name: "Checking" })).toBeChecked();
 
+  // What the card owes does not lower Available to Assign; it shows as Uncovered.
   await goTo(page, "Budget");
-  await expect(available(page)).toContainText("$800.00");
+  await expect(available(page)).toContainText("$1,000.00");
+  const payment = envelope(page, "Visa payment");
+  await expect(page.getByRole("region", { name: "Credit card payments" })).toContainText(
+    "Visa payment",
+  );
+  await expect(payment).toContainText("Owed $200.00");
+  await expect(payment).toContainText("Uncovered $200.00");
 
   // A purchase on the card, entered from the Budget page.
   const dialog = await openAddTransaction(page);
@@ -30,7 +44,11 @@ test("a credit card account owes money and lowers Available to Assign", async ({
   await dialog.getByLabel("Payee").fill("Gas");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
-  await expect(available(page)).toContainText("$770.00");
+  // Uncategorized card spending comes from Available to Assign into Visa payment.
+  await expect(available(page)).toContainText("$970.00");
+  await expect(payment.locator(".envelope-remaining")).toHaveText("$30.00");
+  await expect(payment).toContainText("Owed $230.00");
+  await expect(payment).toContainText("Uncovered $200.00");
 
   // Editing keeps the type and shows the amount owed.
   await goTo(page, "Accounts");
@@ -43,4 +61,81 @@ test("a credit card account owes money and lowers Available to Assign", async ({
   await edit.getByRole("button", { name: "Save changes" }).click();
   await expect(visa).toContainText("-$280.00");
   await expect(visa).toContainText("owing $250.00");
+
+  // Renaming the card renames its payment envelope.
+  await visa.getByRole("button", { name: "Edit" }).click();
+  await page.getByRole("form", { name: "Edit Visa" }).getByLabel("Account name").fill("Visa Gold");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await goTo(page, "Budget");
+  await expect(envelope(page, "Visa Gold payment")).toContainText("Owed $280.00");
+});
+
+test("pay a card from checking, covering what the payment envelope lacks", async ({ page }) => {
+  await signInWithHousehold(page);
+  await goTo(page, "Accounts");
+  await page.getByLabel("Account name").fill("Checking");
+  await page.getByLabel("Opening balance").fill("1000");
+  await page.getByRole("button", { name: "Add account" }).click();
+
+  await goTo(page, "Budget");
+  await page.getByLabel("Group name").fill("Everyday");
+  await page.getByRole("button", { name: "Add group" }).click();
+  await page.getByLabel("New envelope").fill("Groceries");
+  await page.getByRole("button", { name: "Add envelope" }).click();
+  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "100");
+
+  await goTo(page, "Accounts");
+  const add = page.getByRole("form", { name: "Add an account" });
+  await add.getByRole("radio", { name: "Credit card" }).check();
+  await add.getByLabel("Account name").fill("Visa");
+  await add.getByLabel("Amount owed on the opening date").fill("200");
+  await add.getByRole("button", { name: "Add account" }).click();
+  await expect(page.locator(".item", { hasText: "Visa" })).toContainText("-$200.00");
+
+  // A $40 grocery purchase on the card moves $40 into Visa payment.
+  await goTo(page, "Budget");
+  let dialog = await openAddTransaction(page);
+  // The payment envelope fills itself, so it is not an envelope choice.
+  await expect(
+    dialog.getByLabel("Envelope").locator("option", { hasText: "Visa payment" }),
+  ).toHaveCount(0);
+  await dialog.getByLabel("Account").selectOption({ label: "Visa" });
+  await dialog.getByLabel("Amount").fill("40");
+  await dialog.getByLabel("Payee").fill("Market");
+  await dialog.getByLabel("Envelope").selectOption({ label: "Groceries" });
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await expect(dialog).toBeHidden();
+  const payment = envelope(page, "Visa payment");
+  await expect(payment.locator(".envelope-remaining")).toHaveText("$40.00");
+  await expect(envelope(page, "Groceries").locator(".envelope-remaining")).toHaveText("$60.00");
+  await expect(available(page)).toContainText("$900.00");
+
+  // Pay $140: a Transfer out of checking, then a Transfer into the card.
+  const transfer = "Transfer (not spending or income)";
+  dialog = await openAddTransaction(page);
+  await dialog.getByLabel("Amount").fill("140");
+  await dialog.getByLabel("Payee").fill("Visa payment");
+  await dialog.getByLabel("Envelope").selectOption({ label: transfer });
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await expect(dialog).toBeHidden();
+
+  dialog = await openAddTransaction(page);
+  await dialog.getByRole("radio", { name: "Inflow" }).check();
+  await dialog.getByLabel("Account").selectOption({ label: "Visa" });
+  await dialog.getByLabel("Amount").fill("140");
+  await dialog.getByLabel("Payee").fill("Payment from checking");
+  await dialog.getByLabel("Envelope").selectOption({ label: transfer });
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+
+  // Visa payment holds only $40, so the other $100 must be covered.
+  const cover = dialog.getByRole("alertdialog");
+  await expect(cover).toContainText("Visa payment would be $100.00 short");
+  await cover.getByRole("radio", { name: /Available to Assign/ }).check();
+  await cover.getByRole("button", { name: "Cover and save" }).click();
+  await expect(dialog).toBeHidden();
+
+  await expect(available(page)).toContainText("$800.00");
+  await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
+  await expect(payment).toContainText("Owed $100.00");
+  await expect(payment).toContainText("Uncovered $100.00");
 });
