@@ -779,8 +779,17 @@ a:focus-visible {
 .budget-page {
   display: grid;
   gap: 0.5rem;
-  /* The bar sits right under the app header. */
-  margin-block-start: -0.9rem;
+  /* The month picker sits right under the app header. */
+  margin-block-start: -1.1rem;
+}
+
+.budget-month {
+  justify-content: center;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* Available to Assign: always visible at the top while envelopes scroll. */
@@ -792,26 +801,11 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.1rem 0.75rem;
-  padding: 0.55rem 0.85rem 0.6rem;
-  border-radius: 0 0 1rem 1rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 1rem;
   color: #fff;
   background: var(--brand);
   box-shadow: 0 0.5rem 1.25rem rgba(75, 42, 104, 0.25);
-}
-
-.assign-bar .month-nav {
-  gap: 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.assign-bar .month-nav a {
-  inline-size: 1.6rem;
-  block-size: 1.6rem;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.16);
 }
 
 .assign-label,
@@ -820,13 +814,9 @@ a:focus-visible {
   font-size: 0.75rem;
 }
 
-.assign-label {
-  text-align: end;
-}
-
 .assign-amount {
   grid-column: 2;
-  grid-row: 2;
+  grid-row: 1 / span 2;
   font-size: 1.65rem;
   letter-spacing: -0.04em;
   line-height: 1.05;

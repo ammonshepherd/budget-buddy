@@ -28,33 +28,37 @@ export function BudgetPage({
         Budget
       </h1>
 
-      {/* Stays at the top while the envelopes scroll under it. */}
-      <section className="assign-bar" aria-label="Available to Assign">
-        <div className="month-nav">
-          <a href={page.previousHref} aria-label="Previous month">
-            ‹
-          </a>
-          <span>{page.monthLabel}</span>
-          <a href={page.nextHref} aria-label="Next month">
-            ›
-          </a>
-        </div>
-        <span className="assign-label">Available to Assign</span>
-        <strong className="assign-amount money">
-          <Money cents={view.availableToAssign} />
-        </strong>
-        <span className="assign-helper">
-          {view.overAssigned > 0 ? (
-            <>
-              Over assigned by <Money cents={view.overAssigned} />
-            </>
-          ) : (
-            <>
-              Income this month <Money cents={view.income} />
-            </>
-          )}
-        </span>
-      </section>
+      <div className="budget-month month-nav">
+        <a href={page.previousHref} aria-label="Previous month">
+          ‹
+        </a>
+        <span>{page.monthLabel}</span>
+        <a href={page.nextHref} aria-label="Next month">
+          ›
+        </a>
+      </div>
+
+      {/* Stays at the top while the envelopes scroll under it; hidden when
+          there is nothing left to assign (but shown when over assigned). */}
+      {view.availableToAssign !== 0 && (
+        <section className="assign-bar" aria-label="Available to Assign">
+          <span className="assign-label">Available to Assign</span>
+          <strong className="assign-amount money">
+            <Money cents={view.availableToAssign} />
+          </strong>
+          <span className="assign-helper">
+            {view.overAssigned > 0 ? (
+              <>
+                Over assigned by <Money cents={view.overAssigned} />
+              </>
+            ) : (
+              <>
+                Income this month <Money cents={view.income} />
+              </>
+            )}
+          </span>
+        </section>
+      )}
 
       {view.toReview.count > 0 && (
         <p className="notice compact">

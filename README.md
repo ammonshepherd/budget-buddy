@@ -89,8 +89,9 @@ One-time setup:
 ## The Budget page
 
 The Budget page is built to show as many envelopes as possible. **Available to Assign**
-(with the month picker and this month's income) stays fixed at the top while the
-envelopes scroll under it, even at $0.00. Each group has a **+** button to add an
+(with this month's income) stays fixed at the top while the envelopes scroll under it.
+It disappears when there is nothing left to assign ($0.00) and comes back as a warning
+when you are over assigned. The month picker sits just above it. Each group has a **+** button to add an
 envelope; groups themselves are added and deleted (when empty) in **Settings →
 Envelope groups**. Tap an envelope to assign, release from Saved or set its plan.
 
