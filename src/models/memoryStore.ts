@@ -81,6 +81,11 @@ export function createMemoryStore(): DataStore {
         importFormat: null,
       });
     },
+    async updateAccount(accountId, changes) {
+      const account = budget().accounts.find((a) => a.id === accountId);
+      if (!account) throw new UserFacingError("Account not found");
+      Object.assign(account, changes);
+    },
     async closeAccount(accountId) {
       const account = budget().accounts.find((a) => a.id === accountId);
       if (account) account.closedAt = new Date().toISOString();
