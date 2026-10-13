@@ -174,6 +174,9 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
 
   return {
     openAccounts,
+    /** Whether the transaction being edited is saved as a transfer (both sides). */
+    isTransfer: (form: TransactionForm) =>
+      Boolean(data.transactions.find((t) => t.id === form.id)?.transferId),
     otherAccounts,
     transferAccountOf,
 

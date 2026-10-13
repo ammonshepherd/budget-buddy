@@ -752,13 +752,6 @@ a:focus-visible {
   background: rgba(40, 26, 53, 0.45);
 }
 
-.item-editing {
-  margin-inline: -0.6rem;
-  padding: 0.75rem 0.6rem;
-  border-radius: 0.9rem;
-  background: var(--surface-muted);
-}
-
 @media (min-width: 30.01rem) {
   .fab {
     inset-block-end: 6.75rem;
@@ -908,4 +901,88 @@ a:focus-visible {
 .group-card .envelope-actions {
   gap: 0.5rem;
   padding-block-end: 0.6rem;
+}
+
+/* ---- v0.13.1: Activity dates, tappable rows, tighter sides --------------- */
+
+.day-group + .day-group {
+  margin-block-start: 0.35rem;
+}
+
+.day-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-block-end: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.day-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A triangle that points down when the date is open. */
+.day-group > summary > span:first-child::before {
+  display: inline-block;
+  margin-inline-end: 0.4rem;
+  content: "▸";
+  transition: transform 0.15s;
+}
+
+.day-group[open] > summary > span:first-child::before {
+  transform: rotate(90deg);
+}
+
+/* The whole row opens the edit dialog. */
+.item-button {
+  inline-size: 100%;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.item-button:hover {
+  background: var(--surface-muted);
+}
+
+.item-button .item-detail {
+  grid-column: 1 / -1;
+}
+
+.badge-uncategorized {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.4rem;
+  color: #6b4500;
+  background: #ffe2a8;
+  font-weight: 700;
+}
+
+.delete-transaction {
+  justify-self: center;
+  margin-block-start: 0.25rem;
+}
+
+/* Less empty space at the sides on a phone. */
+.page-content {
+  padding-inline: 0.5rem;
+}
+
+.list-card,
+.settings-list {
+  padding-inline: 0.85rem;
+}
+
+.group-card {
+  padding-inline: 0.7rem;
 }

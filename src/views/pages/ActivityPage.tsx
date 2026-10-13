@@ -3,16 +3,16 @@ import { useActivityPage } from "../../controllers/useActivityPage";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import type { Budget } from "../../controllers/useBudget";
 import { formFromTransaction } from "../../controllers/useTransactionEntry";
-import type { BudgetData } from "../../models/types";
+import type { BudgetData, Transaction } from "../../models/types";
 import { ErrorMessage, Money } from "../components";
-import { TransactionEntry } from "../TransactionEntry";
+import { TransactionDialog } from "../TransactionEntry";
 
-/** Transactions, newest first; Edit turns a row into its form, in place. */
+/** Transactions under date headings, newest first; tap one to edit or delete it. */
 export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetData }) {
   const page = useActivityPage(budget, data);
-  const remove = useAsyncAction(page.deleteTransaction);
   const mark = useAsyncAction(page.markIncome);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  /** The transaction open in the edit dialog. */
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   return (
     <section className="page-view stack" aria-labelledby="activity-title">
@@ -94,66 +94,60 @@ export function ActivityPage({ budget, data }: { budget: Budget; data: BudgetDat
         </section>
       )}
 
-      <section className="list-card">
+      <section className="list-card" aria-labelledby="transactions-title">
         <div className="section-heading">
-          <h2>Transactions</h2>
+          <h2 id="transactions-title">Transactions</h2>
           <span className="section-count">{page.rows.length}</span>
         </div>
         {page.rows.length === 0 ? (
           <p className="empty-state">No transactions yet. Add one with the + button.</p>
         ) : (
-          <ul className="item-list" aria-label="Transactions">
-            {page.rows.map(({ tx, accountName, category }) =>
-              tx.id === editingId ? (
-                <li className="item-editing" key={tx.id}>
-                  <TransactionEntry
-                    budget={budget}
-                    data={data}
-                    initial={formFromTransaction(tx, data)}
-                    heading="Edit transaction"
-                    onDone={() => setEditingId(null)}
-                    onCancel={() => setEditingId(null)}
-                  />
-                </li>
-              ) : (
-                <li className="item" key={tx.id}>
-                  <span className="item-title">{tx.payee || "(no payee)"}</span>
-                  <strong>
-                    <Money cents={tx.amount} />
-                  </strong>
-                  <span className="item-detail">
-                    {tx.date} · {accountName} · {category}
-                    {tx.memo && ` · ${tx.memo}`}
-                  </span>
-                  <span className="button-row">
+          page.days.map((day) => (
+            // Open by default; tap a date to fold its transactions away.
+            <details className="day-group" key={day.date} open>
+              <summary>
+                <span>{day.label}</span>
+                <span className="section-count">{day.rows.length}</span>
+              </summary>
+              <ul className="item-list">
+                {day.rows.map(({ tx, accountName, category, uncategorized }) => (
+                  <li key={tx.id}>
                     <button
-                      className="text-button"
+                      className="item item-button"
                       type="button"
-                      onClick={() => setEditingId(tx.id)}
+                      onClick={() => setEditing(tx)}
                     >
-                      Edit
+                      <span className="item-title">{tx.payee || "(no payee)"}</span>
+                      <strong>
+                        <Money cents={tx.amount} />
+                      </strong>
+                      <span className="item-detail">
+                        {accountName} ·{" "}
+                        <span className={uncategorized ? "badge-uncategorized" : undefined}>
+                          {category}
+                        </span>
+                        {tx.memo && ` · ${tx.memo}`}
+                      </span>
                     </button>
-                    <button
-                      className="text-button danger"
-                      type="button"
-                      disabled={remove.pending}
-                      onClick={() => {
-                        const question = tx.transferId
-                          ? "Delete this transfer? Its other side goes too (an imported bank row is kept, as Uncategorized)."
-                          : "Delete this transaction?";
-                        if (window.confirm(question)) void remove.run(tx.id);
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </span>
-                </li>
-              ),
-            )}
-          </ul>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))
         )}
-        <ErrorMessage error={remove.error} />
       </section>
+
+      <TransactionDialog
+        budget={budget}
+        data={data}
+        open={editing !== null}
+        heading="Edit transaction"
+        initial={() => formFromTransaction(editing!, data)}
+        onClose={() => setEditing(null)}
+        onDelete={async () => {
+          if (editing) await page.deleteTransaction(editing.id);
+        }}
+      />
     </section>
   );
 }

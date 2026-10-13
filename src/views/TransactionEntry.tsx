@@ -19,7 +19,7 @@ type Entry = ReturnType<typeof useTransactionEntry>;
 
 /**
  * The transaction form, then the cover prompt if its envelope would go
- * negative. Used by the Add transaction dialog and for editing on Activity.
+ * negative. Shown in TransactionDialog, for adding and for editing.
  */
 export function TransactionEntry({
   budget,
@@ -28,6 +28,7 @@ export function TransactionEntry({
   heading,
   onDone,
   onCancel,
+  onDelete,
 }: {
   budget: Budget;
   data: BudgetData;
@@ -35,6 +36,8 @@ export function TransactionEntry({
   heading: string;
   onDone: () => void;
   onCancel: () => void;
+  /** Set when editing: shows a Delete button. */
+  onDelete?: () => Promise<void>;
 }) {
   const entry = useTransactionEntry(budget, data);
   const [form, setForm] = useState(initial);
@@ -61,7 +64,67 @@ export function TransactionEntry({
       onSaved={onDone}
       onNeedsCover={setPlan}
       onCancel={onCancel}
+      onDelete={onDelete}
     />
+  );
+}
+
+/**
+ * A modal dialog holding TransactionEntry. `open` is controlled by the
+ * caller; Escape, Cancel, saving and deleting all call onClose.
+ */
+export function TransactionDialog({
+  budget,
+  data,
+  open,
+  heading,
+  initial,
+  onClose,
+  onDelete,
+}: {
+  budget: Budget;
+  data: BudgetData;
+  open: boolean;
+  heading: string;
+  initial: () => TransactionForm;
+  onClose: () => void;
+  onDelete?: () => Promise<void>;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  // A <dialog> opens with showModal(), which React has no prop for.
+  useEffect(() => {
+    const element = dialog.current;
+    if (open && !element?.open) element?.showModal();
+    if (!open && element?.open) element.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="sheet"
+      aria-label={heading}
+      // Escape closes the dialog itself; keep React's state in step.
+      onClose={onClose}
+    >
+      {open && (
+        <TransactionEntry
+          budget={budget}
+          data={data}
+          initial={initial()}
+          heading={heading}
+          onDone={onClose}
+          onCancel={onClose}
+          onDelete={
+            onDelete &&
+            (async () => {
+              await onDelete();
+              onClose();
+            })
+          }
+        />
+      )}
+    </dialog>
   );
 }
 
@@ -71,14 +134,6 @@ export function TransactionEntry({
  */
 export function AddTransactionButton({ budget, data }: { budget: Budget; data: BudgetData }) {
   const [open, setOpen] = useState(false);
-  const dialog = useRef<HTMLDialogElement>(null);
-
-  // A <dialog> opens with showModal(), which React has no prop for.
-  useEffect(() => {
-    const element = dialog.current;
-    if (open && !element?.open) element?.showModal();
-    if (!open && element?.open) element.close();
-  }, [open]);
 
   return (
     <>
@@ -91,24 +146,14 @@ export function AddTransactionButton({ budget, data }: { budget: Budget; data: B
       >
         <PlusIcon />
       </button>
-      <dialog
-        ref={dialog}
-        className="sheet"
-        aria-label="Add a transaction"
-        // Escape closes the dialog itself; keep React's state in step.
+      <TransactionDialog
+        budget={budget}
+        data={data}
+        open={open}
+        heading="Add a transaction"
+        initial={() => blankTransactionForm(data)}
         onClose={() => setOpen(false)}
-      >
-        {open && (
-          <TransactionEntry
-            budget={budget}
-            data={data}
-            initial={blankTransactionForm(data)}
-            heading="Add a transaction"
-            onDone={() => setOpen(false)}
-            onCancel={() => setOpen(false)}
-          />
-        )}
-      </dialog>
+      />
     </>
   );
 }
@@ -121,6 +166,7 @@ function TransactionEditor({
   onSaved,
   onNeedsCover,
   onCancel,
+  onDelete,
 }: {
   entry: Entry;
   heading: string;
@@ -129,8 +175,10 @@ function TransactionEditor({
   onSaved: () => void;
   onNeedsCover: (plan: CoverPlan) => void;
   onCancel: () => void;
+  onDelete?: () => Promise<void>;
 }) {
   const save = useAsyncAction(entry.prepare);
+  const remove = useAsyncAction(async () => onDelete?.());
   const transfer = form.category === TRANSFER;
   const transferNote = entry.describeTransfer(form);
   const transferOptions = entry.transferOptions(form);
@@ -260,7 +308,23 @@ function TransactionEditor({
       <button className="secondary-button" type="button" onClick={onCancel}>
         Cancel
       </button>
+      {onDelete && (
+        <button
+          className="text-button danger delete-transaction"
+          type="button"
+          disabled={remove.pending}
+          onClick={() => {
+            const question = entry.isTransfer(form)
+              ? "Delete this transfer? Its other side goes too (an imported bank row is kept, as Uncategorized)."
+              : "Delete this transaction?";
+            if (window.confirm(question)) void remove.run();
+          }}
+        >
+          {entry.isTransfer(form) ? "Delete transfer" : "Delete transaction"}
+        </button>
+      )}
       <ErrorMessage error={save.error} />
+      <ErrorMessage error={remove.error} />
     </form>
   );
 }

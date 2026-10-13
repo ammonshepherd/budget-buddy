@@ -67,7 +67,7 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
     .click();
   await expect(page.getByRole("heading", { name: "Inflows to review" })).toHaveCount(0);
   await expect(
-    page.getByRole("list", { name: "Transactions" }).locator(".item", { hasText: "PAYROLL" }),
+    page.getByRole("region", { name: "Transactions" }).locator(".item", { hasText: "PAYROLL" }),
   ).toContainText("Income");
   await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,481.38");
@@ -117,5 +117,8 @@ test("a card export with positive purchases and changed columns", async ({ page 
 
   await goTo(page, "Activity");
   await expect(page.locator(".item", { hasText: "GROCERY" })).toContainText("-$45.10");
-  await expect(page.locator(".item", { hasText: "GROCERY" })).toContainText("2030-01-04");
+  // Listed under its posting date's heading.
+  await expect(
+    page.locator("details.day-group", { hasText: "Friday, January 4, 2030" }).locator(".item"),
+  ).toContainText("GROCERY");
 });
