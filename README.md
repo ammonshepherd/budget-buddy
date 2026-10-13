@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.13.0** (kept in `package.json`).
+The current application version is **0.13.1** (kept in `package.json`).
 
 Versions follow:
 
@@ -120,7 +120,9 @@ never touch outflows, transfers or transactions already in an envelope.
 
 The round **+** button in the bottom-right corner of Budget, Accounts and Activity opens
 the transaction form in a dialog, so you can record spending without leaving the page.
-On Activity, **Edit** turns that row into the form in place; Cancel puts it back.
+On Activity, transactions are grouped under date headings (tap a date to fold it away),
+Uncategorized ones are highlighted, and tapping a transaction opens it in the same
+dialog to edit or delete it.
 
 ## Credit cards
 

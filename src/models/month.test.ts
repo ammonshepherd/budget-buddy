@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, currentMonth, formatMonth, monthOf, todayIso } from "./month";
+import { addMonths, currentMonth, formatDay, formatMonth, monthOf, todayIso } from "./month";
 
 describe("month helpers", () => {
   it("uses the local calendar for today", () => {
@@ -17,5 +17,12 @@ describe("month helpers", () => {
   it("formats and extracts months", () => {
     expect(formatMonth("2026-10")).toBe("October 2026");
     expect(monthOf("2026-10-05")).toBe("2026-10");
+  });
+});
+
+describe("formatDay", () => {
+  it("names the weekday and date, in the local calendar", () => {
+    expect(formatDay("2026-10-12")).toBe("Monday, October 12, 2026");
+    expect(formatDay("2030-01-01")).toBe("Tuesday, January 1, 2030");
   });
 });

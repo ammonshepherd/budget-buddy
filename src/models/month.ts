@@ -41,3 +41,14 @@ export function formatMonth(month: Month): string {
     year: "numeric",
   });
 }
+
+/** "2026-10-12" → "Monday, October 12, 2026" (the Activity page's date headings). */
+export function formatDay(date: IsoDate): string {
+  const [year, mon, day] = date.split("-").map(Number) as [number, number, number];
+  return new Date(year, mon - 1, day).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}

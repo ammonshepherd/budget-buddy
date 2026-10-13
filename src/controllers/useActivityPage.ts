@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { isInflowToReview } from "../models/budgetMath";
 import { inflowsMatchingRules } from "../models/incomeRules";
+import { formatDay } from "../models/month";
 import { transferPartner } from "../models/transfers";
 import type { BudgetData, Transaction } from "../models/types";
 import type { Budget } from "./useBudget";
@@ -30,14 +31,26 @@ export function useActivityPage(budget: Budget, data: BudgetData) {
     tx,
     accountName: accountNames.get(tx.accountId) ?? "Unknown account",
     category: category(tx),
+    /** No envelope, not income and not a transfer: highlighted so it gets one. */
+    uncategorized: !tx.isTransfer && !tx.isIncome && tx.allocations.length === 0,
   });
+  const rows = data.transactions.map(row);
+  // Transactions come newest first, so each date's group is contiguous.
+  const days: { date: string; label: string; rows: typeof rows }[] = [];
+  for (const r of rows) {
+    const last = days.at(-1);
+    if (last?.date === r.tx.date) last.rows.push(r);
+    else days.push({ date: r.tx.date, label: formatDay(r.tx.date), rows: [r] });
+  }
   const onBudget = new Set(data.accounts.filter((a) => a.onBudget).map((a) => a.id));
   const toReview = data.transactions.filter(
     (tx) => onBudget.has(tx.accountId) && isInflowToReview(tx),
   );
 
   return {
-    rows: data.transactions.map(row),
+    rows,
+    /** Transactions under date headings, newest date first. */
+    days,
     /** Uncategorized inflows: not in Available to Assign until marked Income (or given an envelope). */
     toReview: toReview.map(row),
     toReviewTotal: toReview.reduce((sum, tx) => sum + tx.amount, 0),
