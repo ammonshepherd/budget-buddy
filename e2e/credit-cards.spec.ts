@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  addGroupWithEnvelopes,
   available,
   envelope,
   envelopeAction,
@@ -77,11 +78,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await page.getByLabel("Opening balance").fill("1000");
   await page.getByRole("button", { name: "Add account" }).click();
 
-  await goTo(page, "Budget");
-  await page.getByLabel("Group name").fill("Everyday");
-  await page.getByRole("button", { name: "Add group" }).click();
-  await page.getByLabel("New envelope").fill("Groceries");
-  await page.getByRole("button", { name: "Add envelope" }).click();
+  await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
   await envelopeAction(page, "Groceries", "Assign (negative to take back)", "100");
 
   await goTo(page, "Accounts");

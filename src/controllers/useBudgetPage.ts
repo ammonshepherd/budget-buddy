@@ -8,7 +8,7 @@ import type { BudgetData } from "../models/types";
 import { requireCents, requireName } from "./input";
 import type { Budget } from "./useBudget";
 
-const nextPosition = (items: { position: number }[]) =>
+export const nextPosition = (items: { position: number }[]) =>
   items.reduce((max, item) => Math.max(max, item.position + 1), 0);
 
 /** The Budget page for one month: the numbers to show and what the user can do. */
@@ -68,13 +68,6 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       await budget.change((store) => store.setPlanned(householdId, envelopeId, month, planned));
     },
 
-    addGroup: async (name: string) => {
-      const groupName = requireName(name, "Group name");
-      await budget.change((store) =>
-        store.addGroup(householdId, groupName, nextPosition(data.groups)),
-      );
-    },
-
     addEnvelope: async (groupId: string, name: string) => {
       const envelopeName = requireName(name, "Envelope name");
       const siblings = data.envelopes.filter((e) => e.groupId === groupId);
@@ -85,10 +78,6 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
 
     deleteEnvelope: async (envelopeId: string) => {
       await budget.change((store) => store.deleteEnvelope(envelopeId));
-    },
-
-    deleteGroup: async (groupId: string) => {
-      await budget.change((store) => store.deleteGroup(groupId));
     },
   };
 }

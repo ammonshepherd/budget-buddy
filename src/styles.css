@@ -63,7 +63,8 @@ a:focus-visible {
   min-block-size: 100dvh;
   max-inline-size: 30rem;
   margin-inline: auto;
-  overflow: hidden;
+  /* clip, not hidden: hidden would stop the Available to Assign bar sticking. */
+  overflow: clip;
   background: var(--app-background);
 }
 
@@ -165,8 +166,6 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
-.hero-card,
-.summary-card,
 .list-card,
 .settings-list {
   border: 1px solid var(--border);
@@ -175,53 +174,11 @@ a:focus-visible {
   box-shadow: var(--shadow);
 }
 
-.hero-card {
-  display: grid;
-  gap: 0.35rem;
-  margin-block-end: 0.8rem;
-  padding: 1.35rem;
-  color: #fff;
-  background: var(--brand);
-}
-
-.card-label,
-.card-helper {
-  color: #eadcf6;
-  font-size: 0.82rem;
-}
-
-.hero-amount {
-  margin-block: 0.15rem;
-  font-size: clamp(2.4rem, 13vw, 4rem);
-  letter-spacing: -0.07em;
-  line-height: 1;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  margin-block-end: 0.8rem;
-}
-
-.summary-card {
-  display: grid;
-  gap: 0.5rem;
-  padding: 1rem;
-  box-shadow: none;
-}
-
-.summary-card span,
 .section-count,
 .empty-state,
 .settings-row-copy small {
   color: var(--text-muted);
   font-size: 0.82rem;
-}
-
-.summary-card strong {
-  font-size: 1.35rem;
-  letter-spacing: -0.03em;
 }
 
 .list-card,
@@ -594,10 +551,6 @@ a:focus-visible {
   text-decoration: none;
 }
 
-.summary-grid.four {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .envelope-list,
 .item-list {
   display: grid;
@@ -810,4 +763,159 @@ a:focus-visible {
   .fab {
     inset-block-end: 6.75rem;
   }
+}
+
+/* ---- v0.13.0: compact Budget page --------------------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.budget-page {
+  display: grid;
+  gap: 0.5rem;
+  /* The bar sits right under the app header. */
+  margin-block-start: -0.9rem;
+}
+
+/* Available to Assign: always visible at the top while envelopes scroll. */
+.assign-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.1rem 0.75rem;
+  padding: 0.55rem 0.85rem 0.6rem;
+  border-radius: 0 0 1rem 1rem;
+  color: #fff;
+  background: var(--brand);
+  box-shadow: 0 0.5rem 1.25rem rgba(75, 42, 104, 0.25);
+}
+
+.assign-bar .month-nav {
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.assign-bar .month-nav a {
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.assign-label,
+.assign-helper {
+  color: #eadcf6;
+  font-size: 0.75rem;
+}
+
+.assign-label {
+  text-align: end;
+}
+
+.assign-amount {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 1.65rem;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  text-align: end;
+}
+
+.assign-helper {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.assign-bar .money.negative {
+  color: #ffd2cc;
+}
+
+.notice.compact {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.group-card {
+  padding: 0.4rem 0.8rem 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block: 0.15rem;
+}
+
+.group-heading h2 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.add-envelope-button {
+  display: inline-grid;
+  inline-size: 1.7rem;
+  block-size: 1.7rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--brand);
+  background: var(--brand-light);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.group-card > .form {
+  padding-block: 0.35rem 0.5rem;
+}
+
+.group-card > .empty-state {
+  padding-block: 0.2rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.group-card .envelope summary {
+  gap: 0.05rem 0.6rem;
+  padding: 0.42rem 0;
+}
+
+.group-card .envelope-name {
+  font-size: 0.93rem;
+}
+
+.group-card .envelope-remaining {
+  font-size: 0.95rem;
+}
+
+.group-card .envelope-figures {
+  gap: 0 0.7rem;
+  font-size: 0.7rem;
+}
+
+.group-card .envelope-actions {
+  gap: 0.5rem;
+  padding-block-end: 0.6rem;
 }

@@ -53,3 +53,21 @@ export async function openAddTransaction(page: Page) {
 /** Clicks a page in the bottom navigation. */
 export const goTo = (page: Page, name: "Budget" | "Accounts" | "Activity" | "Settings") =>
   page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name }).click();
+
+/** Adds a group in Settings, then its envelopes with the group's + button on Budget. */
+export async function addGroupWithEnvelopes(page: Page, group: string, envelopes: string[]) {
+  await goTo(page, "Settings");
+  const groups = page.getByRole("region", { name: "Envelope groups" });
+  await groups.getByLabel("Group name").fill(group);
+  await groups.getByRole("button", { name: "Add group" }).click();
+  await expect(groups.getByRole("list", { name: "Envelope groups" })).toContainText(group);
+  await goTo(page, "Budget");
+  const card = page.getByRole("region", { name: group, exact: true });
+  await card.getByRole("button", { name: `Add envelope to ${group}` }).click();
+  for (const name of envelopes) {
+    await card.getByLabel("New envelope").fill(name);
+    await card.getByRole("button", { name: "Add envelope" }).click();
+    await expect(envelope(page, name)).toBeVisible();
+  }
+  await card.getByRole("button", { name: `Stop adding to ${group}` }).click();
+}
