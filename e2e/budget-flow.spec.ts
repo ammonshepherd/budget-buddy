@@ -99,9 +99,21 @@ test("edit and delete a transaction", async ({ page }) => {
   const row = page.locator(".item", { hasText: "Lunch" });
   await expect(row).toContainText("-$12.50");
 
+  // Editing happens in the row itself.
   await row.getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Amount").fill("15");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  const form = page.getByRole("form", { name: "Edit transaction" });
+  await expect(form.getByLabel("Amount")).toHaveValue("12.50");
+  await form.getByLabel("Amount").fill("15");
+  await form.getByLabel("Memo").fill("with a friend");
+  await form.getByRole("button", { name: "Save changes" }).click();
+  await expect(form).toHaveCount(0);
+  await expect(row).toContainText("-$15.00");
+  await expect(row).toContainText("with a friend");
+
+  // Cancel leaves the row as it was.
+  await row.getByRole("button", { name: "Edit" }).click();
+  await form.getByLabel("Amount").fill("99");
+  await form.getByRole("button", { name: "Cancel" }).click();
   await expect(row).toContainText("-$15.00");
 
   await row.getByRole("button", { name: "Delete" }).click();

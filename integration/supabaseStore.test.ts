@@ -34,6 +34,7 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
 
     await store.addAccount(householdId, {
       name: run,
+      type: "checking",
       openingBalance: 100_000,
       openingDate: "2026-10-01",
     });
@@ -179,11 +180,13 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
     const run = `import-${Date.now()}`;
     await store.addAccount(data.household.id, {
       name: run,
+      type: "credit_card",
       openingBalance: 0,
       openingDate: "2030-01-01",
     });
     data = (await store.load())!;
     const account = data.accounts.find((a) => a.name === run)!;
+    expect(account.type).toBe("credit_card");
 
     const table = readTable(
       parseCsv(

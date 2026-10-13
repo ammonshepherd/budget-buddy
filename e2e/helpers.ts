@@ -34,11 +34,20 @@ export async function addTransaction(
   tx: { amount: string; payee: string; envelope?: string; direction?: "Outflow" | "Inflow" },
 ) {
   await goTo(page, "Activity");
-  await page.getByRole("radio", { name: tx.direction ?? "Outflow" }).check();
-  await page.getByLabel("Amount").fill(tx.amount);
-  await page.getByLabel("Payee").fill(tx.payee);
-  await page.getByLabel("Envelope").selectOption({ label: tx.envelope ?? "Uncategorized" });
-  await page.getByRole("button", { name: "Add transaction" }).click();
+  const form = await openAddTransaction(page);
+  await form.getByRole("radio", { name: tx.direction ?? "Outflow" }).check();
+  await form.getByLabel("Amount").fill(tx.amount);
+  await form.getByLabel("Payee").fill(tx.payee);
+  await form.getByLabel("Envelope").selectOption({ label: tx.envelope ?? "Uncategorized" });
+  await form.getByRole("button", { name: "Add transaction" }).click();
+}
+
+/** Clicks the floating + button and returns the dialog it opens. */
+export async function openAddTransaction(page: Page) {
+  await page.getByRole("button", { name: "Add transaction", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add a transaction" });
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
 /** Clicks a page in the bottom navigation. */

@@ -33,6 +33,7 @@ function household(): BudgetData {
       {
         id: "checking",
         name: "Checking",
+        type: "checking",
         openingBalance: 100_000,
         openingDate: "2026-09-15",
         onBudget: true,
@@ -42,6 +43,7 @@ function household(): BudgetData {
       {
         id: "savings",
         name: "Savings",
+        type: "checking",
         openingBalance: 50_000,
         openingDate: "2026-09-15",
         onBudget: true,
@@ -112,6 +114,56 @@ describe("availableToAssignFor", () => {
     const data = household();
     const view = buildBudgetMonth(data, "2026-10");
     const balances = accountBalance("checking", data) + accountBalance("savings", data);
+    const envelopeMoney = view.groups
+      .flatMap((g) => g.envelopes)
+      .reduce((sum, e) => sum + e.envelopeMoney, 0);
+    expect(view.availableToAssign).toBe(balances - envelopeMoney);
+  });
+
+  it("treats a credit card as a budget account that owes money", () => {
+    const data = household();
+    data.accounts.push({
+      id: "card",
+      name: "Card",
+      type: "credit_card",
+      openingBalance: -20_000,
+      openingDate: "2026-10-01",
+      onBudget: true,
+      closedAt: null,
+      importFormat: null,
+    });
+    const before = availableToAssignFor(data, "2026-10");
+    data.transactions.push(
+      // A card purchase from Fun lowers the envelope, not Available to Assign.
+      tx({
+        id: "card-buy",
+        date: "2026-10-07",
+        amount: -4_000,
+        accountId: "card",
+        allocations: [{ envelopeId: "fun", amount: -4_000 }],
+      }),
+      // Paying the card from checking is a Transfer on both sides.
+      tx({ id: "pay-out", date: "2026-10-08", amount: -15_000, isTransfer: true }),
+      tx({
+        id: "pay-in",
+        date: "2026-10-08",
+        amount: 15_000,
+        isTransfer: true,
+        accountId: "card",
+      }),
+    );
+
+    // The amount owed when the card opened is already out of Available to Assign.
+    expect(before).toBe(150_000 + 200_000 - 80_000 - 2_000 - 20_000);
+    expect(availableToAssignFor(data, "2026-10")).toBe(before);
+    expect(accountBalance("card", data)).toBe(-20_000 - 4_000 + 15_000);
+    const view = buildBudgetMonth(data, "2026-10");
+    const fun = view.groups[0]!.envelopes.find((e) => e.id === "fun")!;
+    expect(fun.remaining).toBe(6_000);
+    const balances = ["checking", "savings", "card"].reduce(
+      (sum, id) => sum + accountBalance(id, data),
+      0,
+    );
     const envelopeMoney = view.groups
       .flatMap((g) => g.envelopes)
       .reduce((sum, e) => sum + e.envelopeMoney, 0);

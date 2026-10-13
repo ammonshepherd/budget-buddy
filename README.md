@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.6.0** (kept in `package.json`).
+The current application version is **0.7.0** (kept in `package.json`).
 
 Versions follow:
 
@@ -85,6 +85,21 @@ One-time setup:
   `.env.local`.
 - **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
   and as a redirect URL.
+
+## Adding and editing transactions
+
+The round **+** button in the bottom-right corner of Budget, Accounts and Activity opens
+the transaction form in a dialog, so you can record spending without leaving the page.
+On Activity, **Edit** turns that row into the form in place; Cancel puts it back.
+
+## Credit cards
+
+Accounts → **Add an account** → **Credit card**, then enter the amount owed on the
+opening date (as a positive number). The card's balance is negative while money is
+owed, and that debt lowers Available to Assign. Card purchases come out of envelopes
+like any spending. Record a card payment as a **Transfer** in both the paying account
+and the card, so it is neither spending nor income. A dedicated card-payment envelope
+is still planned.
 
 ## Transaction import
 

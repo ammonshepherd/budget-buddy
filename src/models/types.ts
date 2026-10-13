@@ -14,9 +14,14 @@ export interface Household {
   name: string;
 }
 
+/** Checking holds money; a credit card's balance is normally negative (money owed). */
+export type AccountType = "checking" | "credit_card";
+
 export interface Account {
   id: string;
   name: string;
+  type: AccountType;
+  /** Signed like every amount: a card that owes $50 opens at -5000. */
   openingBalance: Cents;
   openingDate: IsoDate;
   onBudget: boolean;

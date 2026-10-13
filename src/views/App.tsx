@@ -16,6 +16,10 @@ import { ActivityPage } from "./pages/ActivityPage";
 import { BudgetPage } from "./pages/BudgetPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./SignInPage";
+import { AddTransactionButton } from "./TransactionEntry";
+
+/** Pages with the floating Add transaction button. */
+const QUICK_ADD: Route[] = ["budget", "accounts", "activity"];
 
 const NAV_ICONS: Record<Route, () => JSX.Element> = {
   budget: BudgetIcon,
@@ -105,6 +109,7 @@ function SignedInApp({ session }: { session: UserSession }) {
       <main className="page-content" aria-live="polite">
         {pages[location.route]}
       </main>
+      {QUICK_ADD.includes(location.route) && <AddTransactionButton budget={budget} data={data} />}
       <nav className="bottom-nav" aria-label="Primary navigation">
         {ROUTES.map((name) => {
           const NavIcon = NAV_ICONS[name];

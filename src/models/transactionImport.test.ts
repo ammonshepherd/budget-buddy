@@ -47,6 +47,7 @@ function account(partial: Partial<Account> = {}): Account {
   return {
     id: "checking",
     name: "Checking",
+    type: "checking",
     openingBalance: 0,
     openingDate: "2026-10-01",
     onBudget: true,

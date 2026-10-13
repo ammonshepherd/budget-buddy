@@ -84,17 +84,23 @@ Releasing Saved does not change Available to Assign (money stays in the envelope
   of its transactions, so the opening date can be edited only up to the date
   of its first transaction.
 - Only open accounts can be edited (closing requires a $0.00 balance).
+- Account type (`checking` or `credit_card`) is chosen when adding and cannot
+  change. A credit card is a budget account with a normally negative balance
+  (owed); the form takes the amount owed as positive and stores it negated
+  (`src/models/accounts.ts`). No envelope-math change: card purchases spend
+  from envelopes, card debt lowers Available to Assign, and a card payment is a
+  Transfer on both accounts.
 
 ## v1 scope
 
-Checking accounts; CSV import with preview, invalid-row report and duplicate
+Checking and credit card accounts; CSV import with preview, invalid-row report and duplicate
 prevention (bank ID, else date+amount+description fingerprint); transaction
 add/edit/delete; envelope groups and envelopes add/edit/delete/reorder;
 assign transactions to envelopes; Budget page as the main screen showing
 Plan / Assign / Spent / Remaining / Saved per envelope; month picker kept in the URL;
 a "Transfer" marking so transfers are not spending.
 
-Later: credit cards (with a card-payment envelope per card), split UI,
+Later: a card-payment envelope per credit card, split UI,
 manual/imported matching, reconciliation, tithing/fast-offering rules.
 
 ## Supabase state
