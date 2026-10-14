@@ -38,8 +38,8 @@ test("import an envelope plan CSV for a month from Settings", async ({ page }) =
   // The plan is on that month's budget.
   await card.getByRole("link", { name: "Open that budget" }).click();
   await expect(page).toHaveURL(/#budget\/2030-01$/);
-  await expect(envelope(page, "Rent")).toContainText("Plan $1,200.00");
-  await expect(envelope(page, "Food, groceries")).toContainText("Plan $450.50");
+  await expect(envelope(page, "Rent")).toContainText("Planned $1,200.00");
+  await expect(envelope(page, "Food, groceries")).toContainText("Planned $450.50");
 
   // Importing again updates Planned for existing envelopes instead of duplicating them.
   await goTo(page, "Settings");
@@ -54,7 +54,7 @@ test("import an envelope plan CSV for a month from Settings", async ({ page }) =
 
   await page.goto("./#budget/2030-01");
   await expect(page.locator("details.envelope")).toHaveCount(2);
-  await expect(envelope(page, "Rent")).toContainText("Plan $1,300.00");
+  await expect(envelope(page, "Rent")).toContainText("Planned $1,300.00");
 });
 
 test("an unusable file shows why", async ({ page }) => {

@@ -459,7 +459,7 @@ describe("income and transactions to review", () => {
     );
     const view = buildBudgetMonth(data, "2026-10");
     expect(view.availableToAssign).toBe(before);
-    // Shown as Spent $0.00: the refund only raises Remaining.
+    // Fun spent nothing this month, so the refund shows as Refunded, not as Spent −$25.
     expect(view.groups[0]!.envelopes.find((e) => e.id === "fun")).toMatchObject({
       remaining: 12_500,
       spent: -2_500,
@@ -494,5 +494,38 @@ describe("income and transactions to review", () => {
     expect(view.availableToAssign + view.toReview.inflow - view.toReview.outflow).toBe(
       balances - envelopeMoney,
     );
+  });
+});
+
+describe("Spent and Refunded as shown", () => {
+  it("lets a refund cancel out the month's spending first", () => {
+    const data = household();
+    data.envelopeMonths.push({
+      envelopeId: "home",
+      month: "2026-10",
+      assigned: 11_709,
+      released: 0,
+      planned: 6_700,
+    });
+    data.envelopes.push({
+      id: "home",
+      groupId: "g",
+      name: "Home",
+      position: 2,
+      cardAccountId: null,
+    });
+    const spend = (id: string, amount: number) =>
+      tx({ id, date: "2026-10-12", amount, allocations: [{ envelopeId: "home", amount }] });
+    data.transactions.push(
+      spend("a", -6_793),
+      spend("b", -1_862),
+      spend("c", -7_788),
+      spend("r", 4_734),
+    );
+    const home = buildBudgetMonth(data, "2026-10").groups[0]!.envelopes.find(
+      (e) => e.id === "home",
+    );
+    // $164.43 bought − $47.34 refunded = $117.09 spent, matching Assigned.
+    expect(home).toMatchObject({ assigned: 11_709, outflow: 11_709, refunded: 0, remaining: 0 });
   });
 });
