@@ -22,7 +22,14 @@ export default defineConfig({
       // Generates the service worker and manifest that sw.js and
       // manifest.webmanifest used to provide by hand.
       registerType: "autoUpdate",
-      includeAssets: ["icons/logo-icon.svg", "icons/logo-icon.png"],
+      // Cached by the service worker so the icons work offline.
+      includeAssets: [
+        "icons/favicon.svg",
+        "icons/favicon-32.png",
+        "icons/favicon.ico",
+        "icons/apple-touch-icon.png",
+        "icons/icon.svg",
+      ],
       manifest: {
         name: "Budget Buddy",
         short_name: "Budget Buddy",
@@ -33,19 +40,18 @@ export default defineConfig({
         display: "standalone",
         background_color: "#faf8fc",
         theme_color: "#4b2a68",
+        // "any" icons are shown as drawn; the "maskable" one has extra
+        // padding so Android can crop it to a circle or rounded square.
         icons: [
+          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
           {
-            src: "icons/logo-icon.png",
-            sizes: "1024x1024",
+            src: "icons/icon-maskable-512.png",
+            sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "maskable",
           },
-          {
-            src: "icons/logo-icon.svg",
-            sizes: "256x256",
-            type: "image/svg+xml",
-            purpose: "any",
-          },
+          { src: "icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
         ],
       },
     }),

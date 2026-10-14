@@ -87,9 +87,9 @@ a:focus-visible {
   text-decoration: none;
 }
 
+/* The icon is drawn on a transparent background, so no frame or shadow. */
 .brand img {
-  border-radius: 0.75rem;
-  box-shadow: 0 0.3rem 0.8rem rgba(75, 42, 104, 0.2);
+  display: block;
 }
 
 .header-actions {

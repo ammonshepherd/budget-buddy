@@ -32,11 +32,35 @@ test("signing out returns to the sign-in page", async ({ page }) => {
 test("assets and manifest are served from the GitHub Pages base path", async ({ page }) => {
   await page.goto("./");
   const logo = page.locator(".brand img");
-  await expect(logo).toHaveAttribute("src", "/budget-buddy/icons/logo-icon.svg");
+  await expect(logo).toHaveAttribute("src", "/budget-buddy/icons/icon.svg");
   expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   const manifestHref = await page.locator('link[rel="manifest"]').getAttribute("href");
   expect(manifestHref).toBe("/budget-buddy/manifest.webmanifest");
   const manifest = await (await page.request.get(manifestHref!)).json();
   expect(manifest).toMatchObject({ start_url: "/budget-buddy/", scope: "/budget-buddy/" });
+
+  // Every app icon, in the manifest and in <head>, loads from the base path.
+  expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([
+    "icons/icon-192.png",
+    "icons/icon-512.png",
+    "icons/icon-maskable-512.png",
+    "icons/icon.svg",
+  ]);
+  expect(manifest.icons.find((i: { purpose: string }) => i.purpose === "maskable")).toBeTruthy();
+  const headIcons = await page
+    .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+    .evaluateAll((links) => links.map((link) => link.getAttribute("href")!));
+  expect(headIcons).toEqual([
+    "/budget-buddy/icons/favicon.svg",
+    "/budget-buddy/icons/favicon-32.png",
+    "/budget-buddy/icons/favicon.ico",
+    "/budget-buddy/icons/apple-touch-icon.png",
+  ]);
+  for (const href of [
+    ...headIcons,
+    ...manifest.icons.map((i: { src: string }) => `/budget-buddy/${i.src}`),
+  ]) {
+    expect((await page.request.get(href)).status(), href).toBe(200);
+  }
 });
