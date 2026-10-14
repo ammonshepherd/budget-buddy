@@ -1,0 +1,309 @@
+# Budget Buddy — specification
+
+What the app does and how it is built, in enough detail to rebuild it. Three
+sources together are the full picture; when they disagree, fix the docs:
+
+| Source                      | Authoritative for                                  |
+| --------------------------- | -------------------------------------------------- |
+| `CLAUDE.md`                 | Decided envelope math, budgeting rules, process    |
+| `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
+| This file                   | Everything else: structure, screens, import, look  |
+
+Version described: 0.14.4.
+
+## 1. Purpose
+
+An envelope-budgeting Progressive Web App for one small household. Money in
+checking accounts gets a job in envelopes; spending comes out of envelopes;
+credit card spending is set aside in a payment envelope per card. Bank and card
+CSV exports are imported and reviewed. Works on a phone first, installable,
+hosted on GitHub Pages with Supabase as the back end.
+
+## 2. Project structure
+
+```
+src/models/       types, pure functions, data stores (no React)
+src/controllers/  React hooks: load data, handle actions, call models
+src/views/        React components (pages in src/views/pages/)
+src/styles.css    all styling
+public/icons/     app icons (see CLAUDE.md "App icons")
+supabase/migrations/  every schema change, applied in order
+e2e/              Playwright UI tests
+integration/      opt-in tests against the real Supabase project
+```
+
+Key model modules: `budgetMath.ts` (all budget math), `money.ts` (parse and
+format cents), `month.ts` (`YYYY-MM` helpers, `formatDay`), `routes.ts`,
+`accounts.ts` (card opening balance sign), `transfers.ts` (linked transfers and
+matching), `transactionImport.ts` + `csv.ts` (bank CSV), `envelopePlan.ts` (plan
+CSV), `incomeRules.ts`, `dataStore.ts` (the store interface), `supabaseStore.ts`,
+`memoryStore.ts`, `store.ts` (picks one).
+
+### Data stores
+
+`DataStore` (in `dataStore.ts`) is the only way controllers read or write data.
+Two implementations:
+
+- `supabaseStore` — the real one. Loads the whole household at once (`load()`
+  returns `BudgetData`: household, accounts, groups, envelopes, envelope months,
+  transactions with allocations, income rules) and writes through table
+  inserts/updates for simple changes and SQL functions for multi-row ones.
+- `memoryStore` — in-memory, any password signs in. Used when the build sets
+  `VITE_DATA_STORE=memory` (the Playwright build). It must enforce the same rules
+  as the database (card credits, transfers, payment envelopes, income).
+
+After every change the controller reloads all data (`budget.change`), so pages
+always show what the store holds.
+
+### Configuration
+
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — in `.env.local` locally and as
+  repository Actions variables for the deploy build. Never the service-role key.
+- `VITE_DATA_STORE=memory` — the in-memory store (UI tests).
+- `vite.config.ts`: `base: "/budget-buddy/"`, `vite-plugin-pwa` with
+  `registerType: "autoUpdate"`, manifest (name/short name "Budget Buddy",
+  `start_url`/`scope`/`id` = base, `display: standalone`, background `#faf8fc`,
+  theme `#4b2a68`, icons per CLAUDE.md), and `__APP_VERSION__` from `package.json`.
+
+### Commands and CI
+
+`npm run dev | build | preview | typecheck | lint | format | format:check |
+test | test:ui | test:integration`. UI tests build with the memory store into
+`dist-e2e/` and run against `vite preview` on port 4173 (Pixel 7 viewport).
+
+GitHub Actions (`.github/workflows/deploy.yml`) runs on pushes to `main` and on
+pull requests: `npm ci`, `format:check`, `lint`, `npm test` (unit), `build`.
+Only pushes to `main` deploy to Pages. UI tests run locally before a PR.
+
+## 3. Data model
+
+All money is integer cents (`bigint`), signed: inflow positive, outflow negative.
+Every table except `households` has `household_id`; foreign keys between
+household tables include `household_id`, so rows can never point into another
+household. Row Level Security on every table allows a signed-in user only rows
+of a household they belong to (`private.is_household_member`). Signed-out
+visitors get nothing.
+
+| Table                     | Key columns and rules                                                                                                                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `households`              | name (1–100 chars). Created only by `create_household`.                                                                                                                                                              |
+| `household_members`       | household, user (one household per user), role `owner`/`member`.                                                                                                                                                     |
+| `accounts`                | name, `type` (`checking`/`credit_card`), `on_budget`, `opening_balance`, `opening_date`, `closed_at`, `import_format` (JSON, ≤ 8 KB). Never deleted.                                                                 |
+| `category_groups`         | name, `position`. Deletable only when empty.                                                                                                                                                                         |
+| `categories` (envelopes)  | group, name, `position`, `card_account_id` (set on a card's payment envelope; unique per card). Deletable only with no transactions; deleting removes its months (their Assigned returns to Available to Assign).    |
+| `category_months`         | (envelope, `YYYY-MM`) → `assigned` (may be negative after moves), `released` (≥ 0), `planned` (≥ 0).                                                                                                                 |
+| `transactions`            | account, date, amount (≠ 0), payee (≤ 200), memo (≤ 500), `is_transfer`, `transfer_id`, `is_income`, `voided`, `source` (`manual`/`csv`), `import_key` (unique per account).                                         |
+| `transaction_allocations` | transaction, envelope, amount. One row per envelope (several = a split, no UI yet). Must sum to the transaction amount (checked at commit). None for transfers, income or card credits; never to a payment envelope. |
+| `income_rules`            | `pattern` (2–100 chars), `account_id` (null = any account).                                                                                                                                                          |
+
+Database checks (constraint triggers, deferred to commit where noted):
+`is_transfer = (transfer_id is not null)`; a transfer is exactly two rows in
+different accounts that cancel out (deferred); `is_income` only on positive,
+non-transfer rows and never on a card account; allocations balance (deferred).
+Foreign keys that mark something "in use" are deferred `no action`, so deleting
+a whole household cascades but deleting a used account/envelope/group fails.
+
+SQL functions (all `security invoker` except `create_household`):
+
+| Function                                                       | Does                                                                                                                                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `create_household(name)`                                       | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                 |
+| `adjust_category_month(envelope, month, Δassigned, Δreleased)` | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                  |
+| `move_between_envelopes(from, to, month, amount)`              | Moves Assigned between envelopes in one step.                                                                                                                                              |
+| `save_transaction(…, is_transfer=false, category, is_income)`  | Creates/updates one non-transfer transaction and its single allocation; turning a transfer side into an ordinary transaction releases the other side.                                      |
+| `save_transfer(transfer_id, legs)`                             | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                              |
+| `import_transactions(account, format, rows)`                   | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added. |
+| `import_envelope_plan(household, month, rows)`                 | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                  |
+| `mark_income(ids)`                                             | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                             |
+
+Triggers also: create/rename/protect each card's payment envelope (in the
+"Credit card payments" group, named "⟨card⟩ payment"); release a transfer's other
+side when one side is deleted (a typed-in side is deleted, an imported one kept
+as Uncategorized). Errors with codes `23514`, `23505`, `P0002`, `22023`, `42501`
+carry readable messages shown to the user; `23503` shows "It is still in use".
+
+## 4. Budget rules beyond CLAUDE.md
+
+These are implemented in `budgetMath.ts` and the controllers:
+
+- **Assign limit:** assigning in month M is limited to the smallest Available to
+  Assign of M and every later month with data (`assignableIn`), never below 0.
+  Message: "Only $X is available to assign in ⟨Month YYYY⟩."
+- **Take back:** a negative Assign may take back at most the envelope's current
+  Remaining.
+- **Release from Saved:** amount above 0 and at most Saved.
+- **Planned:** 0 or more; input only.
+- **Cover prompt** (spending into an envelope, or a card payment from its payment
+  envelope, that would make Remaining negative): title "⟨Envelope⟩ would be $X
+  short in ⟨Month⟩". Step 1 releases this envelope's Saved automatically; for the
+  rest, choose another envelope with enough Remaining this month (moved) or
+  Available to Assign (assigned, only if `assignable` allows). If neither can
+  cover it, saving is blocked with an explanation (card payments never suggest
+  Uncategorized). Cover actions happen in the transaction's month.
+- **Envelope visibility:** `envelopeInUse` (CLAUDE.md Rules).
+- **Envelope months:** an envelope with no record in a month carries Saved
+  forward from its last month.
+
+## 5. Screens
+
+### App shell
+
+- Max width 30rem, centred; on wider screens it floats as a rounded card.
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.14.4", and
+  an Install button when the browser offers installing.
+- Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
+  the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
+- Hash routes: `#budget`, `#budget/YYYY-MM`, `#accounts`, `#activity`,
+  `#settings`; anything else shows Budget for the current month.
+- Floating round + button (bottom right, above the nav) on Budget, Accounts and
+  Activity opens the transaction dialog.
+- States: "Loading Budget Buddy…", sign-in, create household, or the app.
+
+### Sign in / Create account
+
+Email and password (8+ characters to create). "New here? Create an account" /
+"Have an account? Sign in" toggles. If email confirmation is required: "Check
+⟨email⟩ for a confirmation link, then come back and sign in." Sign-in uses PKCE
+so the `?code=` in the URL leaves the `#route` alone.
+
+### Create household
+
+One field, "Household name", and Create. Shown when the signed-in user has no
+household yet.
+
+### Budget
+
+- No page title or totals (the `h1` exists for screen readers only).
+- Month picker row (‹ OCTOBER 2026 ›) changes `#budget/YYYY-MM`.
+- Sticky "Available to Assign" bar (hidden at exactly $0.00): amount on the
+  right; on the left "Income this month $X" or "Over assigned by $X".
+- Notices: "N transactions to review ($X in, $Y out) are not in Available to
+  Assign yet. Review them on Activity."; no accounts → link to Accounts; no
+  groups → link to Settings.
+- One card per group: uppercase group name and a + that opens "New envelope"
+  (+ becomes ×). Envelope rows as in CLAUDE.md; tapping one opens Released (if
+  used), "Assign (negative to take back)", "Release from Saved" (only with
+  Saved), "Planned" with Set plan, and Delete envelope (confirm: money assigned
+  returns to Available to Assign). Card payment envelopes explain how they fill
+  instead of offering Delete.
+- "Show N envelopes not used this month" toggle when some are hidden.
+
+### Accounts
+
+- Open accounts: name, balance (red when negative), "Checking · opened DATE with
+  $X" or "Credit card · opened DATE owing $X"; Edit (inline form) and Close
+  (confirm; only at $0.00).
+- "Add an account": Checking / Credit card choice, Account name, "Opening
+  balance" (checking) or "Amount owed on the opening date" (card), Opening date
+  (default today). A card shows a short explanation of its payment envelope.
+- Edit keeps the type; the opening date cannot move past the first transaction.
+- Closed accounts listed separately with their balance.
+
+### Activity
+
+- Page heading (eyebrow "YOUR SPENDING TRAIL", title, one sentence).
+- "To review" card when anything waits: totals in and out, rows (tap to edit),
+  "Mark as Income" on non-card inflows, "Apply income rules (N matches)",
+  "Mark all N inflows as Income" (confirm), link to Settings income rules.
+- "Transactions" card: collapsible date groups ("Wednesday, January 2, 2030",
+  count), newest first; each row is a button: payee, amount (red if negative),
+  "Account · Category" where category is the envelope(s), Income, Transfer
+  to/from ⟨account⟩, Card credit, or Uncategorized (amber label); memo appended.
+
+### Transaction dialog (add and edit)
+
+Fields: Outflow/Inflow, Amount (> 0), Payee, Envelope, Account, Date (default
+today), Memo; then Add transaction / Save changes, Cancel, and (editing)
+Delete transaction / Delete transfer.
+
+Envelope choices: Uncategorized; Income (to Available to Assign) — disabled for
+outflows; each group's envelopes (payment envelopes excluded); Transfer — needs
+two open accounts. On a credit card with Inflow, only "Card credit (lowers what
+you owe)" and Transfer are offered.
+
+Transfer adds "To account" (outflow) / "From account" (inflow), an "Other side"
+choice when there are candidates (bank rows up to 31 days away, "Keep …", "Add a
+new transaction instead"), and a note saying what will happen ("Links to the
+⟨account⟩ transaction on DATE (PAYEE), so it is not added twice.", "Also adds
+the matching inflow in ⟨account⟩.", "Also updates the ⟨account⟩ side.").
+
+### Settings
+
+In order: household name and "Signed in as ⟨email⟩"; About (version); Sign out;
+Envelope groups; Import transactions; Income rules; Import envelope plan.
+
+- **Envelope groups:** list with envelope counts, Delete for empty groups, "Group
+  name" + Add group.
+- **Import transactions:** see §6.
+- **Income rules:** list ("Contains “TEXT”", account or Any account, Delete);
+  "Description contains" + "In account" + Add rule; when waiting inflows match:
+  "N inflows waiting for review match your rules. Mark them as Income".
+- **Import envelope plan:** month (default current), CSV file, preview with
+  new groups/envelopes and Planned changes, invalid rows by line, then Import.
+
+## 6. Bank CSV import
+
+1. Choose an open account and a `.csv` (≤ 2 MB). RFC 4180 parsing; a UTF-8 BOM
+   is ignored.
+2. **Table:** the most common number of cells per row decides the table; rows
+   above it (bank titles, date ranges) are skipped. The first row is a header
+   unless a cell looks like a date. At most 2000 rows.
+3. **Format** (saved per account and reused when the headers match): columns
+   are matched by normalized header name (lowercase letters and digits only):
+   - Date: `date, transactiondate, transdate, posteddate, postingdate, postdate`
+   - Amount: `amount, transactionamount, amountusd`; else Money out `debit,
+debits, withdrawal, withdrawals, moneyout, debitamount, outflow` with Money
+     in `credit, credits, deposit, deposits, moneyin, creditamount, inflow`
+   - Description: `description, payee, name, merchant, details,
+transactiondescription, originaldescription, merchantname`
+   - Notes: `memo, notes, note, extendeddescription`
+   - Bank transaction ID: `transactionid, referencenumber, reference, refnumber,
+fitid, transactionnumber, id`
+   - Without a match: a column where 80%+ of values look like dates/amounts
+     (skipping a `balance` column); description = the longest remaining text.
+   - Date order: month-first unless a value proves day-first (first part > 12)
+     or year-first (4-digit first part). Two-digit years mean 20YY. Also reads
+     "Oct 12, 2026".
+   - Amounts accept `-$18.62`, `1,234.56`, `+5`, `(18.62)` (negative), `−`.
+   - "Spending is shown as positive: flip signs" for card exports; a hint shows
+     when 70%+ of amounts (3 or more) are positive.
+4. **Preview:** "N new transactions from DATE to DATE: $X in, $Y out." plus
+   duplicates skipped, rows before the opening date skipped, invalid rows (by
+   line, with the reason), and how many inflows income rules will mark.
+   Description over 200 characters is kept whole in the memo.
+5. **Duplicates:** key `id:⟨bank ID⟩`, or without one
+   `fp:⟨date⟩|⟨cents⟩|⟨description lowercased⟩|⟨n⟩` (n counts identical rows in
+   the file). Keys already in the account, or repeated bank IDs, are skipped.
+6. Import adds everything as Uncategorized (to review) except card credits;
+   income-rule matches arrive as Income.
+
+## 7. Envelope plan CSV
+
+Columns `category, group, planned amount` (header optional; with a header the
+columns may be in any order: `category|envelope`, `group|categorygroup|
+envelopegroup`, `plannedamount|planned|plan|amount`). A first row whose third
+cell is an amount is data. ≤ 500 rows; names ≤ 100 characters; planned ≥ 0.
+Envelopes not in the file are left alone.
+
+## 8. Look and feel
+
+- Font: Inter, falling back to the system UI font.
+- Colours (`:root` in `styles.css`): page `#ece7f2`, app background `#faf8fc`,
+  surface `#ffffff`, muted surface `#f2ecf7`, border `#e3dbe9`, text `#281a35`,
+  muted text `#74677e`, brand `#4b2a68`, light brand `#eee5f7`, accent `#8051a2`,
+  focus `#d29a3b`; negative money and errors red `#b3261e`; Uncategorized label
+  `#ffe2a8` on `#6b4500`.
+- Cards: white, 1px border, rounded (1–1.35rem), soft purple shadow; page side
+  padding 0.5rem on a phone.
+- Money shows as `$1,234.56` / `-$12.50`; negative amounts in red.
+- Saved above $0.00: larger, purple, shimmering gradient text with a twinkling
+  ✨; no animation with "reduce motion".
+- Modal dialogs: centred sheet up to 28rem wide with a dimmed backdrop.
+
+## 9. Not built yet
+
+Decided or wanted, but not in the app: copy last month's spending into Planned;
+renaming and reordering envelopes and groups; a split-transaction UI; matching
+typed transactions to imported ones (other than transfers); reconciliation;
+tithing/fast-offering rules; inviting a second household member; editing an
+income rule (delete and re-add instead).
