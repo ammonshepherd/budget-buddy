@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.14.4.
+Version described: 0.15.0.
 
 ## 1. Purpose
 
@@ -84,37 +84,38 @@ household. Row Level Security on every table allows a signed-in user only rows
 of a household they belong to (`private.is_household_member`). Signed-out
 visitors get nothing.
 
-| Table                     | Key columns and rules                                                                                                                                                                                                |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `households`              | name (1–100 chars). Created only by `create_household`.                                                                                                                                                              |
-| `household_members`       | household, user (one household per user), role `owner`/`member`.                                                                                                                                                     |
-| `accounts`                | name, `type` (`checking`/`credit_card`), `on_budget`, `opening_balance`, `opening_date`, `closed_at`, `import_format` (JSON, ≤ 8 KB). Never deleted.                                                                 |
-| `category_groups`         | name, `position`. Deletable only when empty.                                                                                                                                                                         |
-| `categories` (envelopes)  | group, name, `position`, `card_account_id` (set on a card's payment envelope; unique per card). Deletable only with no transactions; deleting removes its months (their Assigned returns to Available to Assign).    |
-| `category_months`         | (envelope, `YYYY-MM`) → `assigned` (may be negative after moves), `released` (≥ 0), `planned` (≥ 0).                                                                                                                 |
-| `transactions`            | account, date, amount (≠ 0), payee (≤ 200), memo (≤ 500), `is_transfer`, `transfer_id`, `is_income`, `voided`, `source` (`manual`/`csv`), `import_key` (unique per account).                                         |
-| `transaction_allocations` | transaction, envelope, amount. One row per envelope (several = a split, no UI yet). Must sum to the transaction amount (checked at commit). None for transfers, income or card credits; never to a payment envelope. |
-| `income_rules`            | `pattern` (2–100 chars), `account_id` (null = any account).                                                                                                                                                          |
+| Table                     | Key columns and rules                                                                                                                                                                                                                                                   |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `households`              | name (1–100 chars). Created only by `create_household`.                                                                                                                                                                                                                 |
+| `household_members`       | household, user (one household per user), role `owner`/`member`.                                                                                                                                                                                                        |
+| `accounts`                | name, `type` (`checking`/`credit_card`), `on_budget`, `opening_balance`, `opening_date`, `closed_at`, `import_format` (JSON, ≤ 8 KB). Never deleted.                                                                                                                    |
+| `category_groups`         | name, `position`. Deletable only when empty.                                                                                                                                                                                                                            |
+| `categories` (envelopes)  | group, name, `position`, `card_account_id` (set on a card's payment envelope; unique per card). Deletable only with no transactions; deleting removes its months (their Assigned returns to Available to Assign).                                                       |
+| `category_months`         | (envelope, `YYYY-MM`) → `assigned` (may be negative after moves), `released` (≥ 0), `planned` (≥ 0).                                                                                                                                                                    |
+| `transactions`            | account, date, amount (≠ 0), payee (≤ 200), memo (≤ 500), `is_transfer`, `transfer_id`, `is_income`, `voided`, `source` (`manual`/`csv`), `import_key` (unique per account).                                                                                            |
+| `transaction_allocations` | transaction, envelope, amount. One row per envelope (several = a split), each envelope at most once, each with the transaction's sign. Must sum to the transaction amount (checked at commit). None for transfers, income or card credits; never to a payment envelope. |
+| `income_rules`            | `pattern` (2–100 chars), `account_id` (null = any account).                                                                                                                                                                                                             |
 
 Database checks (constraint triggers, deferred to commit where noted):
 `is_transfer = (transfer_id is not null)`; a transfer is exactly two rows in
 different accounts that cancel out (deferred); `is_income` only on positive,
-non-transfer rows and never on a card account; allocations balance (deferred).
+non-transfer rows and never on a card account; allocations balance and share
+the transaction's sign (deferred).
 Foreign keys that mark something "in use" are deferred `no action`, so deleting
 a whole household cascades but deleting a used account/envelope/group fails.
 
 SQL functions (all `security invoker` except `create_household`):
 
-| Function                                                       | Does                                                                                                                                                                                       |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `create_household(name)`                                       | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                 |
-| `adjust_category_month(envelope, month, Δassigned, Δreleased)` | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                  |
-| `move_between_envelopes(from, to, month, amount)`              | Moves Assigned between envelopes in one step.                                                                                                                                              |
-| `save_transaction(…, is_transfer=false, category, is_income)`  | Creates/updates one non-transfer transaction and its single allocation; turning a transfer side into an ordinary transaction releases the other side.                                      |
-| `save_transfer(transfer_id, legs)`                             | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                              |
-| `import_transactions(account, format, rows)`                   | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added. |
-| `import_envelope_plan(household, month, rows)`                 | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                  |
-| `mark_income(ids)`                                             | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                             |
+| Function                                                         | Does                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_household(name)`                                         | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                                                                                                                        |
+| `adjust_category_month(envelope, month, Δassigned, Δreleased)`   | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                                                                                                                         |
+| `move_between_envelopes(from, to, month, amount)`                | Moves Assigned between envelopes in one step.                                                                                                                                                                                                                                                     |
+| `save_transaction(…, is_transfer=false, is_income, allocations)` | Creates/updates one non-transfer transaction and its allocations (≤ 50 lines of `{category_id, amount}`; empty = Uncategorized); turning a transfer side into an ordinary transaction releases the other side. The older single `category` argument still works until a later migration drops it. |
+| `save_transfer(transfer_id, legs)`                               | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                                                                                                                                     |
+| `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added.                                                                                                        |
+| `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                                                                                                         |
+| `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                                                                                                    |
 
 Triggers also: create/rename/protect each card's payment envelope (in the
 "Credit card payments" group, named "⟨card⟩ payment"); release a transfer's other
@@ -136,10 +137,18 @@ These are implemented in `budgetMath.ts` and the controllers:
 - **Cover prompt** (spending into an envelope, or a card payment from its payment
   envelope, that would make Remaining negative): title "⟨Envelope⟩ would be $X
   short in ⟨Month⟩". Step 1 releases this envelope's Saved automatically; for the
-  rest, choose another envelope with enough Remaining this month (moved) or
-  Available to Assign (assigned, only if `assignable` allows). If neither can
-  cover it, saving is blocked with an explanation (card payments never suggest
-  Uncategorized). Cover actions happen in the transaction's month.
+  rest, a "Cover $X from" dropdown offers other envelopes with enough Remaining
+  this month (moved) and Available to Assign (assigned, only if `assignable`
+  allows). If neither can cover it, saving is blocked with an explanation (card
+  payments never suggest Uncategorized). Cover actions happen in the
+  transaction's month.
+- **Covering a split:** each envelope the split would overdraw gets its own
+  prompt, one at a time ("Envelope 1 of 2 to cover", "Cover and continue", then
+  "Cover and save"). Choices are worked out as the budget would be after the
+  save and the covers already chosen (`budgetWith`), so an envelope this split
+  also spends from offers only what it has left, and Available to Assign shrinks
+  by earlier covers. Nothing is saved until the last prompt; Back returns to the
+  form.
 - **Envelope visibility:** `envelopeInUse` (CLAUDE.md Rules).
 - **Envelope months:** an envelope with no record in a month carries Saved
   forward from its last month.
@@ -149,7 +158,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.14.4", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.15.0", and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
@@ -207,8 +216,9 @@ household yet.
   "Mark all N inflows as Income" (confirm), link to Settings income rules.
 - "Transactions" card: collapsible date groups ("Wednesday, January 2, 2030",
   count), newest first; each row is a button: payee, amount (red if negative),
-  "Account · Category" where category is the envelope(s), Income, Transfer
-  to/from ⟨account⟩, Card credit, or Uncategorized (amber label); memo appended.
+  "Account · Category" where category is the envelope, "Split: ⟨envelopes⟩",
+  Income, Transfer to/from ⟨account⟩, Card credit, or Uncategorized (amber
+  label); memo appended.
 
 ### Transaction dialog (add and edit)
 
@@ -217,9 +227,19 @@ today), Memo; then Add transaction / Save changes, Cancel, and (editing)
 Delete transaction / Delete transfer.
 
 Envelope choices: Uncategorized; Income (to Available to Assign) — disabled for
-outflows; each group's envelopes (payment envelopes excluded); Transfer — needs
-two open accounts. On a credit card with Inflow, only "Card credit (lowers what
-you owe)" and Transfer are offered.
+outflows; each group's envelopes (payment envelopes excluded); Split across
+envelopes; Transfer — needs two open accounts. On a credit card with Inflow,
+only "Card credit (lowers what you owe)" and Transfer are offered (so card
+purchases can be split, card credits cannot).
+
+Split shows lines of envelope + amount (positive; the transaction's direction
+applies to every line), starting with two (the envelope already chosen fills
+the first). "+ Add line" (up to 50), × removes a line (at least two stay),
+a live "$X left to split" / "$X too much" / "Adds up", and "Put the rest in the
+last line". Saving needs the lines to add up, each line an envelope and an
+amount above $0.00, and no envelope twice (`src/models/splits.ts`). Picking a
+single envelope (or anything else) again undoes the split. Editing a split
+loads all its lines.
 
 Transfer adds "To account" (outflow) / "From account" (inflow), an "Other side"
 choice when there are candidates (bank rows up to 31 days away, "Keep …", "Add a
@@ -303,7 +323,7 @@ Envelopes not in the file are left alone.
 ## 9. Not built yet
 
 Decided or wanted, but not in the app: copy last month's spending into Planned;
-renaming and reordering envelopes and groups; a split-transaction UI; matching
+renaming and reordering envelopes and groups; matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead).

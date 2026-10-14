@@ -3,7 +3,7 @@ import {
   accountBalance,
   availableToAssignFor,
   buildBudgetMonth,
-  checkTransactionSpend,
+  transactionShortfalls,
   type BudgetMonthView,
 } from "./budgetMath";
 import type { BudgetData, Transaction } from "./types";
@@ -216,6 +216,28 @@ describe("card-payment envelope", () => {
     expect(row(view, "visa-pay").remaining).toBe(20_000);
   });
 
+  it("moves a split card purchase into the payment envelope, each envelope paying its line", () => {
+    const data = household();
+    assign(data, "groceries", 40_000);
+    assign(data, "fun", 10_000);
+    data.transactions.push(
+      tx({
+        id: "split",
+        accountId: "visa",
+        amount: -7_000,
+        allocations: [
+          { envelopeId: "groceries", amount: -5_000 },
+          { envelopeId: "fun", amount: -2_000 },
+        ],
+      }),
+    );
+    const view = expectIdentity(data);
+    expect(view.availableToAssign).toBe(950_000);
+    expect(row(view, "groceries").remaining).toBe(35_000);
+    expect(row(view, "fun").remaining).toBe(8_000);
+    expect(row(view, "visa-pay").remaining).toBe(7_000);
+  });
+
   it("always shows an open card's payment envelope, and only then", () => {
     const data = household();
     // Make every envelope "used" so only the card rule keeps one visible.
@@ -243,19 +265,20 @@ describe("card-payment envelope", () => {
   });
 });
 
-describe("checkTransactionSpend for cards", () => {
+describe("transactionShortfalls for cards", () => {
   const payment = {
     accountId: "visa",
     date: "2026-10-09",
     amount: 50_000,
-    envelopeId: null,
+    allocations: [],
     isTransfer: true,
+    isIncome: false,
   };
 
   it("needs no cover when the payment envelope holds enough", () => {
     const data = household();
     assign(data, "visa-pay", 60_000);
-    expect(checkTransactionSpend(data, payment)).toBeNull();
+    expect(transactionShortfalls(data, [payment])).toEqual([]);
   });
 
   it("asks to cover a payment larger than the payment envelope, Saved first", () => {
@@ -269,38 +292,45 @@ describe("checkTransactionSpend for cards", () => {
     });
     data.accounts[1]!.openingDate = "2026-09-01";
     assign(data, "visa-pay", 15_000);
-    expect(checkTransactionSpend(data, payment)).toEqual({
-      envelopeId: "visa-pay",
-      remainingAfter: -35_000,
-      shortfall: 35_000,
-      fromSaved: 10_000,
-      stillShort: 25_000,
-    });
+    expect(transactionShortfalls(data, [payment])).toEqual([
+      {
+        envelopeId: "visa-pay",
+        month: "2026-10",
+        remainingAfter: -35_000,
+        shortfall: 35_000,
+        fromSaved: 10_000,
+        stillShort: 25_000,
+      },
+    ]);
   });
 
   it("never asks to cover a card credit, even with an empty payment envelope", () => {
     const data = household();
     expect(
-      checkTransactionSpend(data, {
-        ...payment,
-        amount: 2_500,
-        isTransfer: false,
-        envelopeId: "groceries",
-      }),
-    ).toBeNull();
+      transactionShortfalls(data, [
+        {
+          ...payment,
+          amount: 2_500,
+          isTransfer: false,
+          allocations: [{ envelopeId: "groceries", amount: 2_500 }],
+        },
+      ]),
+    ).toEqual([]);
   });
 
   it("never stops an uncategorized refund or a purchase on the card for the payment envelope", () => {
     const data = household();
-    expect(checkTransactionSpend(data, { ...payment, isTransfer: false })).toBeNull();
+    expect(transactionShortfalls(data, [{ ...payment, isTransfer: false }])).toEqual([]);
     assign(data, "groceries", 10_000);
     expect(
-      checkTransactionSpend(data, {
-        ...payment,
-        amount: -4_000,
-        isTransfer: false,
-        envelopeId: "groceries",
-      }),
-    ).toBeNull();
+      transactionShortfalls(data, [
+        {
+          ...payment,
+          amount: -4_000,
+          isTransfer: false,
+          allocations: [{ envelopeId: "groceries", amount: -4_000 }],
+        },
+      ]),
+    ).toEqual([]);
   });
 });

@@ -30,7 +30,8 @@ export function useActivityPage(budget: Budget, data: BudgetData) {
           ? "Card credit"
           : tx.allocations.length === 0
             ? "Uncategorized"
-            : tx.allocations.map((a) => envelopeNames.get(a.envelopeId) ?? "Unknown").join(", ");
+            : (tx.allocations.length > 1 ? "Split: " : "") +
+              tx.allocations.map((a) => envelopeNames.get(a.envelopeId) ?? "Unknown").join(", ");
   const row = (tx: Transaction) => ({
     tx,
     accountName: accountNames.get(tx.accountId) ?? "Unknown account",

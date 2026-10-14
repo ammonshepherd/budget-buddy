@@ -8,7 +8,7 @@
  */
 import { assertCents, type Cents } from "./money";
 import { addMonths, isMonth, monthOf, type Month } from "./month";
-import type { BudgetData, Envelope, Transaction } from "./types";
+import type { Allocation, BudgetData, Envelope, Transaction } from "./types";
 
 export { isMonth, type Month };
 
@@ -584,42 +584,103 @@ export interface PendingTransaction {
   accountId: string;
   date: string;
   amount: Cents;
-  envelopeId: string | null;
+  /** One line per envelope (several = a split); empty = Uncategorized. */
+  allocations: readonly Allocation[];
   isTransfer: boolean;
+  isIncome: boolean;
 }
 
-/** The envelope a transaction would overdraw, and by how much. */
+/** An envelope a transaction would overdraw, in which month, and by how much. */
 export interface TransactionShortfall extends SpendCheck {
   envelopeId: string;
+  month: Month;
 }
 
 /**
- * Checks whether saving a transaction would push an envelope's Remaining
- * below zero in the transaction's month, and returns that envelope's check
- * (null when nothing would go negative). Only taking money out can overdraw:
- * - spending categorized to an envelope draws on that envelope;
+ * Checks whether saving transactions would push envelopes' Remaining below
+ * zero in each transaction's month, and returns every such envelope's check,
+ * in the order of the transactions and their lines (empty when nothing would
+ * go negative). Only taking money out can overdraw:
+ * - spending in an envelope (each line of a split) draws on that envelope;
  * - a card payment (a Transfer into the card) draws on its payment envelope.
  * A refund in an envelope only adds to it, and a card credit touches no envelope.
  */
-export function checkTransactionSpend(
+export function transactionShortfalls(
   data: BudgetData,
-  pending: PendingTransaction,
-): TransactionShortfall | null {
-  const without = { ...data, transactions: data.transactions.filter((tx) => tx.id !== pending.id) };
+  pending: readonly PendingTransaction[],
+): TransactionShortfall[] {
+  const ids = new Set(pending.map((p) => p.id));
+  const without = { ...data, transactions: data.transactions.filter((tx) => !ids.has(tx.id)) };
   const histories = envelopeHistories(without);
-  const month = monthOf(pending.date);
-  const check = (envelopeId: string, additionalSpent: Cents) => {
+  const payments = cardPaymentEnvelopes(data);
+  const shortfalls: TransactionShortfall[] = [];
+  const check = (envelopeId: string, month: Month, additionalSpent: Cents) => {
     const result = checkSpend(
       envelopeAsOf(histories.get(envelopeId) ?? [], month),
       additionalSpent,
     );
-    return result.shortfall > 0 ? { ...result, envelopeId } : null;
+    if (result.shortfall > 0) shortfalls.push({ ...result, envelopeId, month });
   };
 
-  if (pending.envelopeId && pending.amount < 0) return check(pending.envelopeId, -pending.amount);
-  const payment = cardPaymentEnvelopes(data).get(pending.accountId);
-  if (payment && pending.isTransfer && pending.amount > 0) return check(payment, pending.amount);
-  return null;
+  for (const tx of pending) {
+    const month = monthOf(tx.date);
+    for (const line of tx.allocations) {
+      if (line.amount < 0) check(line.envelopeId, month, -line.amount);
+    }
+    const payment = payments.get(tx.accountId);
+    if (payment && tx.isTransfer && tx.amount > 0) check(payment, month, tx.amount);
+  }
+  return shortfalls;
+}
+
+/** A change to one envelope's stored month, such as a cover makes. */
+export interface EnvelopeMonthChange {
+  envelopeId: string;
+  month: Month;
+  assigned?: Cents;
+  released?: Cents;
+}
+
+/**
+ * The budget as it would be after saving pending transactions (replacing
+ * any with the same id) and changing envelope months. Used to plan covers
+ * before anything is saved; the real save then makes the same changes.
+ */
+export function budgetWith(
+  data: BudgetData,
+  pending: readonly PendingTransaction[],
+  changes: readonly EnvelopeMonthChange[] = [],
+): BudgetData {
+  const ids = new Set(pending.map((p) => p.id));
+  const added: Transaction[] = pending.map((p, index) => ({
+    id: p.id ?? `pending-${index}`,
+    accountId: p.accountId,
+    date: p.date,
+    amount: p.amount,
+    payee: "",
+    memo: "",
+    isTransfer: p.isTransfer,
+    isIncome: p.isIncome,
+    transferId: p.isTransfer ? "pending" : null,
+    voided: false,
+    allocations: [...p.allocations],
+    importKey: null,
+  }));
+  return {
+    ...data,
+    transactions: [...data.transactions.filter((tx) => !ids.has(tx.id)), ...added],
+    // Records for the same envelope and month add up (see ledgerFor).
+    envelopeMonths: [
+      ...data.envelopeMonths,
+      ...changes.map((c) => ({
+        envelopeId: c.envelopeId,
+        month: c.month,
+        assigned: c.assigned ?? 0,
+        released: c.released ?? 0,
+        planned: 0,
+      })),
+    ],
+  };
 }
 
 /** Envelopes that could give `amount` in `month` without going negative (cover step 2). */

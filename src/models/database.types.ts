@@ -409,8 +409,9 @@ export type Database = {
       save_transaction: {
         Args: {
           p_account_id: string
+          p_allocations?: Json
           p_amount: number
-          p_category_id: string
+          p_category_id?: string
           p_date: string
           p_id: string
           p_is_income?: boolean

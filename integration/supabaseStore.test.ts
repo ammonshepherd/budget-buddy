@@ -62,7 +62,7 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       payee: "Market",
       memo: run,
       isIncome: false,
-      envelopeId: food.id,
+      allocations: [{ envelopeId: food.id, amount: -12_345 }],
     });
 
     data = (await store.load())!;
@@ -86,7 +86,7 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       payee: "Market",
       memo: run,
       isIncome: false,
-      envelopeId: null,
+      allocations: [],
     });
     data = (await store.load())!;
     expect(data.transactions.find((t) => t.id === tx.id)).toMatchObject({
@@ -113,8 +113,46 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
       payee: "Market",
       memo: run,
       isIncome: false,
-      envelopeId: fun.id,
+      allocations: [{ envelopeId: fun.id, amount: -500 }],
     });
+    // A split: one line per envelope, each with the transaction's sign.
+    await store.saveTransaction(householdId, {
+      id: tx.id,
+      accountId: account.id,
+      date: "2026-10-06",
+      amount: -500,
+      payee: "Market",
+      memo: run,
+      isIncome: false,
+      allocations: [
+        { envelopeId: food.id, amount: -200 },
+        { envelopeId: fun.id, amount: -300 },
+      ],
+    });
+    data = (await store.load())!;
+    expect(
+      data.transactions
+        .find((t) => t.id === tx.id)!
+        .allocations.sort((a, b) => a.amount - b.amount),
+    ).toEqual([
+      { envelopeId: fun.id, amount: -300 },
+      { envelopeId: food.id, amount: -200 },
+    ]);
+    await expect(
+      store.saveTransaction(householdId, {
+        id: tx.id,
+        accountId: account.id,
+        date: "2026-10-06",
+        amount: -500,
+        payee: "Market",
+        memo: run,
+        isIncome: false,
+        allocations: [
+          { envelopeId: food.id, amount: 100 },
+          { envelopeId: fun.id, amount: -600 },
+        ],
+      }),
+    ).rejects.toThrow(/same way/);
     await expect(store.deleteEnvelope(fun.id)).rejects.toThrow(/still in use/);
     await expect(store.deleteGroup(group.id)).rejects.toThrow(/still in use/);
 

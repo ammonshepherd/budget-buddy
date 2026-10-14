@@ -46,8 +46,8 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await addTransaction(page, { amount: "400", payee: "Big shop", envelope: "Groceries" });
   const cover = page.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $150.00 short");
-  await expect(cover.getByRole("radio", { name: /Fun/ })).toHaveCount(0); // Fun has only $100
-  await cover.getByRole("radio", { name: /Available to Assign/ }).check();
+  await expect(cover.getByRole("option", { name: /Fun/ })).toHaveCount(0); // Fun has only $100
+  await cover.getByLabel(/cover .* from/i).selectOption("available");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(page.locator(".item", { hasText: "Big shop" })).toContainText("-$400.00");
 

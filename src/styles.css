@@ -654,6 +654,89 @@ a:focus-visible {
   font-size: 0.88rem;
 }
 
+.cover-step {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.split {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface-muted);
+}
+
+.split legend {
+  padding-inline: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.split-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 6.5rem 2rem;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.split-line select,
+.split-line input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 2.6rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.split-line input {
+  text-align: end;
+}
+
+.split-line select:focus-visible,
+.split-line input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.split-remove {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.split-remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.split-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.split-left {
+  color: #8a5a00;
+  font-weight: 700;
+}
+
+.split-done {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
 .csv-example {
   margin: 0.75rem 0;
   padding: 0.75rem 0.9rem;

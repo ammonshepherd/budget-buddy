@@ -250,10 +250,13 @@ export function createSupabaseStore(
 
     async saveTransaction(_householdId, input) {
       const { error } = await db().rpc("save_transaction", {
-        // The generated types mark SQL arguments as non-null, but both of
-        // these accept null (create, and Uncategorized).
+        // The generated types mark SQL arguments as non-null, but p_id
+        // accepts null (create).
         p_id: input.id ?? (null as unknown as string),
-        p_category_id: input.envelopeId ?? (null as unknown as string),
+        p_allocations: input.allocations.map((a) => ({
+          category_id: a.envelopeId,
+          amount: a.amount,
+        })),
         p_account_id: input.accountId,
         p_date: input.date,
         p_amount: input.amount,

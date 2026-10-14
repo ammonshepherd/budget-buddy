@@ -3,9 +3,10 @@ import {
   accountBalance,
   assignableIn,
   availableToAssignFor,
+  budgetWith,
   buildBudgetMonth,
-  checkTransactionSpend,
   coverSources,
+  transactionShortfalls,
   visibleGroups,
 } from "./budgetMath";
 import type { BudgetData, Transaction } from "./types";
@@ -235,47 +236,104 @@ describe("assignableIn", () => {
   });
 });
 
-describe("checkTransactionSpend", () => {
+describe("transactionShortfalls", () => {
   const pending = {
     accountId: "checking",
     date: "2026-10-09",
     amount: 0,
-    envelopeId: null,
+    allocations: [],
     isTransfer: false,
     isIncome: false,
-    transferId: null,
   };
+  const spend = (amount: number, ...lines: [string, number][]) => ({
+    ...pending,
+    amount,
+    allocations: lines.map(([envelopeId, cents]) => ({ envelopeId, amount: cents })),
+  });
 
-  it("is null for an uncategorized transaction", () => {
-    expect(
-      checkTransactionSpend(household(), { ...pending, amount: -500, envelopeId: null }),
-    ).toBeNull();
+  it("is empty for an uncategorized transaction", () => {
+    expect(transactionShortfalls(household(), [{ ...pending, amount: -500 }])).toEqual([]);
   });
 
   it("covers a shortfall from Saved first, then reports what is still short", () => {
     // Food has 0 Remaining and 3,000 Saved in October.
-    expect(
-      checkTransactionSpend(household(), { ...pending, amount: -5_000, envelopeId: "food" }),
-    ).toEqual({
-      envelopeId: "food",
-      remainingAfter: -5_000,
-      shortfall: 5_000,
-      fromSaved: 3_000,
-      stillShort: 2_000,
-    });
+    expect(transactionShortfalls(household(), [spend(-5_000, ["food", -5_000])])).toEqual([
+      {
+        envelopeId: "food",
+        month: "2026-10",
+        remainingAfter: -5_000,
+        shortfall: 5_000,
+        fromSaved: 3_000,
+        stillShort: 2_000,
+      },
+    ]);
   });
 
-  it("does not count the transaction being edited twice (null: nothing goes negative)", () => {
+  it("does not count the transaction being edited twice (empty: nothing goes negative)", () => {
     // g2 already spent 35,000 of Food; editing it to 34,000 frees 1,000.
     expect(
-      checkTransactionSpend(household(), {
-        ...pending,
-        id: "g2",
-        date: "2026-10-03",
-        amount: -34_000,
+      transactionShortfalls(household(), [
+        { ...spend(-34_000, ["food", -34_000]), id: "g2", date: "2026-10-03" },
+      ]),
+    ).toEqual([]);
+  });
+
+  it("checks each line of a split against its own envelope", () => {
+    // Fun has 10,000: its 4,000 line fits; Food's 1,000 line is short.
+    expect(
+      transactionShortfalls(household(), [spend(-5_000, ["fun", -4_000], ["food", -1_000])]),
+    ).toEqual([
+      {
         envelopeId: "food",
-      }),
-    ).toBeNull();
+        month: "2026-10",
+        remainingAfter: -1_000,
+        shortfall: 1_000,
+        fromSaved: 1_000,
+        stillShort: 0,
+      },
+    ]);
+    const both = transactionShortfalls(household(), [
+      spend(-17_000, ["fun", -12_000], ["food", -5_000]),
+    ]);
+    expect(both.map((s) => [s.envelopeId, s.shortfall])).toEqual([
+      ["fun", 2_000],
+      ["food", 5_000],
+    ]);
+  });
+
+  it("never asks to cover a split refund", () => {
+    expect(
+      transactionShortfalls(household(), [spend(5_000, ["fun", 4_000], ["food", 1_000])]),
+    ).toEqual([]);
+  });
+});
+
+describe("budgetWith", () => {
+  it("shows the budget as it would be after saving and covering", () => {
+    const data = household();
+    const split = {
+      accountId: "checking",
+      date: "2026-10-09",
+      amount: -5_000,
+      allocations: [
+        { envelopeId: "fun", amount: -4_000 },
+        { envelopeId: "food", amount: -1_000 },
+      ],
+      isTransfer: false,
+      isIncome: false,
+    };
+    const before = buildBudgetMonth(data, "2026-10");
+    const after = buildBudgetMonth(
+      budgetWith(data, [split], [{ envelopeId: "food", month: "2026-10", assigned: 1_000 }]),
+      "2026-10",
+    );
+    const remaining = (view: typeof before, id: string) =>
+      view.groups[0]!.envelopes.find((e) => e.id === id)!.remaining;
+    expect(remaining(after, "fun")).toBe(remaining(before, "fun") - 4_000);
+    expect(remaining(after, "food")).toBe(0);
+    expect(after.assignable).toBe(before.assignable - 1_000);
+    // The original data is left alone.
+    expect(data.transactions).toHaveLength(household().transactions.length);
   });
 });
 
@@ -467,14 +525,17 @@ describe("income and transactions to review", () => {
       refunded: 2_500,
     });
     expect(
-      checkTransactionSpend(data, {
-        accountId: "checking",
-        date: "2026-10-21",
-        amount: 2_500,
-        envelopeId: "food",
-        isTransfer: false,
-      }),
-    ).toBeNull(); // a refund never needs covering, even into an empty envelope
+      transactionShortfalls(data, [
+        {
+          accountId: "checking",
+          date: "2026-10-21",
+          amount: 2_500,
+          allocations: [{ envelopeId: "food", amount: 2_500 }],
+          isTransfer: false,
+          isIncome: false,
+        },
+      ]),
+    ).toEqual([]); // a refund never needs covering, even into an empty envelope
   });
 
   it("keeps every dollar accounted for", () => {
