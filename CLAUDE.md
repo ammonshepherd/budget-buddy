@@ -4,6 +4,11 @@ Envelope-budgeting Progressive Web App for a small household. The owner is
 learning Vite, React and TypeScript: explain new concepts briefly in PR
 descriptions and when asked, without being condescending.
 
+This file holds the decided math, rules and process. `docs/SPEC.md` describes
+everything else (structure, data model summary, screens, CSV import, look and
+feel, what is not built yet), and `supabase/migrations/` is the exact database.
+Keep all three in step when behaviour changes.
+
 ## Stack (decided)
 
 - Vite + React + TypeScript, `vite-plugin-pwa` for installability.
@@ -49,7 +54,7 @@ Envelope money = Saved + Remaining
 - Saved is a reserve. It is only spendable after the user releases it into
   Remaining through a prompt.
 - Planned is user input only; it affects no other number.
-- "Copy last month's spending into Planned" is supported.
+- "Copy last month's spending into Planned" is wanted but not built yet.
 
 Available to Assign (equivalent to non-card budget balances − all envelope money
 − inflows to review + outflows to review, but valid for any month):
@@ -167,14 +172,16 @@ non-card budget balances − all envelope money (P included)`.
 
 Checking and credit card accounts; CSV import with preview, invalid-row report and duplicate
 prevention (bank ID, else date+amount+description fingerprint); transaction
-add/edit/delete; envelope groups and envelopes add/edit/delete/reorder;
+add/edit/delete; envelope groups and envelopes add/delete (rename and reorder not
+built yet);
 assign transactions to envelopes; Budget page as the main screen showing what is
 left plus Saved / Planned / Assigned / Refunded / Spent per envelope; month picker
 kept in the URL; linked transfers (both sides in one entry) so transfers are not
 spending.
 
-Later: split UI,
-manual/imported matching, reconciliation, tithing/fast-offering rules.
+Later: split UI, matching typed transactions to imported ones (transfers already
+link to matching bank rows), reconciliation, tithing/fast-offering rules. See
+`docs/SPEC.md` §9 for everything not built yet.
 
 ## Supabase state
 
@@ -201,7 +208,10 @@ security and performance advisors after every schema change. Report data
 changes a migration makes to existing rows (as counts) in the PR.
 
 Never commit or ask for the service_role key or database password. The app
-uses only the project URL and publishable/anon key, in `.env.local`. Do not
+uses only the project URL and publishable/anon key: `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY`, in `.env.local` and as repository Actions variables.
+UI tests build with `VITE_DATA_STORE=memory`, an in-memory store
+(`src/models/memoryStore.ts`) that must enforce the same rules as the database. Do not
 create test users by writing to `auth.users`/`auth.identities` with SQL; the
 integration tests (`integration/`) stay opt-in through `SUPABASE_TEST_EMAIL` and
 `SUPABASE_TEST_PASSWORD`. When querying the owner's real data to answer a

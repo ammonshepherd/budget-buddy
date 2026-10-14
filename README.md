@@ -2,6 +2,9 @@
 
 Budget Buddy is a mobile-first, installable envelope-budgeting web app for a small household.
 
+The full description of how it works is in [`docs/SPEC.md`](docs/SPEC.md); the decided
+budgeting rules are in [`CLAUDE.md`](CLAUDE.md).
+
 ## Version
 
 The current application version is **0.14.4** (kept in `package.json`).
