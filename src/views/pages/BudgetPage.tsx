@@ -172,12 +172,23 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
             <span className="envelope-remaining">
               <Money cents={envelope.remaining} />
             </span>
-            {/* Closed: only what matters at a glance. A shortfall always shows. */}
+            {/* Assigned + Released + Refunded − Spent = what is left. */}
             <span className="envelope-figures">
+              <SavedAmount cents={envelope.saved} />
               <span>
                 Planned <Money cents={envelope.planned} />
               </span>
-              <SavedAmount cents={envelope.saved} />
+              <span>
+                Assigned <Money cents={envelope.assigned} />
+              </span>
+              {envelope.refunded > 0 && (
+                <span>
+                  Refunded <Money cents={envelope.refunded} />
+                </span>
+              )}
+              <span>
+                Spent <Money cents={envelope.outflow} />
+              </span>
               {envelope.shortfall > 0 && (
                 <span className="short">
                   Short <Money cents={envelope.shortfall} />
@@ -188,25 +199,11 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
         )}
       </summary>
       <div className="envelope-actions">
-        {!envelope.card && (
-          // Assigned + Released + Refunded − Spent = what is left.
-          <p className="envelope-figures envelope-detail" aria-label="This month">
+        {!envelope.card && envelope.released > 0 && (
+          <p className="envelope-figures envelope-detail">
             <span>
-              Assigned <Money cents={envelope.assigned} />
+              Released from Saved <Money cents={envelope.released} />
             </span>
-            {envelope.released > 0 && (
-              <span>
-                Released from Saved <Money cents={envelope.released} />
-              </span>
-            )}
-            <span>
-              Spent <Money cents={envelope.outflow} />
-            </span>
-            {envelope.refunded > 0 && (
-              <span>
-                Refunded <Money cents={envelope.refunded} />
-              </span>
-            )}
           </p>
         )}
         <SingleFieldForm

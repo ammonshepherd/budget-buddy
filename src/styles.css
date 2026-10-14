@@ -1077,3 +1077,14 @@ a:focus-visible {
   margin: 0;
   font-size: 0.78rem;
 }
+
+/* ---- v0.14.4: envelope amounts stand out from their labels -------------- */
+
+.envelope-figures .money {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.envelope-figures .short .money {
+  color: inherit;
+}

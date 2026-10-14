@@ -113,7 +113,8 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
 
   const insurance = envelope(page, "Car insurance");
   await expect(insurance.locator(".envelope-remaining")).toHaveText("$785.37");
-  await expect(insurance.getByLabel("This month")).toHaveText(
-    "Assigned $700.00Spent $0.00Refunded $85.37",
+  // All on the envelope's line, in order: Saved, Planned, Assigned, Refunded, Spent.
+  await expect(insurance.locator("summary .envelope-figures")).toHaveText(
+    "Saved $0.00Planned $0.00Assigned $700.00Refunded $85.37Spent $0.00",
   );
 });
