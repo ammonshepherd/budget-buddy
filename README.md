@@ -4,7 +4,7 @@ Budget Buddy is a mobile-first, installable envelope-budgeting web app for a sma
 
 ## Version
 
-The current application version is **0.14.2** (kept in `package.json`).
+The current application version is **0.14.3** (kept in `package.json`).
 
 Versions follow:
 
