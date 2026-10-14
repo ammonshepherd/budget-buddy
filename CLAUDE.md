@@ -132,6 +132,13 @@ non-card budget balances − all envelope money (P included)`.
   Refunded = refunds beyond the month's spending (`outflow` / `refunded` in
   `EnvelopeMonth`; math unchanged). A card's payment envelope shows only
   Available to pay (Saved + Remaining) and Remaining debt (Uncovered).
+- Transactions are added with the floating round + button (bottom right of
+  Budget, Accounts and Activity; not Settings), which opens the transaction form
+  in a modal `<dialog>` (`TransactionDialog`). On Activity, transactions sit under
+  collapsible date headings (newest first); tapping a row opens the same dialog
+  to edit, with Delete (Delete transfer for a transfer) at the bottom. Rows have
+  no Edit/Delete links. Transactions to review show "Uncategorized" on an amber
+  label; Activity's "To review" list sits above the transactions.
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount.
 - Accounts are closed (soft delete), never deleted with their transactions.
@@ -161,9 +168,10 @@ non-card budget balances − all envelope money (P included)`.
 Checking and credit card accounts; CSV import with preview, invalid-row report and duplicate
 prevention (bank ID, else date+amount+description fingerprint); transaction
 add/edit/delete; envelope groups and envelopes add/edit/delete/reorder;
-assign transactions to envelopes; Budget page as the main screen showing
-Plan / Assign / Spent / Remaining / Saved per envelope; month picker kept in the URL;
-linked transfers (both sides in one entry) so transfers are not spending.
+assign transactions to envelopes; Budget page as the main screen showing what is
+left plus Saved / Planned / Assigned / Refunded / Spent per envelope; month picker
+kept in the URL; linked transfers (both sides in one entry) so transfers are not
+spending.
 
 Later: split UI,
 manual/imported matching, reconciliation, tithing/fast-offering rules.
@@ -177,7 +185,7 @@ category_groups, categories (= envelopes), category_months, transactions,
 transaction_allocations, income_rules. Every table has household-scoped RLS; multi-row
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
-`import_envelope_plan`, `import_transactions`, `save_transfer`). Triggers create, rename and protect
+`import_envelope_plan`, `import_transactions`, `save_transfer`, `mark_income`). Triggers create, rename and protect
 each credit card's payment envelope and reject allocations to it. Imported transactions carry an
 `import_key` (unique per account) for duplicate prevention; each account keeps
 its CSV column mapping in `import_format`. Budget math stays in
@@ -185,8 +193,35 @@ its CSV column mapping in `import_format`. Budget math stays in
 keep every schema change as a file in `supabase/migrations/`, and regenerate
 `src/models/database.types.ts` afterwards.
 
+Migrations are applied to dev with the Supabase MCP tool; the file is then
+named after the version the project assigns (`list_migrations`). Test new SQL
+on dev inside a `do $$ … $$` block that ends with `raise exception` so it rolls
+back (use `set constraints all immediate` to fire deferred checks), and run the
+security and performance advisors after every schema change. Report data
+changes a migration makes to existing rows (as counts) in the PR.
+
 Never commit or ask for the service_role key or database password. The app
-uses only the project URL and publishable/anon key, in `.env.local`.
+uses only the project URL and publishable/anon key, in `.env.local`. Do not
+create test users by writing to `auth.users`/`auth.identities` with SQL; the
+integration tests (`integration/`) stay opt-in through `SUPABASE_TEST_EMAIL` and
+`SUPABASE_TEST_PASSWORD`. When querying the owner's real data to answer a
+question, read only what the question needs (prefer totals and counts).
+
+## Private data
+
+`private/` (gitignored) holds the owner's real bank exports and other private
+files. Never commit its contents or copy them into tests, fixtures, docs or PR
+text; tests use made-up rows in the same layout. Files from it that the owner
+asks to use (e.g. the icon zip) are inspected first, then copied into place.
+
+## App icons
+
+`public/icons/`: `favicon.svg` (+ `favicon-32.png`, `favicon.ico`) for the tab,
+`apple-touch-icon.png` for iOS, `icon-192.png`/`icon-512.png`/`icon.svg`
+(purpose "any") and a separate `icon-maskable-512.png` (purpose "maskable") in
+the manifest (`vite.config.ts`), and `icon.svg` as the header logo (transparent,
+so no frame or shadow). `e2e/navigation.spec.ts` checks every icon loads under
+the base path.
 
 ## Development process
 
@@ -195,3 +230,14 @@ before modifying code if an unrelated PR is open. Make focused changes on a
 branch, bump the version (x = production-ready, y = feature, z = incremental),
 run format, lint, unit and UI tests, and open a PR. In the final message report
 the version, changed files, tests run, remaining limitations, and the PR link.
+
+- Display-only or cosmetic changes are a patch version (z); anything that changes
+  the decided math needs the owner's approval first and is a feature version (y).
+- Check visible UI changes with a Playwright screenshot (a throwaway spec,
+  deleted afterwards) at phone width before opening the PR.
+- Merge only when asked: wait for the PR's checks, merge with `--delete-branch`,
+  pull `main`, then confirm the Pages deploy succeeded and the live bundle shows
+  the new version.
+- Stacked PRs: before merging the lower PR, keep its branch, retarget the upper
+  PR to `main`, and only then delete the lower branch (deleting it first closes
+  the upper PR).
