@@ -68,8 +68,18 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await expect(dialog).toBeHidden();
   await expect(groceries.locator(".envelope-remaining")).toHaveText("$10.00");
   await expect(available(page)).toContainText("$320.00");
-  // A refund is not spending: Spent stays at the $180 that went out.
-  await expect(groceries).toContainText("Spent $180.00");
+  // The refund cancels out part of this month's spending: $180 − $10 = $170.
+  await expect(groceries).toContainText("Spent $170.00");
+  // Closed, the row shows only what's left, Planned and Saved; tapping shows the rest.
+  const summary = groceries.locator("summary");
+  await expect(summary).toContainText("Planned $0.00");
+  await expect(summary).not.toContainText("Assigned");
+  await expect(summary).not.toContainText("Spent");
+  const details = groceries.getByLabel("This month");
+  await expect(details).toBeHidden();
+  await summary.click();
+  await expect(details).toBeVisible();
+  await expect(details).toHaveText("Assigned $180.00Spent $170.00");
 });
 
 test("money into a credit card is a card credit that only lowers what is owed", async ({

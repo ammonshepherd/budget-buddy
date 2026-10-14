@@ -5,6 +5,7 @@ import {
   envelope,
   envelopeAction,
   goTo,
+  openAddTransaction,
   signInWithHousehold,
 } from "./helpers";
 
@@ -89,4 +90,30 @@ test("the bar hides at $0.00 and comes back when over assigned", async ({ page }
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("-$40.00");
   await expect(available(page)).toContainText("Over assigned by $40.00");
+});
+
+test("a refund with no spending this month shows as Refunded, not negative Spent", async ({
+  page,
+}) => {
+  await signInWithHousehold(page);
+  await goTo(page, "Accounts");
+  await page.getByLabel("Account name").fill("Checking");
+  await page.getByLabel("Opening balance").fill("1000");
+  await page.getByRole("button", { name: "Add account" }).click();
+  await addGroupWithEnvelopes(page, "Bills", ["Car insurance"]);
+  await envelopeAction(page, "Car insurance", "Assign (negative to take back)", "700");
+
+  const dialog = await openAddTransaction(page);
+  await dialog.getByRole("radio", { name: "Inflow" }).check();
+  await dialog.getByLabel("Amount").fill("85.37");
+  await dialog.getByLabel("Payee").fill("Insurance refund");
+  await dialog.getByLabel("Envelope").selectOption({ label: "Car insurance" });
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await expect(dialog).toBeHidden();
+
+  const insurance = envelope(page, "Car insurance");
+  await expect(insurance.locator(".envelope-remaining")).toHaveText("$785.37");
+  await expect(insurance.getByLabel("This month")).toHaveText(
+    "Assigned $700.00Spent $0.00Refunded $85.37",
+  );
 });

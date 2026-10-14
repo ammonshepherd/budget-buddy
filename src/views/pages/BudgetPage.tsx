@@ -172,16 +172,10 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
             <span className="envelope-remaining">
               <Money cents={envelope.remaining} />
             </span>
+            {/* Closed: only what matters at a glance. A shortfall always shows. */}
             <span className="envelope-figures">
               <span>
-                Plan <Money cents={envelope.planned} />
-              </span>
-              <span>
-                Assigned <Money cents={envelope.assigned} />
-              </span>
-              {/* Refunds are not spending: they only raise Remaining. */}
-              <span>
-                Spent <Money cents={envelope.outflow} />
+                Planned <Money cents={envelope.planned} />
               </span>
               <SavedAmount cents={envelope.saved} />
               {envelope.shortfall > 0 && (
@@ -194,6 +188,27 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
         )}
       </summary>
       <div className="envelope-actions">
+        {!envelope.card && (
+          // Assigned + Released + Refunded − Spent = what is left.
+          <p className="envelope-figures envelope-detail" aria-label="This month">
+            <span>
+              Assigned <Money cents={envelope.assigned} />
+            </span>
+            {envelope.released > 0 && (
+              <span>
+                Released from Saved <Money cents={envelope.released} />
+              </span>
+            )}
+            <span>
+              Spent <Money cents={envelope.outflow} />
+            </span>
+            {envelope.refunded > 0 && (
+              <span>
+                Refunded <Money cents={envelope.refunded} />
+              </span>
+            )}
+          </p>
+        )}
         <SingleFieldForm
           label="Assign (negative to take back)"
           button="Assign"

@@ -21,8 +21,6 @@ export interface EnvelopeMonthInput {
   released: Cents;
   /** Money spent from the envelope this month, net of refunds (positive = spent). */
   spent: Cents;
-  /** Refunds into the envelope this month, already netted into `spent`. */
-  refunded?: Cents;
 }
 
 /** The numbers shown for one envelope in one month. */
@@ -32,9 +30,15 @@ export interface EnvelopeMonth {
   released: Cents;
   /** Net of refunds: what Remaining is computed from. */
   spent: Cents;
-  /** What was spent, refunds left out: what the Budget page shows as Spent. */
+  /**
+   * Spent as the Budget page shows it: net of refunds, never below zero
+   * (refunds first cancel out the month's spending).
+   */
   outflow: Cents;
-  /** Refunds into the envelope this month; they simply add to Remaining. */
+  /**
+   * Refunds beyond the month's spending, shown as "Refunded" (0 otherwise).
+   * Assigned + Released + refunded − outflow = Remaining, like the real math.
+   */
   refunded: Cents;
   /** Saved(M): the reserve carried in from earlier months, before releases. */
   savedAtStart: Cents;
@@ -80,15 +84,13 @@ export function computeEnvelopeMonth(
 
   const remaining = assigned + released - spent;
   const saved = savedAtStart - released;
-  const refunded = input.refunded ?? 0;
-  assertCents(refunded, "refunded");
   return {
     month,
     assigned,
     released,
     spent,
-    outflow: spent + refunded,
-    refunded,
+    outflow: Math.max(0, spent),
+    refunded: Math.max(0, -spent),
     savedAtStart,
     saved,
     remaining,
@@ -286,9 +288,7 @@ function ledgerFor(data: BudgetData): Ledger {
   for (const tx of budgetTransactions(data)) {
     const month = monthOf(tx.date);
     for (const allocation of tx.allocations) {
-      const input = row(allocation.envelopeId, month);
-      input.spent -= allocation.amount;
-      if (allocation.amount > 0) input.refunded = (input.refunded ?? 0) + allocation.amount;
+      row(allocation.envelopeId, month).spent -= allocation.amount;
     }
     const payment = cards.get(tx.accountId);
     const settled = tx.isTransfer || (tx.amount < 0 && tx.allocations.length > 0);

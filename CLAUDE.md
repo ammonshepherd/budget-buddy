@@ -125,10 +125,12 @@ non-card budget balances − all envelope money (P included)`.
   to Assign is a sticky bar at the top, hidden when it is exactly $0.00 (shown
   when positive or over assigned); the month picker sits above it; envelopes
   are added with each group's + button; groups are added/deleted in Settings.
-- Envelope rows show Spent without refunds (`outflow`; refunds only raise
-  Remaining, math unchanged) and a Saved that turns large, purple and sparkling once above $0.00. A card's payment
-  envelope shows only Available to pay (Saved + Remaining) and Remaining debt
-  (Uncovered).
+- Envelope rows (closed) show name, what is left, Planned and Saved (large,
+  purple, sparkling once above $0.00), plus Short if overspent; opening one shows
+  Assigned, Released, Spent and Refunded. Spent shown = max(0, net spent);
+  Refunded = refunds beyond the month's spending (`outflow` / `refunded` in
+  `EnvelopeMonth`; math unchanged). A card's payment envelope shows only
+  Available to pay (Saved + Remaining) and Remaining debt (Uncovered).
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount.
 - Accounts are closed (soft delete), never deleted with their transactions.

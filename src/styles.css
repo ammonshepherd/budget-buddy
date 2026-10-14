@@ -1070,3 +1070,10 @@ a:focus-visible {
     animation: none;
   }
 }
+
+/* ---- v0.14.2: envelope details shown when the envelope is opened -------- */
+
+.envelope-detail {
+  margin: 0;
+  font-size: 0.78rem;
+}
