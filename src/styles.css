@@ -1053,7 +1053,7 @@ a:focus-visible {
   font-weight: 700;
 }
 
-.delete-transaction {
+.sheet-delete {
   justify-self: center;
   margin-block-start: 0.25rem;
 }

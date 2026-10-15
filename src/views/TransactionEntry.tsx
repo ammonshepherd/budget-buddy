@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
 import type { Budget } from "../controllers/useBudget";
 import {
@@ -15,7 +15,7 @@ import { formatCents } from "../models/money";
 import { formatMonth } from "../models/month";
 import { MAX_SPLIT_LINES, type SplitLine } from "../models/splits";
 import type { BudgetData } from "../models/types";
-import { ErrorMessage, Money } from "./components";
+import { ErrorMessage, Money, Sheet } from "./components";
 import { PlusIcon } from "./icons";
 
 type Entry = ReturnType<typeof useTransactionEntry>;
@@ -101,24 +101,9 @@ export function TransactionDialog({
   onClose: () => void;
   onDelete?: () => Promise<void>;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-
-  // A <dialog> opens with showModal(), which React has no prop for.
-  useEffect(() => {
-    const element = dialog.current;
-    if (open && !element?.open) element?.showModal();
-    if (!open && element?.open) element.close();
-  }, [open]);
-
   return (
-    <dialog
-      ref={dialog}
-      className="sheet"
-      aria-label={heading}
-      // Escape closes the dialog itself; keep React's state in step.
-      onClose={onClose}
-    >
-      {open && (
+    <Sheet open={open} label={heading} onClose={onClose}>
+      {() => (
         <TransactionEntry
           budget={budget}
           data={data}
@@ -135,7 +120,7 @@ export function TransactionDialog({
           }
         />
       )}
-    </dialog>
+    </Sheet>
   );
 }
 
@@ -397,7 +382,7 @@ function TransactionEditor({
       </button>
       {onDelete && (
         <button
-          className="text-button danger delete-transaction"
+          className="text-button danger sheet-delete"
           type="button"
           disabled={remove.pending}
           onClick={() => {

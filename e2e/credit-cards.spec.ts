@@ -54,7 +54,7 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   // Editing keeps the type and shows the amount owed.
   await goTo(page, "Accounts");
   await expect(visa).toContainText("-$230.00");
-  await visa.getByRole("button", { name: "Edit" }).click();
+  await visa.click();
   const edit = page.getByRole("form", { name: "Edit Visa" });
   await expect(edit.getByRole("radiogroup", { name: "Account type" })).toHaveCount(0);
   await expect(edit.getByLabel("Amount owed on the opening date")).toHaveValue("200.00");
@@ -64,7 +64,7 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   await expect(visa).toContainText("owing $250.00");
 
   // Renaming the card renames its payment envelope.
-  await visa.getByRole("button", { name: "Edit" }).click();
+  await visa.click();
   await page.getByRole("form", { name: "Edit Visa" }).getByLabel("Account name").fill("Visa Gold");
   await page.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");
