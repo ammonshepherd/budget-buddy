@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
 import { formatCents, type Cents } from "../models/money";
 
@@ -8,6 +8,43 @@ export function Money({ cents, className = "" }: { cents: Cents; className?: str
     <span className={`money ${cents < 0 ? "negative" : ""} ${className}`.trim()}>
       {formatCents(cents)}
     </span>
+  );
+}
+
+/**
+ * A modal <dialog> sheet. Its content is built only while open (children is a
+ * function), so a form inside starts fresh each time.
+ */
+export function Sheet({
+  open,
+  label,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  label: string;
+  onClose: () => void;
+  children: () => ReactNode;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+
+  // A <dialog> opens with showModal(), which React has no prop for.
+  useEffect(() => {
+    const element = dialog.current;
+    if (open && !element?.open) element?.showModal();
+    if (!open && element?.open) element.close();
+  }, [open]);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="sheet"
+      aria-label={label}
+      // Escape closes the dialog itself; keep React's state in step.
+      onClose={onClose}
+    >
+      {open && children()}
+    </dialog>
   );
 }
 

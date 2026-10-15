@@ -81,10 +81,7 @@ test("the bar hides at $0.00 and comes back when over assigned", async ({ page }
 
   // Lower the account's balance: now over assigned, and the bar warns.
   await goTo(page, "Accounts");
-  await page
-    .locator(".item", { hasText: "Checking" })
-    .getByRole("button", { name: "Edit" })
-    .click();
+  await page.locator(".item", { hasText: "Checking" }).click();
   await page.getByRole("form", { name: "Edit Checking" }).getByLabel("Opening balance").fill("60");
   await page.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");

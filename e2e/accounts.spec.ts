@@ -15,8 +15,12 @@ test("edit an account's name, opening balance and opening date", async ({ page }
   const row = page.locator(".item", { hasText: "Checking" });
   await expect(row).toContainText("opened 2026-01-01 with $100.00");
 
-  // The edit form starts with the current details.
-  await row.getByRole("button", { name: "Edit" }).click();
+  // Rows have no Edit or Close links; tapping a row opens the edit sheet,
+  // which starts with the current details.
+  await expect(row.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Close", exact: true })).toHaveCount(0);
+  await row.click();
+  await expect(page.getByRole("dialog", { name: "Edit Checking" })).toBeVisible();
   const form = page.getByRole("form", { name: "Edit Checking" });
   await expect(form.getByLabel("Opening balance")).toHaveValue("100.00");
   await form.getByLabel("Account name").fill("Main checking");
@@ -34,7 +38,7 @@ test("edit an account's name, opening balance and opening date", async ({ page }
 
   // The opening date cannot move past the account's first transaction.
   await goTo(page, "Accounts");
-  await edited.getByRole("button", { name: "Edit" }).click();
+  await edited.click();
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const again = page.getByRole("form", { name: "Edit Main checking" });
@@ -47,5 +51,6 @@ test("edit an account's name, opening balance and opening date", async ({ page }
   // Cancel leaves it unchanged.
   await again.getByRole("button", { name: "Cancel" }).click();
   await expect(edited).toContainText("opened 2026-01-01 with $1,250.50");
+  await expect(again).toHaveCount(0);
   await expect(edited).toContainText("$1,200.00");
 });

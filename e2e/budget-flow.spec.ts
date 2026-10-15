@@ -138,9 +138,16 @@ test("an account can only be closed at a zero balance", async ({ page }) => {
   await page.getByLabel("Account name").fill("Old bank");
   await page.getByLabel("Opening balance").fill("10");
   await page.getByRole("button", { name: "Add account" }).click();
-  await page
-    .locator(".item", { hasText: "Old bank" })
-    .getByRole("button", { name: "Close" })
-    .click();
-  await expect(page.getByRole("alert")).toContainText("only a $0.00 account can be closed");
+  await page.locator(".item", { hasText: "Old bank" }).click();
+  const sheet = page.getByRole("dialog", { name: "Edit Old bank" });
+  await sheet.getByRole("button", { name: "Close account" }).click();
+  await expect(sheet.getByRole("alert")).toContainText("only a $0.00 account can be closed");
+
+  // At $0.00 it closes: the sheet shuts and the account moves to Closed accounts.
+  await sheet.getByLabel("Opening balance").fill("0");
+  await sheet.getByRole("button", { name: "Save changes" }).click();
+  await page.locator(".item", { hasText: "Old bank" }).click();
+  await sheet.getByRole("button", { name: "Close account" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Closed accounts" })).toBeVisible();
 });

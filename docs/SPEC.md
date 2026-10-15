@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.15.1.
+Version described: 0.15.2.
 
 ## 1. Purpose
 
@@ -158,7 +158,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.15.1", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.15.2", and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
@@ -200,8 +200,9 @@ household yet.
 ### Accounts
 
 - Open accounts: name, balance (red when negative), "Checking · opened DATE with
-  $X" or "Credit card · opened DATE owing $X"; Edit (inline form) and Close
-  (confirm; only at $0.00).
+  $X" or "Credit card · opened DATE owing $X". Rows have no Edit/Close links:
+  tapping a row opens "Edit ⟨name⟩" in a modal sheet (Save changes, Cancel,
+  and Close account at the bottom: confirm; only at $0.00).
 - "Add an account": Checking / Credit card choice, Account name, "Opening
   balance" (checking) or "Amount owed on the opening date" (card), Opening date
   (default today). A card shows a short explanation of its payment envelope.

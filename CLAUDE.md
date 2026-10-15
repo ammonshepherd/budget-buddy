@@ -150,7 +150,9 @@ non-card budget balances − all envelope money (P included)`.
   once. Any outflow (card purchases too) or non-card inflow can be split; a split
   that overdraws several envelopes prompts to cover them one at a time, saving
   only after the last.
-- Accounts are closed (soft delete), never deleted with their transactions.
+- Accounts are closed (soft delete), never deleted with their transactions. On
+  Accounts, tapping an open account's row opens its edit form in a modal sheet
+  with Close account at the bottom; rows have no Edit/Close links.
 - An account's opening balance is its balance on the opening date, before any
   of its transactions, so the opening date can be edited only up to the date
   of its first transaction.

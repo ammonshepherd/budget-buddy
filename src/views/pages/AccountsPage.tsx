@@ -1,19 +1,19 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useAccountsPage, type AccountForm as Fields } from "../../controllers/useAccountsPage";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import type { Budget } from "../../controllers/useBudget";
 import { ACCOUNT_TYPE_NAMES } from "../../models/accounts";
 import { todayIso } from "../../models/month";
 import type { AccountType, BudgetData } from "../../models/types";
-import { ErrorMessage, Money } from "../components";
+import { ErrorMessage, Money, Sheet } from "../components";
 
 type Page = ReturnType<typeof useAccountsPage>;
 type AccountRow = Page["openAccounts"][number];
 
 export function AccountsPage({ budget, data }: { budget: Budget; data: BudgetData }) {
   const page = useAccountsPage(budget, data);
-  const close = useAsyncAction(page.closeAccount);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = page.openAccounts.find((a) => a.id === editingId);
 
   return (
     <section className="page-view stack" aria-labelledby="accounts-title">
@@ -32,56 +32,28 @@ export function AccountsPage({ budget, data }: { budget: Budget; data: BudgetDat
           <p className="empty-state">No accounts yet. Add your checking account below.</p>
         ) : (
           <ul className="item-list">
-            {page.openAccounts.map((account) =>
-              account.id === editingId ? (
-                <li key={account.id}>
-                  <AccountForm
-                    heading={`Edit ${account.name}`}
-                    button="Save changes"
-                    initial={{
-                      type: account.type,
-                      name: account.name,
-                      openingBalance: account.openingBalanceInput,
-                      openingDate: account.openingDate,
-                    }}
-                    onSubmit={async (form) => {
-                      await page.updateAccount(account.id, form);
-                      setEditingId(null);
-                    }}
-                    onCancel={() => setEditingId(null)}
-                  />
-                </li>
-              ) : (
-                <li className="item" key={account.id}>
+            {page.openAccounts.map((account) => (
+              <li key={account.id}>
+                <button
+                  className="item item-button"
+                  type="button"
+                  onClick={() => setEditingId(account.id)}
+                >
                   <AccountSummary account={account} />
-                  <span className="button-row">
-                    <button
-                      className="text-button"
-                      type="button"
-                      onClick={() => setEditingId(account.id)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="text-button"
-                      type="button"
-                      disabled={close.pending}
-                      onClick={() => {
-                        if (window.confirm(`Close ${account.name}? Its history is kept.`)) {
-                          void close.run(account.id);
-                        }
-                      }}
-                    >
-                      Close
-                    </button>
-                  </span>
-                </li>
-              ),
-            )}
+                </button>
+              </li>
+            ))}
           </ul>
         )}
-        <ErrorMessage error={close.error} />
       </section>
+
+      <Sheet
+        open={editing !== undefined}
+        label={`Edit ${editing?.name ?? "account"}`}
+        onClose={() => setEditingId(null)}
+      >
+        {() => <EditAccount account={editing!} page={page} onDone={() => setEditingId(null)} />}
+      </Sheet>
 
       <section className="list-card">
         <AccountForm
@@ -111,6 +83,52 @@ export function AccountsPage({ budget, data }: { budget: Budget; data: BudgetDat
         </section>
       )}
     </section>
+  );
+}
+
+/** The edit form in the sheet, with Close account at the bottom. */
+function EditAccount({
+  account,
+  page,
+  onDone,
+}: {
+  account: AccountRow;
+  page: Page;
+  onDone: () => void;
+}) {
+  const close = useAsyncAction(async () => {
+    await page.closeAccount(account.id);
+    onDone();
+  });
+
+  return (
+    <AccountForm
+      heading={`Edit ${account.name}`}
+      button="Save changes"
+      initial={{
+        type: account.type,
+        name: account.name,
+        openingBalance: account.openingBalanceInput,
+        openingDate: account.openingDate,
+      }}
+      onSubmit={async (form) => {
+        await page.updateAccount(account.id, form);
+        onDone();
+      }}
+      onCancel={onDone}
+    >
+      <button
+        className="text-button danger sheet-delete"
+        type="button"
+        disabled={close.pending}
+        onClick={() => {
+          if (window.confirm(`Close ${account.name}? Its history is kept.`)) void close.run();
+        }}
+      >
+        Close account
+      </button>
+      <ErrorMessage error={close.error} />
+    </AccountForm>
   );
 }
 
@@ -149,6 +167,7 @@ function AccountForm({
   resetAfterSubmit = false,
   onSubmit,
   onCancel,
+  children,
 }: {
   heading: string;
   button: string;
@@ -157,6 +176,8 @@ function AccountForm({
   resetAfterSubmit?: boolean;
   onSubmit: (form: Fields) => Promise<void>;
   onCancel?: () => void;
+  /** Extra controls under the buttons (the edit sheet's Close account). */
+  children?: ReactNode;
 }) {
   const [form, setForm] = useState(initial);
   const action = useAsyncAction(onSubmit);
@@ -224,6 +245,7 @@ function AccountForm({
           Cancel
         </button>
       )}
+      {children}
       <ErrorMessage error={action.error} />
     </form>
   );
