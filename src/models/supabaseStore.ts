@@ -62,16 +62,6 @@ export function createSupabaseStore(
       if (error) throw new UserFacingError(error.message);
     },
 
-    async signUp(email, password) {
-      const { data, error } = await db().auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL },
-      });
-      if (error) throw new UserFacingError(error.message);
-      return data.session === null;
-    },
-
     async signOut() {
       const { error } = await db().auth.signOut();
       if (error) throw error;

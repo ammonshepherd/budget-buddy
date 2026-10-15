@@ -61,7 +61,7 @@ export function App() {
       {session.status === "error" && <Message error={session.error} />}
       {session.status === "signedOut" && (
         <main className="page-content">
-          <SignInPage onSignIn={store.signIn} onSignUp={store.signUp} />
+          <SignInPage onSignIn={store.signIn} />
         </main>
       )}
       {session.status === "signedIn" && (

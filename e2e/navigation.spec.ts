@@ -5,6 +5,8 @@ test("shows sign-in first, with the app version", async ({ page }) => {
   await page.goto("./");
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
   await expect(page.getByLabel("Application version")).toHaveText(/^v\d+\.\d+\.\d+$/);
+  // Public sign-up is off: no way to create an account here.
+  await expect(page.getByText(/create an account|create account/i)).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
 });
 
