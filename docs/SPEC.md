@@ -247,7 +247,9 @@ household yet.
     to move into Remaining" + Move, i.e. Release from Saved); at $0.00 a quiet
     "Nothing saved yet" panel;
   - "This month's transactions": date, payee, account, this envelope's amount
-    (a split shows "part of a $X split");
+    (a split shows "part of a $X split"); each is a button ("Edit ⟨payee⟩,
+    ⟨amount⟩, ⟨date⟩") that opens the transaction edit dialog over the sheet,
+    which stays open and updates after a save or delete;
   - Delete envelope (confirm: money assigned returns to Available to Assign).
     A card's payment envelope sheet shows Available to pay, "Owed $X · Remaining
     debt $Y", "Assign (negative to take back)", the Saved panel and how it fills,
@@ -414,9 +416,7 @@ Decided or wanted, but not in the app: matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead); an envelope icon next to each envelope
-name on the Budget page and in Settings; tapping a transaction in the envelope
-sheet's "This month's transactions" list to open it in the transaction edit
-dialog (as on Activity); on Activity: search and filters (account, envelope,
+name on the Budget page and in Settings; on Activity: search and filters (account, envelope,
 status), a "Needs review" queue for transfer matches, running balances, swipe
 actions (such as marking cleared), a stored cleared/reconciled status, and a
 memo per split part.

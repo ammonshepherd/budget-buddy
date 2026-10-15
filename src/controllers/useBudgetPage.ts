@@ -192,5 +192,12 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     deleteEnvelope: async (envelopeId: string) => {
       await budget.change((store) => store.deleteEnvelope(envelopeId));
     },
+
+    /** A transaction tapped in an envelope sheet, to edit; undefined once it is gone. */
+    transaction: (id: string) => data.transactions.find((tx) => tx.id === id),
+
+    deleteTransaction: async (id: string) => {
+      await budget.change((store) => store.deleteTransaction(id));
+    },
   };
 }

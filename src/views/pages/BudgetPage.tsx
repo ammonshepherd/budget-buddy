@@ -3,6 +3,7 @@ import { messageOf } from "../../controllers/errors";
 import type { Budget } from "../../controllers/useBudget";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
+import { formFromTransaction } from "../../controllers/useTransactionEntry";
 import type { EnvelopeRow, GroupRows } from "../../models/budgetMath";
 import { centsToInput, formatCents } from "../../models/money";
 import type { Month } from "../../models/month";
@@ -10,6 +11,7 @@ import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
+import { TransactionDialog } from "../TransactionEntry";
 
 type Page = ReturnType<typeof useBudgetPage>;
 
@@ -29,6 +31,9 @@ export function BudgetPage({
   const detail = openId ? page.detail(openId) : null;
   const over = view.overAssigned > 0;
   const [uploading, setUploading] = useState(false);
+  // A transaction tapped in the envelope sheet; the dialog closes if it goes.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = editingId ? page.transaction(editingId) : undefined;
 
   return (
     <section className="page-view budget-page" aria-labelledby="budget-title">
@@ -110,8 +115,28 @@ export function BudgetPage({
         className="sheet bottom"
         onClose={() => setOpenId(null)}
       >
-        {() => <EnvelopeSheet detail={detail!} page={page} onClose={() => setOpenId(null)} />}
+        {() => (
+          <EnvelopeSheet
+            detail={detail!}
+            page={page}
+            onClose={() => setOpenId(null)}
+            onEditTransaction={setEditingId}
+          />
+        )}
       </Sheet>
+
+      {/* Opens over the envelope sheet, which stays open underneath. */}
+      <TransactionDialog
+        budget={budget}
+        data={data}
+        open={editing !== undefined}
+        heading="Edit transaction"
+        initial={() => formFromTransaction(editing!, data)}
+        onClose={() => setEditingId(null)}
+        onDelete={async () => {
+          if (editing) await page.deleteTransaction(editing.id);
+        }}
+      />
 
       <Sheet
         open={uploading}

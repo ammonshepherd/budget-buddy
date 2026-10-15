@@ -159,7 +159,8 @@ non-card budget balances − all envelope money (P included)`.
   name (renamed with its pencil button), Remaining this month with how it adds up, the plan
   line (under/on/over Planned), Planned and Assigned fields (same rules as the
   cells), Spent, the purple Saved panel with "Move some into Remaining…"
-  (Release from Saved), this month's transactions in the envelope, and Delete
+  (Release from Saved), this month's transactions in the envelope (tapping
+  one opens the transaction edit dialog over the sheet), and Delete
   envelope. Spent shown = max(0, net spent); Refunded =
   refunds beyond the month's spending (`outflow` / `refunded` in
   `EnvelopeMonth`; math unchanged). A card's payment envelope shows Available

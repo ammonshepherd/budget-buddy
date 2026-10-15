@@ -1516,13 +1516,29 @@ div.sheet-field .sheet-field-value {
 }
 
 .sheet-activity li {
+  border-block-end: 1px solid var(--bb-row-line);
+}
+
+/* Each transaction is a button that opens it in the edit dialog. */
+.sheet-activity-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
+  inline-size: 100%;
+  min-block-size: 44px;
   padding: 0.5rem 0;
-  border-block-end: 1px solid var(--bb-row-line);
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
   font-size: 0.875rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.sheet-activity-row:hover {
+  background: var(--bb-purple-tint);
 }
 
 .activity-what {
@@ -1535,7 +1551,7 @@ div.sheet-field .sheet-field-value {
   font-size: 0.75rem;
 }
 
-.sheet-activity li strong {
+.sheet-activity-row strong {
   white-space: nowrap;
 }
 

@@ -78,6 +78,55 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
   await expect(available(page)).toContainText("$650.00");
 });
 
+test("tapping a transaction in the sheet opens it to edit, over the sheet", async ({ page }) => {
+  await addAccount(page, "Checking", "1000");
+  await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
+  await editCell(page, "Groceries", "assigned", "300");
+  await editCell(page, "Fun", "assigned", "100");
+  await addTransaction(page, { amount: "120", payee: "Market", envelope: "Groceries" });
+  await addTransaction(page, { amount: "15", payee: "Bakery", envelope: "Groceries" });
+  await goTo(page, "Budget");
+
+  const sheet = await openEnvelope(page, "Groceries");
+  const activity = sheet.getByRole("region", { name: "Groceries transactions" });
+  const edit = page.getByRole("dialog", { name: "Edit transaction" });
+
+  // Edit the amount: the sheet behind updates and stays open.
+  await activity.getByRole("button", { name: /^Edit Market, -\$120\.00, / }).click();
+  await expect(edit.getByLabel("Payee")).toHaveValue("Market");
+  await edit.getByLabel("Amount").fill("100");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(edit).toBeHidden();
+  await expect(sheet).toBeVisible();
+  await expect(activity.getByRole("listitem").filter({ hasText: "Market" })).toContainText(
+    "-$100.00",
+  );
+  await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$185.00");
+
+  // Escape closes only the edit dialog.
+  await activity.getByRole("button", { name: /^Edit Market/ }).click();
+  await expect(edit).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(edit).toBeHidden();
+  await expect(sheet).toBeVisible();
+
+  // Moving it to another envelope takes it off this list.
+  await activity.getByRole("button", { name: /^Edit Market/ }).click();
+  await edit.getByLabel("Envelope").selectOption({ label: "Fun" });
+  // Fun has only $100: exactly enough, so no cover prompt.
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(edit).toBeHidden();
+  await expect(activity.getByRole("listitem")).toHaveCount(1);
+  await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$285.00");
+
+  // Deleting from the dialog removes it too.
+  await activity.getByRole("button", { name: /^Edit Bakery/ }).click();
+  await edit.getByRole("button", { name: "Delete transaction" }).click();
+  await expect(edit).toBeHidden();
+  await expect(activity).toContainText("No transactions in this envelope this month.");
+  await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$300.00");
+});
+
 test("Saved can be moved into Remaining from the sheet", async ({ page }) => {
   await addAccount(page, "Checking", "1000");
   await addGroupWithEnvelopes(page, "Often", ["Gifts"]);
