@@ -84,7 +84,7 @@ export function TransactionImport({ budget, data }: { budget: Budget; data: Budg
           Imported {io.done.added} {io.done.added === 1 ? "transaction" : "transactions"} into{" "}
           {io.done.accountName}
           {io.done.alreadyThere > 0 && ` (${io.done.alreadyThere} were already there)`}.{" "}
-          <a href="#activity">Give them envelopes on Activity</a>
+          <a href={io.done.activityHref}>Give them envelopes on Activity</a>
         </p>
       )}
 

@@ -21,6 +21,7 @@ export const InstallIcon = () => (
 );
 export const PlusIcon = () => <Icon path="M12 5v14M5 12h14" />;
 export const PencilIcon = () => <Icon path="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />;
+export const ChevronDownIcon = () => <Icon path="M6 9l6 6 6-6" />;
 
 /** Six dots in two columns: "drag me". */
 export const GripIcon = () => (

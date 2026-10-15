@@ -1,8 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  activityRow,
   addGroupWithEnvelopes,
   available,
   envelope,
+  editActivityRow,
   editCell,
   goTo,
   openAddTransaction,
@@ -55,11 +57,17 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   await expect(remaining(page, "Household")).toHaveText("$75.00");
   await expect(available(page)).toContainText("$700.00");
 
-  // Activity shows the split; editing loads every line.
+  // Activity shows the split with its parts; editing loads every line.
   await goTo(page, "Activity");
-  const row = page.locator(".item", { hasText: "Superstore" });
-  await expect(row).toContainText("Split: Groceries, Household");
-  await row.click();
+  const row = activityRow(page, "Superstore");
+  await expect(row.getByRole("button", { name: "Close split for Superstore" })).toHaveText(
+    "Split (2)",
+  );
+  await expect(row.locator(".activity-portion")).toHaveText([
+    /Groceries.*−\$50\.00/,
+    /Household.*−\$25\.00/,
+  ]);
+  await editActivityRow(page, "Superstore");
   const form = page.getByRole("form", { name: "Edit transaction" });
   await expect(form.getByLabel("Envelope").first()).toHaveValue("split");
   await expect(form.getByLabel("Amount 1")).toHaveValue("50.00");
@@ -76,11 +84,11 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   await expect(form).toHaveCount(0);
 
   // Choosing one envelope again undoes the split.
-  await row.click();
+  await editActivityRow(page, "Superstore");
   await form.getByLabel("Envelope").first().selectOption({ label: "Household" });
   await expect(form.getByLabel("Envelope 1")).toHaveCount(0);
   await form.getByRole("button", { name: "Save changes" }).click();
-  await expect(row).toContainText("Household");
+  await expect(row.locator(".activity-category")).toHaveText("Household");
   await expect(row).not.toContainText("Split");
   await goTo(page, "Budget");
   await expect(remaining(page, "Groceries")).toHaveText("$200.00");

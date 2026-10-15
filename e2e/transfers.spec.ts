@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { goTo, signInWithHousehold } from "./helpers";
+import {
+  activityRow,
+  editActivityRow,
+  goTo,
+  openActivityMonth,
+  signInWithHousehold,
+} from "./helpers";
 
 const file = (name: string, text: string) => ({
   name,
@@ -17,13 +23,15 @@ async function addAccount(page: Page, name: string, balance: string) {
 }
 
 /** Rows of the Activity page's Transactions list (not the review list). */
-const items = (page: Page) => page.getByRole("region", { name: "Transactions" }).locator(".item");
+const items = (page: Page) =>
+  page.getByRole("region", { name: "Transactions" }).locator(".activity-item");
 
-/** The Activity row whose title is exactly `title` (text matching ignores case). */
-const row = (page: Page, title: string) =>
-  items(page).filter({
-    has: page.locator(".item-title", { hasText: new RegExp(`^${title}$`) }),
-  });
+/** The "Other side" a transfer's edit form has chosen. */
+const otherSideChosen = (page: Page) =>
+  page
+    .getByRole("form", { name: "Edit transaction" })
+    .getByLabel("Other side")
+    .locator("option:checked");
 
 async function importCsv(page: Page, account: string, name: string, text: string) {
   await goTo(page, "Settings");
@@ -54,9 +62,9 @@ test("marking an imported row as a Transfer links the other account's bank row",
     "Date,Description,Amount\n01/06/2030,TRANSFER FROM CHECKING,200.00",
   );
 
-  await goTo(page, "Activity");
-  const out = items(page).filter({ hasText: "TRANSFER TO SAVINGS" });
-  await out.click();
+  await openActivityMonth(page, "2030-01");
+  const out = activityRow(page, "TRANSFER TO SAVINGS");
+  await editActivityRow(page, "TRANSFER TO SAVINGS");
   const form = page.getByRole("form", { name: "Edit transaction" });
   await form.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
   await expect(form.getByLabel("To account")).toHaveValue(/.+/);
@@ -65,11 +73,13 @@ test("marking an imported row as a Transfer links the other account's bank row",
   );
   await form.getByRole("button", { name: "Save changes" }).click();
 
-  // Still two rows, both now a linked Transfer; the bank's own dates are kept.
-  await expect(items(page)).toHaveCount(2);
-  await expect(out).toContainText("Checking · Transfer to Savings");
-  const into = items(page).filter({ hasText: "TRANSFER FROM CHECKING" });
-  await expect(into).toContainText("Savings · Transfer from Checking");
+  // One linked Transfer, shown once from its money-out side.
+  await expect(items(page)).toHaveCount(1);
+  await expect(out.locator(".activity-account")).toHaveText("Checking → Savings");
+  await expect(out.locator(".activity-category")).toHaveText("Transfer");
+  await expect(out.locator(".activity-amount")).toHaveText("$200.00");
+  const into = activityRow(page, "TRANSFER FROM CHECKING");
+  await expect(into).toHaveCount(0);
 
   // Neither side is spending or income.
   await page.goto("./#budget/2030-01");
@@ -79,8 +89,8 @@ test("marking an imported row as a Transfer links the other account's bank row",
 
   // Deleting one imported side keeps the other bank row, unlinked.
   page.on("dialog", (dialog) => dialog.accept());
-  await goTo(page, "Activity");
-  await out.click();
+  await openActivityMonth(page, "2030-01");
+  await editActivityRow(page, "TRANSFER TO SAVINGS");
   await page.getByRole("button", { name: "Delete transfer" }).click();
   await expect(items(page)).toHaveCount(1);
   await expect(into).toContainText("Uncategorized");
@@ -103,21 +113,25 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
   await expect(dialog.getByLabel("From account")).toHaveValue(/.+/);
   await dialog.getByRole("button", { name: "Add transaction" }).click();
 
-  const rows = items(page).filter({ hasText: "Move" });
-  await expect(rows).toHaveCount(2);
-  await rows.filter({ hasText: "Transfer from Checking" }).click();
+  // One row for both sides, opened at its money-out side.
+  const move = activityRow(page, "Move");
+  await expect(move).toHaveCount(1);
+  await expect(move.locator(".activity-account")).toHaveText("Checking → Savings");
+  await editActivityRow(page, "Move");
   const form = page.getByRole("form", { name: "Edit transaction" });
-  await expect(form.getByRole("note")).toHaveText("Also updates the Checking side.");
+  await expect(form.getByRole("note")).toHaveText("Also updates the Savings side.");
   await form.getByLabel("Amount").fill("80");
   await form.getByRole("button", { name: "Save changes" }).click();
-  await expect(rows.filter({ hasText: "Transfer to Savings" })).toContainText("-$80.00");
+  await expect(move.locator(".activity-amount")).toHaveText("$80.00");
 
   // Making one side ordinary spending removes the typed-in other side.
-  await rows.filter({ hasText: "Transfer to Savings" }).click();
+  await editActivityRow(page, "Move");
   await form.getByLabel("Envelope").selectOption({ label: "Uncategorized" });
   await form.getByRole("button", { name: "Save changes" }).click();
-  await expect(rows).toHaveCount(1);
-  await expect(rows).toContainText("Checking · Uncategorized");
+  await expect(items(page)).toHaveCount(1);
+  await expect(move.locator(".activity-account")).toHaveText("Checking");
+  await expect(move.locator(".activity-category")).toHaveText("Uncategorized");
+  await expect(move.locator(".activity-amount")).toHaveText("−$80.00");
 });
 
 test("pick a different bank row, or a new transaction, as the other side", async ({ page }) => {
@@ -138,9 +152,9 @@ test("pick a different bank row, or a new transaction, as the other side", async
     "Date,Description,Amount\n01/06/2030,BIRTHDAY GIFT,200.00\n01/20/2030,FROM CHECKING,200.00",
   );
 
-  await goTo(page, "Activity");
-  const out = items(page).filter({ hasText: "TO SAVINGS" });
-  await out.click();
+  await openActivityMonth(page, "2030-01");
+  const out = activityRow(page, "TO SAVINGS");
+  await editActivityRow(page, "TO SAVINGS");
   const form = page.getByRole("form", { name: "Edit transaction" });
   await form.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
   const otherSide = form.getByLabel("Other side");
@@ -158,20 +172,22 @@ test("pick a different bank row, or a new transaction, as the other side", async
     "Links to the Savings transaction on 2030-01-20 (FROM CHECKING), so it is not added twice.",
   );
   await form.getByRole("button", { name: "Save changes" }).click();
-  await expect(row(page, "FROM CHECKING")).toContainText("Transfer from Checking");
-  await expect(row(page, "BIRTHDAY GIFT")).toContainText("Uncategorized");
+  await expect(out.locator(".activity-account")).toHaveText("Checking → Savings");
+  await expect(activityRow(page, "FROM CHECKING")).toHaveCount(0); // shown with its other side
+  await expect(activityRow(page, "BIRTHDAY GIFT")).toContainText("Uncategorized");
 
   // Change it to a new transaction: the bank row goes back to Uncategorized.
-  await out.click();
+  await editActivityRow(page, "TO SAVINGS");
   await expect(otherSide.locator("option:checked")).toHaveText(
     "Keep 2030-01-20 · FROM CHECKING · $200.00 (15 days later)",
   );
   await otherSide.selectOption({ label: "Add a new transaction instead" });
   await expect(form.getByRole("note")).toHaveText("Also adds the matching inflow in Savings.");
   await form.getByRole("button", { name: "Save changes" }).click();
-  await expect(row(page, "FROM CHECKING")).toContainText("Uncategorized");
-  await expect(items(page).filter({ hasText: "Transfer from Checking" })).toContainText("Savings");
-  await expect(items(page)).toHaveCount(4);
+  await expect(activityRow(page, "FROM CHECKING")).toContainText("Uncategorized");
+  await expect(out.locator(".activity-account")).toHaveText("Checking → Savings");
+  // The transfer (once), BIRTHDAY GIFT and FROM CHECKING.
+  await expect(items(page)).toHaveCount(3);
 });
 
 test("swap a typed-in side for the bank row that arrives later", async ({ page }) => {
@@ -195,8 +211,8 @@ test("swap a typed-in side for the bank row that arrives later", async ({ page }
     "savings.csv",
     "Date,Description,Amount\n01/11/2030,ONLINE TRANSFER,50.00",
   );
-  await goTo(page, "Activity");
-  await page.locator(".item", { hasText: "Transfer to Savings" }).click();
+  await openActivityMonth(page, "2030-01");
+  await editActivityRow(page, "Typed move");
   const form = page.getByRole("form", { name: "Edit transaction" });
   await expect(form.getByLabel("Other side").locator("option")).toHaveText([
     "Keep the side you typed in (updated to match)",
@@ -206,8 +222,12 @@ test("swap a typed-in side for the bank row that arrives later", async ({ page }
   await form.getByRole("button", { name: "Save changes" }).click();
 
   // The typed-in Savings side is gone; the bank row is now the other side.
-  await expect(items(page)).toHaveCount(2);
-  await expect(items(page).filter({ hasText: "ONLINE TRANSFER" })).toContainText(
-    "Transfer from Checking",
+  await expect(items(page)).toHaveCount(1);
+  await expect(activityRow(page, "Typed move").locator(".activity-account")).toHaveText(
+    "Checking → Savings",
+  );
+  await editActivityRow(page, "Typed move");
+  await expect(otherSideChosen(page)).toHaveText(
+    "Keep 2030-01-11 · ONLINE TRANSFER · $50.00 (1 day later)",
   );
 });

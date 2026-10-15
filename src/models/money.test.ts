@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { assertCents, centsToInput, formatCents, parseCents, roundMoney } from "./money";
+import {
+  assertCents,
+  centsToInput,
+  formatCents,
+  formatSignedCents,
+  parseCents,
+  roundMoney,
+} from "./money";
 
 describe("assertCents", () => {
   it("accepts whole cents and rejects fractions and non-numbers", () => {
@@ -14,6 +21,14 @@ describe("formatCents", () => {
     expect(formatCents(0)).toBe("$0.00");
     expect(formatCents(123_456)).toBe("$1,234.56");
     expect(formatCents(-5)).toBe("-$0.05");
+  });
+});
+
+describe("formatSignedCents", () => {
+  it("puts + on inflows and a minus sign on outflows", () => {
+    expect(formatSignedCents(245_000)).toBe("+$2,450.00");
+    expect(formatSignedCents(-8_642)).toBe("\u2212$86.42");
+    expect(formatSignedCents(0)).toBe("$0.00");
   });
 });
 

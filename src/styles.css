@@ -812,43 +812,7 @@ a:focus-visible {
   line-height: 1.45;
 }
 
-/* ---- v0.13.1: Activity dates, tappable rows, tighter sides --------------- */
-
-.day-group + .day-group {
-  margin-block-start: 0.35rem;
-}
-
-.day-group > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.45rem 0;
-  border-block-end: 1px solid var(--border);
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 850;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  list-style: none;
-}
-
-.day-group > summary::-webkit-details-marker {
-  display: none;
-}
-
-/* A triangle that points down when the date is open. */
-.day-group > summary > span:first-child::before {
-  display: inline-block;
-  margin-inline-end: 0.4rem;
-  content: "▸";
-  transition: transform 0.15s;
-}
-
-.day-group[open] > summary > span:first-child::before {
-  transform: rotate(90deg);
-}
+/* ---- v0.13.1: tappable rows, tighter sides -------------------------------- */
 
 /* The whole row opens the edit dialog. */
 .item-button {
@@ -1823,4 +1787,269 @@ div.sheet-field .sheet-field-value {
 
 .plan-start-actions .secondary-button {
   background: var(--surface);
+}
+
+/* ---- v0.21.0: Activity page redesign (docs/mockups/activity-screen.html) - */
+
+:root {
+  --bb-day-bg: #faf8fc;
+  --bb-income: #1f6b42;
+}
+
+.activity-page {
+  /* Rows run edge to edge, right under the app header, like the Budget page. */
+  margin: -1.5rem -0.5rem 0;
+  color: var(--bb-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.activity-page .budget-month {
+  padding: 6px 4px;
+  font-size: 0.875rem;
+}
+
+.activity-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 8px 16px;
+  border-block-end: 1px solid var(--bb-purple-line);
+  background: var(--bb-purple-tint);
+}
+
+.activity-totals div {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.activity-totals dt {
+  color: var(--bb-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.activity-totals dd {
+  margin: 0;
+  color: var(--bb-ink);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.activity-totals .activity-in {
+  color: var(--bb-income);
+}
+
+.activity-totals .activity-transfer {
+  color: var(--bb-muted);
+}
+
+.activity-page > .activity-notice,
+.activity-page > .activity-review {
+  margin: 0.6rem 1rem;
+}
+
+.activity-empty {
+  margin: 0;
+  padding: 2rem 16px;
+  color: var(--bb-muted);
+  text-align: center;
+}
+
+.activity-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 6px 16px;
+  border-block-end: 1px solid var(--bb-row-line);
+  color: var(--bb-muted);
+  background: var(--bb-day-bg);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.activity-day-head h2 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.activity-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-item {
+  border-block-end: 1px solid var(--bb-row-line);
+  background: #fff;
+}
+
+.activity-grid {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) minmax(0, 0.9fr) 84px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+}
+
+.activity-row {
+  min-block-size: 48px;
+}
+
+.status-mark {
+  inline-size: 10px;
+  block-size: 10px;
+  border: 1.5px solid var(--bb-purple);
+  border-radius: 50%;
+}
+
+.status-mark.cleared,
+.status-mark.reconciled {
+  background: var(--bb-purple);
+}
+
+/* Square, so reconciled differs from cleared by more than color. */
+.status-mark.reconciled {
+  border-radius: 2px;
+}
+
+.activity-who {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-inline-size: 0;
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.activity-payee,
+.activity-account,
+.activity-category,
+.portion-memo,
+.portion-envelope {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-payee {
+  color: var(--bb-ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.activity-account,
+.activity-category {
+  color: var(--bb-muted);
+}
+
+.activity-account {
+  font-size: 11px;
+}
+
+.activity-category {
+  font-size: 12px;
+}
+
+.activity-amount {
+  color: var(--bb-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.activity-amount.in {
+  color: var(--bb-income);
+}
+
+.activity-amount.transfer {
+  color: var(--bb-muted);
+}
+
+.split-pill {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 4px;
+  min-block-size: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--bb-purple);
+  background: var(--bb-purple-tint);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.split-pill svg {
+  inline-size: 12px;
+  block-size: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+  transition: transform 0.15s;
+}
+
+.split-pill[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .split-pill svg {
+    transition: none;
+  }
+}
+
+.activity-portions {
+  padding: 2px 0;
+  border-block-start: 1px dashed var(--bb-purple-line);
+  background: var(--bb-day-bg);
+}
+
+.activity-portions[hidden] {
+  display: none;
+}
+
+.activity-portion {
+  min-block-size: 36px;
+}
+
+.portion-memo {
+  color: var(--bb-muted);
+  font-size: 12px;
+}
+
+.portion-envelope {
+  color: var(--bb-purple);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.portion-amount {
+  color: var(--bb-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: end;
+  white-space: nowrap;
 }

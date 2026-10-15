@@ -28,6 +28,7 @@ src/views/        React components (pages in src/views/pages/)
 src/styles.css    all styling
 public/icons/     app icons (see CLAUDE.md "App icons")
 supabase/migrations/  every schema change, applied in order
+docs/mockups/     static design mockups (reference only, not shipped)
 e2e/              Playwright UI tests (in-memory store)
 e2e-db/           Playwright UI tests against the test database
 integration/      integration and RLS tests against the test database
@@ -36,7 +37,8 @@ scripts/          test-database seed script and its safety guard
 
 Key model modules: `budgetMath.ts` (all budget math), `money.ts` (parse and
 format cents), `month.ts` (`YYYY-MM` helpers, `formatDay`), `routes.ts`,
-`accounts.ts` (card opening balance sign), `transfers.ts` (linked transfers and
+`accounts.ts` (card opening balance sign), `activity.ts` (the Activity page's
+month: rows by day, totals, day nets), `transfers.ts` (linked transfers and
 matching), `transactionImport.ts` + `csv.ts` (bank CSV), `envelopePlan.ts` (plan
 CSV), `incomeRules.ts`, `dataStore.ts` (the store interface), `supabaseStore.ts`,
 `memoryStore.ts`, `store.ts` (picks one).
@@ -178,7 +180,9 @@ These are implemented in `budgetMath.ts` and the controllers:
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
 - Hash routes: `#budget`, `#budget/YYYY-MM`, `#accounts`, `#activity`,
-  `#settings`; anything else shows Budget for the current month.
+  `#activity/YYYY-MM`, `#settings`; anything else shows Budget. Without a month,
+  Budget and Activity show the month last shown on either (else the current
+  month), and their nav links carry it (`routeHref`).
 - Floating round + button (bottom right, above the nav) on Budget, Accounts and
   Activity opens the transaction dialog.
 - States: "Loading Budget Buddy…", sign-in, create household, or the app.
@@ -264,15 +268,35 @@ household yet.
 
 ### Activity
 
-- Page heading (eyebrow "YOUR SPENDING TRAIL", title, one sentence).
-- "To review" card when anything waits: totals in and out, rows (tap to edit),
-  "Mark as Income" on non-card inflows, "Apply income rules (N matches)",
-  "Mark all N inflows as Income" (confirm), link to Settings income rules.
-- "Transactions" card: collapsible date groups ("Wednesday, January 2, 2030",
-  count), newest first; each row is a button: payee, amount (red if negative),
-  "Account · Category" where category is the envelope, "Split: ⟨envelopes⟩",
-  Income, Transfer to/from ⟨account⟩, Card credit, or Uncategorized (amber
-  label); memo appended.
+Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
+
+- Visually hidden "Activity" heading; the month band as on Budget ("OCTOBER
+  2026", ‹ › links to `#activity/YYYY-MM`). No search yet.
+- Totals strip (purple tint, three columns): IN (green, "+$X": non-transfer
+  inflows, i.e. income, refunds, card credits), OUT ("−$X": non-transfer
+  outflows, card purchases included), TRANSFERS (grey, each transfer once).
+  Dated in the month, budget accounts only, voided left out, a split once.
+  Display figures from `activityMonth`, not Available to Assign or balances.
+- "No accounts" notice, then the "To review" card when anything waits (from
+  any month): totals in and out, rows (tap to edit), "Mark as Income" on
+  non-card inflows, "Apply income rules (N matches)", "Mark all N inflows as
+  Income" (confirm), link to Settings income rules.
+- Days with transactions, newest first: a tinted heading ("THU OCT 15", an
+  `<h2>`) with the day's net on the right (signed, transfers left out; $0.00
+  for a day of only transfers). Within a day, newest first.
+- Row (grid 14px | payee | envelope | 84px): a status mark (hollow circle
+  Uncleared = typed, filled circle Cleared = imported, filled square
+  Reconciled, not used until reconciliation; `role="img"` with the name);
+  payee over account (a button, "Edit ⟨payee⟩, ⟨amount⟩, ⟨account⟩", that
+  opens the edit dialog); the envelope, Income, Transfer, Card credit, or
+  Uncategorized (amber label); the amount ("−$X" ink, "+$X" green, a
+  transfer unsigned grey). Closed accounts keep their name.
+- A transfer is one row: its money-out side's date and payee, "From → To".
+- A split shows a "Split (N)" pill (`aria-expanded`, "Close/Open split for
+  ⟨payee⟩", chevron) instead of an envelope, and its parts underneath (dashed
+  top border, "↳ ⟨envelope⟩", envelope, signed amount). Every split starts
+  open; closing is kept only until the month changes.
+- Empty month: "No transactions in ⟨Month YYYY⟩." with $0.00 totals.
 
 ### Transaction dialog (add and edit)
 
@@ -377,7 +401,9 @@ Envelopes not in the file are left alone.
   `#ffe2a8` on `#6b4500`.
 - Cards: white, 1px border, rounded (1–1.35rem), soft purple shadow; page side
   padding 0.5rem on a phone.
-- Money shows as `$1,234.56` / `-$12.50`; negative amounts in red.
+- Money shows as `$1,234.56` / `-$12.50`; negative amounts in red. Activity
+  uses its own signs instead: "+$X" (green), "−$X" (a true minus sign, ink),
+  transfers unsigned (`formatSignedCents`).
 - Saved above $0.00: larger, purple, shimmering gradient text with a twinkling
   ✨; no animation with "reduce motion".
 - Modal dialogs: centred sheet up to 28rem wide with a dimmed backdrop.
@@ -390,4 +416,7 @@ tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead); an envelope icon next to each envelope
 name on the Budget page and in Settings; tapping a transaction in the envelope
 sheet's "This month's transactions" list to open it in the transaction edit
-dialog (as on Activity).
+dialog (as on Activity); on Activity: search and filters (account, envelope,
+status), a "Needs review" queue for transfer matches, running balances, swipe
+actions (such as marking cleared), a stored cleared/reconciled status, and a
+memo per split part.

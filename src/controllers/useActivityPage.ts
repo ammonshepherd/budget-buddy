@@ -1,62 +1,39 @@
 import { useMemo } from "react";
-import { isCardCredit, isToReview, transactionsToReview } from "../models/budgetMath";
+import { activityMonth } from "../models/activity";
+import { isToReview, transactionsToReview } from "../models/budgetMath";
 import { inflowsMatchingRules } from "../models/incomeRules";
-import { formatDay } from "../models/month";
-import { transferPartner } from "../models/transfers";
+import { addMonths, formatMonth, type Month } from "../models/month";
+import { activityHref } from "../models/routes";
 import type { BudgetData, Transaction } from "../models/types";
 import type { Budget } from "./useBudget";
 
 /**
- * The Activity page: every transaction with its account and envelopes, the
- * transactions still to review, plus delete and "Mark as Income". Adding and
- * editing go through useTransactionEntry.
+ * The Activity page for one month: its transactions by day with the month's
+ * totals, the transactions still to review (from any month), plus delete and
+ * "Mark as Income". Adding and editing go through useTransactionEntry.
  */
-export function useActivityPage(budget: Budget, data: BudgetData) {
+export function useActivityPage(budget: Budget, data: BudgetData, month: Month) {
   const accountNames = useMemo(() => new Map(data.accounts.map((a) => [a.id, a.name])), [data]);
-  const envelopeNames = useMemo(() => new Map(data.envelopes.map((e) => [e.id, e.name])), [data]);
   const cards = new Set(data.accounts.filter((a) => a.type === "credit_card").map((a) => a.id));
-  const onCard = (tx: Transaction) => cards.has(tx.accountId);
-  const transferLabel = (tx: Transaction) => {
-    const other = transferPartner(data, tx);
-    const name = other ? (accountNames.get(other.accountId) ?? "another account") : "";
-    return other ? `Transfer ${tx.amount < 0 ? "to" : "from"} ${name}` : "Transfer";
-  };
-  const category = (tx: Transaction) =>
-    tx.isTransfer
-      ? transferLabel(tx)
-      : tx.isIncome
-        ? "Income"
-        : isCardCredit(tx, onCard(tx))
-          ? "Card credit"
-          : tx.allocations.length === 0
-            ? "Uncategorized"
-            : (tx.allocations.length > 1 ? "Split: " : "") +
-              tx.allocations.map((a) => envelopeNames.get(a.envelopeId) ?? "Unknown").join(", ");
-  const row = (tx: Transaction) => ({
+  const reviewRow = (tx: Transaction) => ({
     tx,
     accountName: accountNames.get(tx.accountId) ?? "Unknown account",
-    category: category(tx),
-    /** Still to review: highlighted so it gets an envelope (or Income, or Transfer). */
-    uncategorized: isToReview(tx, onCard(tx)),
     /** An inflow outside a credit card: one tap can mark it Income. */
-    canBeIncome: tx.amount > 0 && !onCard(tx) && isToReview(tx, false),
+    canBeIncome: tx.amount > 0 && !cards.has(tx.accountId) && isToReview(tx, false),
   });
-  const rows = data.transactions.map(row);
-  // Transactions come newest first, so each date's group is contiguous.
-  const days: { date: string; label: string; rows: typeof rows }[] = [];
-  for (const r of rows) {
-    const last = days.at(-1);
-    if (last?.date === r.tx.date) last.rows.push(r);
-    else days.push({ date: r.tx.date, label: formatDay(r.tx.date), rows: [r] });
-  }
+  const activity = useMemo(() => activityMonth(data, month), [data, month]);
   const review = transactionsToReview(data);
 
   return {
-    rows,
-    /** Transactions under date headings, newest date first. */
-    days,
-    /** Uncategorized transactions: they count toward nothing until they are decided. */
-    toReview: review.list.map(row),
+    monthLabel: formatMonth(month),
+    previousHref: activityHref(addMonths(month, -1)),
+    nextHref: activityHref(addMonths(month, 1)),
+    /** Money in, out and transferred this month (display only). */
+    totals: activity.totals,
+    /** This month's transactions by day, newest day first. */
+    days: activity.days,
+    /** Uncategorized transactions from any month: they count toward nothing until decided. */
+    toReview: review.list.map(reviewRow),
     toReviewIn: review.inflow,
     toReviewOut: review.outflow,
     /** Inflows to review that an income rule matches (see Settings → Income rules). */

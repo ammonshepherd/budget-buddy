@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activity screen mockup</title>
+<!--
+  Budget Buddy — Activity screen mockup (static reference).
+  Companion to activity-screen-redesign-spec.md. Visual reference only:
+  amounts are sample data. The split toggle works; nothing else is wired up.
+  If this file and the spec disagree, follow the spec.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #4B2A68; --purple-tint: #F3EEF8; --purple-line: #E4DCEE; --row-line: #F0EBF5;
+    --day-bg: #FAF8FC; --ink: #1E1A24; --ink-2: #3A3342; --muted: #6A6175;
+    --income: #1F6B42; --transfer: #6A6175;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E9E4EF; font-family: Manrope, system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .app { max-width: 430px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; padding-bottom: 96px; }
+  button { font: inherit; }
+
+  /* Header */
+  .month { background: var(--purple); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 6px 4px; }
+  .month h1 { margin: 0; font-size: 14px; font-weight: 800; letter-spacing: .12em; }
+  .month .icon { width: 44px; height: 44px; border: 0; background: transparent; color: #fff; font-size: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Month totals strip */
+  .totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; background: var(--purple-tint); border-bottom: 1px solid var(--purple-line); padding: 8px 16px; font-size: 12px; }
+  .totals div { display: flex; flex-direction: column; }
+  .totals .lbl { font-size: 10px; font-weight: 800; letter-spacing: .08em; color: var(--muted); }
+  .totals .amt { font-weight: 800; }
+  .totals .in { color: var(--income); } .totals .out { color: var(--ink); } .totals .xfer { color: var(--transfer); }
+
+  /* Day header */
+  .day-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: var(--day-bg); border-bottom: 1px solid var(--row-line); font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--muted); }
+  .day-head h2 { margin: 0; font-size: 11px; font-weight: 800; }
+
+  /* Transaction row */
+  .txn { border-bottom: 1px solid var(--row-line); }
+  .grid { display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(0, .9fr) 84px; align-items: center; gap: 8px; padding: 4px 16px; }
+  .row { min-height: 48px; }
+  .status { width: 10px; height: 10px; border-radius: 5px; border: 1.5px solid var(--purple); }
+  .status--cleared { background: var(--purple); }
+  .status--reconciled { background: var(--purple); border-radius: 2px; }
+  .who { border: 0; background: transparent; padding: 0; text-align: left; display: flex; flex-direction: column; min-width: 0; min-height: 44px; justify-content: center; cursor: pointer; }
+  .payee { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acct { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .amt { font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; color: var(--ink); }
+  .amt--income { color: var(--income); } .amt--transfer { color: var(--transfer); }
+
+  .split-pill { justify-self: start; min-height: 32px; border: 0; border-radius: 999px; background: var(--purple-tint); color: var(--purple); font-size: 12px; font-weight: 700; padding: 0 10px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; }
+  .split-pill svg { transition: transform .15s; }
+  .split-pill[aria-expanded="true"] svg { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) { .split-pill svg { transition: none; } }
+
+  .splits { background: var(--day-bg); border-top: 1px dashed var(--purple-line); padding: 2px 0; }
+  .splits[hidden] { display: none; }
+  .child { min-height: 36px; }
+  .child .memo { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .child .ccat { font-size: 12px; font-weight: 700; color: var(--purple); }
+  .child .camt { font-size: 13px; font-weight: 700; text-align: right; color: var(--ink-2); }
+
+  .fab { position: fixed; bottom: 84px; right: max(18px, calc(50% - 215px + 18px)); width: 56px; height: 56px; border-radius: 28px; border: 0; background: var(--purple); color: #fff; font-size: 28px; box-shadow: 0 4px 12px rgba(40,20,70,.3); cursor: pointer; }
+  nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #fff; border-top: 1px solid var(--purple-line); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 8px; }
+  nav a { height: 56px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); text-decoration: none; border-radius: 14px; }
+  nav a.active { background: #EFE6F8; color: var(--purple); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="month">
+    <button class="icon" aria-label="Previous month">‹</button>
+    <h1>OCTOBER 2026</h1>
+    <span>
+      <button class="icon" aria-label="Search transactions"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      <button class="icon" aria-label="Next month">›</button>
+    </span>
+  </header>
+
+  <div class="totals">
+    <div><span class="lbl">IN</span><span class="amt in">+$2,535.37</span></div>
+    <div><span class="lbl">OUT</span><span class="amt out">−$2,265.24</span></div>
+    <div><span class="lbl">TRANSFERS</span><span class="amt xfer">$300.00</span></div>
+  </div>
+
+  <main id="list"></main>
+
+  <button class="fab" aria-label="Add transaction">+</button>
+  <nav aria-label="Main">
+    <a href="#">Budget</a><a href="#">Accounts</a><a href="#" class="active" aria-current="page">Activity</a><a href="#">Settings</a>
+  </nav>
+</div>
+
+<script>
+  // Sample data only. status: u = uncleared, c = cleared, r = reconciled. kind: expense | income | transfer
+  const days = [
+    { label: 'THU OCT 15', net: '−$127.60', items: [
+      { p: 'Kroger', acct: 'Main Checking', c: 'Groceries', a: '−$86.42', kind: 'expense', st: 'u' },
+      { p: 'Shell', acct: 'Discover Card', c: 'Gas', a: '−$41.18', kind: 'expense', st: 'u' } ] },
+    { label: 'WED OCT 14', net: '+$2,307.87', items: [
+      { p: 'Paycheck', acct: 'Main Checking', c: 'Income', a: '+$2,450.00', kind: 'income', st: 'c' },
+      { p: 'Target', acct: 'Main Checking', c: 'Split (2)', a: '−$142.13', kind: 'expense', st: 'c', splits: [
+        { memo: 'Shoes, backpack', c: 'Kids', a: '−$68.57' },
+        { memo: 'Household', c: 'General', a: '−$73.56' } ] } ] },
+    { label: 'TUE OCT 13', net: '−$23.67', items: [
+      { p: 'Discover payment', acct: 'Main Checking → Discover Card', c: 'Transfer', a: '$300.00', kind: 'transfer', st: 'c' },
+      { p: 'Chick-fil-A', acct: 'Discover Card', c: 'Date $/Restaurants', a: '−$23.67', kind: 'expense', st: 'c' } ] },
+    { label: 'MON OCT 12', net: '−$49.63', items: [
+      { p: 'Dominion Energy', acct: 'Main Checking', c: 'Dominion', a: '−$135.00', kind: 'expense', st: 'r' },
+      { p: 'GEICO', acct: 'Main Checking', c: 'GEICO', a: '+$85.37', kind: 'income', st: 'r' } ] },
+    { label: 'SAT OCT 10', net: '−$1,734.49', items: [
+      { p: 'Amazon', acct: 'Discover Card', c: 'Christmas/Easter/Holidays', a: '−$34.49', kind: 'expense', st: 'r' },
+      { p: 'Mortgage payment', acct: 'Main Checking', c: 'Mortgage', a: '−$1,700.00', kind: 'expense', st: 'r' } ] }
+  ];
+  const stLabel = { u: 'Uncleared', c: 'Cleared', r: 'Reconciled' };
+  const stClass = { u: '', c: 'status--cleared', r: 'status--reconciled' };
+  const chev = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  let n = 0;
+  document.getElementById('list').innerHTML = days.map(d => `
+    <section>
+      <div class="day-head"><h2>${d.label}</h2><span>${d.net}</span></div>
+      ${d.items.map(t => {
+        const id = 'split-' + (n++);
+        const cat = t.splits
+          ? `<button class="split-pill" aria-expanded="true" aria-controls="${id}" aria-label="Close split for ${t.p}">${t.c}${chev}</button>`
+          : `<span class="cat">${t.c}</span>`;
+        const kids = t.splits ? `<div class="splits" id="${id}">${t.splits.map(s => `
+            <div class="grid child"><span></span><span class="memo">↳ ${s.memo}</span><span class="ccat">${s.c}</span><span class="camt">${s.a}</span></div>`).join('')}</div>` : '';
+        return `<div class="txn">
+          <div class="grid row">
+            <span class="status ${stClass[t.st]}" role="img" aria-label="${stLabel[t.st]}"></span>
+            <button class="who" aria-label="Edit ${t.p}, ${t.a}, ${t.acct}"><span class="payee">${t.p}</span><span class="acct">${t.acct}</span></button>
+            ${cat}
+            <span class="amt ${t.kind === 'income' ? 'amt--income' : t.kind === 'transfer' ? 'amt--transfer' : ''}">${t.a}</span>
+          </div>${kids}
+        </div>`;
+      }).join('')}
+    </section>`).join('');
+
+  document.addEventListener('click', e => {
+    const pill = e.target.closest('.split-pill');
+    if (!pill) return;
+    const open = pill.getAttribute('aria-expanded') === 'true';
+    pill.setAttribute('aria-expanded', String(!open));
+    pill.setAttribute('aria-label', (open ? 'Open' : 'Close') + ' split for ' + pill.closest('.row').querySelector('.payee').textContent);
+    document.getElementById(pill.getAttribute('aria-controls')).hidden = open;
+  });
+</script>
+</body>
+</html>

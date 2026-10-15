@@ -16,11 +16,28 @@ test("bottom navigation switches pages and updates the URL hash", async ({ page 
 
   for (const name of ["Accounts", "Activity", "Settings", "Budget"]) {
     await nav.getByRole("link", { name }).click();
-    await expect(page).toHaveURL(new RegExp(`#${name.toLowerCase()}$`));
+    // Budget and Activity carry the month, so it stays the same between them.
+    await expect(page).toHaveURL(new RegExp(`#${name.toLowerCase()}(/\\d{4}-\\d{2})?$`));
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
     await expect(nav.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveTitle(`${name} | Budget Buddy`);
   }
+});
+
+test("Budget and Activity keep the chosen month in the URL and between them", async ({ page }) => {
+  await signInWithHousehold(page);
+  await page.evaluate(() => (location.hash = "#budget/2030-01"));
+  await expect(page.locator(".budget-month")).toContainText("January 2030");
+  await goTo(page, "Activity");
+  await expect(page).toHaveURL(/#activity\/2030-01$/);
+  await expect(page.locator(".budget-month")).toContainText("January 2030");
+  await page.getByRole("link", { name: "Next month" }).click();
+  await expect(page).toHaveURL(/#activity\/2030-02$/);
+  await expect(page.locator(".budget-month")).toContainText("February 2030");
+  await goTo(page, "Settings");
+  await goTo(page, "Budget");
+  await expect(page).toHaveURL(/#budget\/2030-02$/);
+  await expect(page.locator(".budget-month")).toContainText("February 2030");
 });
 
 test("signing out returns to the sign-in page", async ({ page }) => {

@@ -22,6 +22,15 @@ export function formatCents(cents: Cents): string {
 }
 
 /**
+ * Formats cents with an explicit sign, as the Activity page shows amounts:
+ * 245000 → "+$2,450.00", -8642 → "−$86.42" (a true minus sign), 0 → "$0.00".
+ */
+export function formatSignedCents(cents: Cents): string {
+  const sign = cents > 0 ? "+" : cents < 0 ? "\u2212" : "";
+  return sign + formatCents(Math.abs(cents));
+}
+
+/**
  * Reads a typed dollar amount ("12", "-4.5", "$1,234.56") as cents.
  * Returns null when it is not a valid amount with at most two decimals.
  */

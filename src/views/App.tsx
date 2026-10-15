@@ -1,12 +1,12 @@
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 import { useBudget } from "../controllers/useBudget";
 import { useHashRoute } from "../controllers/useHashRoute";
 import { useInstallPrompt } from "../controllers/useInstallPrompt";
 import { useSession } from "../controllers/useSession";
 import { APP_VERSION } from "../models/appInfo";
 import type { UserSession } from "../models/dataStore";
-import { currentMonth } from "../models/month";
-import { ROUTE_TITLES, ROUTES, type Route } from "../models/routes";
+import { currentMonth, type Month } from "../models/month";
+import { ROUTE_TITLES, ROUTES, routeHref, type Route } from "../models/routes";
 import { store } from "../models/store";
 import { CreateHouseholdPage } from "./CreateHouseholdPage";
 import { ErrorMessage } from "./components";
@@ -76,6 +76,10 @@ function SignedInApp({ session }: { session: UserSession }) {
   const budget = useBudget(store);
   const location = useHashRoute();
   const { state } = budget;
+  // The month last shown on Budget or Activity, so moving between pages keeps
+  // it. (Updating state while rendering is React's way to follow a prop.)
+  const [lastMonth, setLastMonth] = useState<Month | null>(null);
+  if (location.month && location.month !== lastMonth) setLastMonth(location.month);
 
   if (state.status === "loading") return <Message text="Loading your budget..." />;
   if (state.status === "error") return <Message error={state.error} />;
@@ -88,12 +92,13 @@ function SignedInApp({ session }: { session: UserSession }) {
   }
 
   const { data } = state;
-  const month = location.month ?? currentMonth();
+  const month = location.month ?? lastMonth ?? currentMonth();
   const pages: Record<Route, JSX.Element> = {
     // key: each month starts fresh (unused envelopes hidden, rows closed).
     budget: <BudgetPage key={month} budget={budget} data={data} month={month} />,
     accounts: <AccountsPage budget={budget} data={data} />,
-    activity: <ActivityPage budget={budget} data={data} />,
+    // key: each month starts with every split open.
+    activity: <ActivityPage key={month} budget={budget} data={data} month={month} />,
     settings: (
       <SettingsPage budget={budget} data={data} email={session.email} onSignOut={store.signOut} />
     ),
@@ -112,7 +117,7 @@ function SignedInApp({ session }: { session: UserSession }) {
           return (
             <a
               key={name}
-              href={`#${name}`}
+              href={routeHref(name, month)}
               className={active ? "active" : undefined}
               aria-current={active ? "page" : undefined}
             >
