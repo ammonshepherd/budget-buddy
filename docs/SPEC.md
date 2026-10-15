@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.15.0.
+Version described: 0.15.1.
 
 ## 1. Purpose
 
@@ -106,16 +106,16 @@ a whole household cascades but deleting a used account/envelope/group fails.
 
 SQL functions (all `security invoker` except `create_household`):
 
-| Function                                                         | Does                                                                                                                                                                                                                                                                                              |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create_household(name)`                                         | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                                                                                                                        |
-| `adjust_category_month(envelope, month, Δassigned, Δreleased)`   | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                                                                                                                         |
-| `move_between_envelopes(from, to, month, amount)`                | Moves Assigned between envelopes in one step.                                                                                                                                                                                                                                                     |
-| `save_transaction(…, is_transfer=false, is_income, allocations)` | Creates/updates one non-transfer transaction and its allocations (≤ 50 lines of `{category_id, amount}`; empty = Uncategorized); turning a transfer side into an ordinary transaction releases the other side. The older single `category` argument still works until a later migration drops it. |
-| `save_transfer(transfer_id, legs)`                               | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                                                                                                                                     |
-| `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added.                                                                                                        |
-| `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                                                                                                         |
-| `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                                                                                                    |
+| Function                                                         | Does                                                                                                                                                                                                           |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_household(name)`                                         | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                                     |
+| `adjust_category_month(envelope, month, Δassigned, Δreleased)`   | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                                      |
+| `move_between_envelopes(from, to, month, amount)`                | Moves Assigned between envelopes in one step.                                                                                                                                                                  |
+| `save_transaction(…, is_transfer=false, is_income, allocations)` | Creates/updates one non-transfer transaction and its allocations (≤ 50 lines of `{category_id, amount}`; empty = Uncategorized); turning a transfer side into an ordinary transaction releases the other side. |
+| `save_transfer(transfer_id, legs)`                               | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                                                  |
+| `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added.                     |
+| `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                      |
+| `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                 |
 
 Triggers also: create/rename/protect each card's payment envelope (in the
 "Credit card payments" group, named "⟨card⟩ payment"); release a transfer's other
@@ -158,7 +158,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.15.0", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.15.1", and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
