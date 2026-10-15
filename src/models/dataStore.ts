@@ -3,7 +3,7 @@
  * use this interface, so the real Supabase store and the in-memory store used
  * by UI tests are interchangeable ("dependency injection").
  */
-import type { EnvelopePlanRow } from "./envelopePlan";
+import type { EnvelopePlanRow, PlannedAmount } from "./envelopePlan";
 import type { Cents } from "./money";
 import type { Month } from "./month";
 import type { ImportedTransaction, ImportFormat } from "./transactionImport";
@@ -87,6 +87,8 @@ export interface DataStore {
   ): Promise<void>;
   moveBetweenEnvelopes(fromId: string, toId: string, month: Month, amount: Cents): Promise<void>;
   setPlanned(householdId: string, envelopeId: string, month: Month, planned: Cents): Promise<void>;
+  /** All or nothing: sets Planned for several envelopes in one month. */
+  setPlannedAmounts(householdId: string, month: Month, rows: PlannedAmount[]): Promise<void>;
   /**
    * All or nothing: creates the groups and envelopes a plan names that do not
    * exist yet (matching names ignoring case) and sets each one's Planned for

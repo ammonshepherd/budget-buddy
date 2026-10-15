@@ -1790,3 +1790,37 @@ div.sheet-field .sheet-field-value {
 .move-status:empty {
   display: none;
 }
+
+/* ---- v0.20.0: start a month's plan --------------------------------------- */
+
+.budget-page > .plan-start {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.6rem 1rem 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed var(--bb-purple);
+  border-radius: 0.9rem;
+  background: var(--bb-purple-tint);
+  color: var(--bb-ink);
+}
+
+.plan-start h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.plan-start p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.plan-start-actions {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.plan-start-actions .secondary-button {
+  background: var(--surface);
+}

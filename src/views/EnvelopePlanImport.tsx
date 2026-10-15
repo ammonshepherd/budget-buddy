@@ -3,12 +3,27 @@ import { useAsyncAction } from "../controllers/useAsyncAction";
 import type { Budget } from "../controllers/useBudget";
 import { useEnvelopePlanImport } from "../controllers/useEnvelopePlanImport";
 import type { PlanPreviewRow } from "../models/envelopePlan";
+import type { Month } from "../models/month";
 import type { BudgetData } from "../models/types";
 import { ErrorMessage, Money } from "./components";
 
-/** Settings card: upload a CSV of envelopes and Planned amounts for one month. */
-export function EnvelopePlanImport({ budget, data }: { budget: Budget; data: BudgetData }) {
-  const plan = useEnvelopePlanImport(budget, data);
+/**
+ * Upload a CSV of envelopes and Planned amounts for one month: a Settings
+ * card where the month is chosen, or (with `month`) the Budget page's sheet
+ * for that month, which `onDone` closes after an import.
+ */
+export function EnvelopePlanImport({
+  budget,
+  data,
+  month,
+  onDone,
+}: {
+  budget: Budget;
+  data: BudgetData;
+  month?: Month;
+  onDone?: () => void;
+}) {
+  const plan = useEnvelopePlanImport(budget, data, month);
   const save = useAsyncAction(plan.importPlan);
   // Changing the key empties the file input after an import or a clear.
   const [inputKey, setInputKey] = useState(0);
@@ -27,23 +42,26 @@ export function EnvelopePlanImport({ budget, data }: { budget: Budget; data: Bud
       </div>
       <p className="empty-state">
         Upload a CSV with the columns <strong>category, group, planned amount</strong>. Missing
-        groups and envelopes are created, and each envelope’s Planned is set for the month you
-        choose. Envelopes not in the file keep their Planned.
+        groups and envelopes are created, and each envelope’s Planned is set for{" "}
+        {month ? plan.monthLabel : "the month you choose"}. Envelopes not in the file keep their
+        Planned.
       </p>
       <pre className="csv-example" aria-label="Example CSV">
         {"category,group,planned amount\nRent,Bills,1200.00\nGroceries,Everyday,450\n"}
       </pre>
 
       <div className="form">
-        <label className="field">
-          Month
-          <input
-            type="month"
-            value={plan.month}
-            required
-            onChange={(event) => plan.chooseMonth(event.target.value)}
-          />
-        </label>
+        {!month && (
+          <label className="field">
+            Month
+            <input
+              type="month"
+              value={plan.month}
+              required
+              onChange={(event) => plan.chooseMonth(event.target.value)}
+            />
+          </label>
+        )}
         <label className="field">
           CSV file
           <input
@@ -111,7 +129,9 @@ export function EnvelopePlanImport({ budget, data }: { budget: Budget; data: Bud
               type="button"
               disabled={save.pending || preview.rows.length === 0}
               onClick={async () => {
-                if ((await save.run()).ok) setInputKey((k) => k + 1);
+                if (!(await save.run()).ok) return;
+                setInputKey((k) => k + 1);
+                onDone?.();
               }}
             >
               Import {preview.rows.length} {preview.rows.length === 1 ? "row" : "rows"}

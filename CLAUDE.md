@@ -56,7 +56,12 @@ Envelope money = Saved + Remaining
 - Saved is a reserve. It is only spendable after the user releases it into
   Remaining through a prompt.
 - Planned is user input only; it affects no other number.
-- "Copy last month's spending into Planned" is wanted but not built yet.
+- A month whose Budget page opens with every Planned at $0.00 (Planned is stored
+  per envelope and month; there is no separate plan record) offers to start the
+  plan: copy last month's Planned or Spent (as shown), or upload a plan CSV for
+  that month. Copying fills only envelopes still at $0.00 and skips card payment
+  envelopes (`planToCopy` in `src/models/envelopePlan.ts`). The offer is decided
+  when the month opens, so typing a Planned does not make the page jump.
 
 Available to Assign (equivalent to non-card budget balances − all envelope money
 − inflows to review + outflows to review, but valid for any month):

@@ -16,9 +16,11 @@ type Done = { month: Month; count: number };
  * Settings → Import envelope plan: pick a month and a CSV, see a preview,
  * then import. The preview is recomputed whenever the month or the saved
  * budget changes, so it always compares against what is stored now.
+ * With `fixedMonth` (the Budget page's "Upload a plan CSV") the month is set.
  */
-export function useEnvelopePlanImport(budget: Budget, data: BudgetData) {
-  const [month, setMonth] = useState<Month>(currentMonth);
+export function useEnvelopePlanImport(budget: Budget, data: BudgetData, fixedMonth?: Month) {
+  const [chosenMonth, setMonth] = useState<Month>(currentMonth);
+  const month = fixedMonth ?? chosenMonth;
   const [file, setFile] = useState<Loaded | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [done, setDone] = useState<Done | null>(null);

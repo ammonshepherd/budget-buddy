@@ -208,6 +208,13 @@ household yet.
 - Notices: "N transactions to review ($X in, $Y out) are not in Available to
   Assign yet. Review them on Activity."; no accounts → link to Accounts; no
   groups → link to Settings.
+- "No plan for ⟨month⟩ yet" (a dashed purple card under the notices), when the
+  month opens with every Planned at $0.00: "Copy ⟨last month⟩’s Planned" and
+  "Copy ⟨last month⟩’s Spent" (each only when last month has some; they fill
+  Planned only where it is still $0.00, card payment envelopes left out) and
+  "Upload a plan CSV" (a bottom sheet with the plan import for this month, no
+  month field; it closes after importing). The card goes after a copy or an
+  upload, and otherwise stays until the month is opened again.
 - Each group: a full-width tinted bar with the uppercase name and a + that
   opens "New envelope" (+ becomes ×); no totals.
 - Envelope rows as in CLAUDE.md. Planned and Assigned cells are buttons ("Edit
@@ -377,8 +384,7 @@ Envelopes not in the file are left alone.
 
 ## 9. Not built yet
 
-Decided or wanted, but not in the app: copy last month's spending into Planned;
-matching
+Decided or wanted, but not in the app: matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead); an envelope icon next to each envelope

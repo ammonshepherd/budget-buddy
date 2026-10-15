@@ -7,8 +7,9 @@
  * spaces; anything not found is created. Planned is replaced for that month
  * only; envelopes missing from the file are left as they are.
  */
+import { buildBudgetMonth, type BudgetMonthView } from "./budgetMath";
 import { parseCents, type Cents } from "./money";
-import type { Month } from "./month";
+import { addMonths, type Month } from "./month";
 import { CsvError, parseCsv, type CsvRow } from "./csv";
 import type { BudgetData } from "./types";
 
@@ -156,4 +157,40 @@ export function previewEnvelopePlan(data: BudgetData, month: Month, text: string
     newGroups: newGroupKeys.size,
     newEnvelopes: rows.filter((r) => r.newEnvelope).length,
   };
+}
+
+/** One envelope's Planned for a month, by id (what copying a month saves). */
+export interface PlannedAmount {
+  envelopeId: string;
+  planned: Cents;
+}
+
+/** What a new month's plan can be copied from. */
+export type PlanSource = "planned" | "spent";
+
+/**
+ * Whether the month has a plan: some envelope's Planned is above $0.00.
+ * Planned is stored per envelope and month, so a month with every Planned at
+ * $0.00 has no plan yet. Card payment envelopes have no Planned to set.
+ */
+export function monthHasPlan(view: BudgetMonthView): boolean {
+  return view.groups.some((g) => g.envelopes.some((e) => !e.card && e.planned > 0));
+}
+
+/**
+ * What copying last month into `month` sets: each envelope's Planned, or
+ * Spent as shown (refunds netted, never below zero), in the month before.
+ * Only envelopes whose Planned in `month` is still $0.00 are filled, so a
+ * copy never overwrites a typed plan. Amounts of $0.00 and card payment
+ * envelopes are left out.
+ */
+export function planToCopy(data: BudgetData, month: Month, source: PlanSource): PlannedAmount[] {
+  const plannedNow = new Map(
+    data.envelopeMonths.filter((r) => r.month === month).map((r) => [r.envelopeId, r.planned]),
+  );
+  return buildBudgetMonth(data, addMonths(month, -1))
+    .groups.flatMap((g) => g.envelopes)
+    .filter((e) => !e.card && !plannedNow.get(e.id))
+    .map((e) => ({ envelopeId: e.id, planned: source === "planned" ? e.planned : e.outflow }))
+    .filter((row) => row.planned > 0);
 }

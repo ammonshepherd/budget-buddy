@@ -315,6 +315,23 @@ export function createSupabaseStore(
       check(error);
     },
 
+    async setPlannedAmounts(householdId, month, rows) {
+      if (rows.length === 0) return;
+      // One upsert is one statement, so every row is saved or none is.
+      const { error } = await db()
+        .from("category_months")
+        .upsert(
+          rows.map(({ envelopeId, planned }) => ({
+            household_id: householdId,
+            category_id: envelopeId,
+            month,
+            planned,
+          })),
+          { onConflict: "category_id,month" },
+        );
+      check(error);
+    },
+
     async importEnvelopePlan(householdId, month, rows) {
       const { error } = await db().rpc("import_envelope_plan", {
         p_household_id: householdId,
