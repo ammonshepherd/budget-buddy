@@ -140,6 +140,22 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       );
     },
 
+    renameEnvelope: async (envelopeId: string, name: string) => {
+      const envelopeName = requireName(name, "Envelope name");
+      if (envelope(envelopeId).card) {
+        throw new UserFacingError("A card's payment envelope is named after its card.");
+      }
+      await budget.change(
+        (store) => store.renameEnvelope(envelopeId, envelopeName),
+        (current) => ({
+          ...current,
+          envelopes: current.envelopes.map((e) =>
+            e.id === envelopeId ? { ...e, name: envelopeName } : e,
+          ),
+        }),
+      );
+    },
+
     deleteEnvelope: async (envelopeId: string) => {
       await budget.change((store) => store.deleteEnvelope(envelopeId));
     },

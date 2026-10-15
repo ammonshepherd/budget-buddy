@@ -239,6 +239,42 @@ export function createSupabaseStore(
       check((await db().from("category_groups").delete().eq("id", groupId)).error);
     },
 
+    async renameGroup(groupId, name) {
+      const { data, error } = await db()
+        .from("category_groups")
+        .update({ name })
+        .eq("id", groupId)
+        .select("id");
+      check(error);
+      if (!data?.length) throw new UserFacingError("Group not found");
+    },
+
+    async renameEnvelope(envelopeId, name) {
+      const { data, error } = await db()
+        .from("categories")
+        .update({ name })
+        .eq("id", envelopeId)
+        .select("id");
+      check(error);
+      if (!data?.length) throw new UserFacingError("Envelope not found");
+    },
+
+    async reorderGroups(householdId, groupIds) {
+      const { error } = await db().rpc("reorder_category_groups", {
+        p_household_id: householdId,
+        p_group_ids: groupIds,
+      });
+      check(error);
+    },
+
+    async reorderEnvelopes(groupId, envelopeIds) {
+      const { error } = await db().rpc("reorder_categories", {
+        p_group_id: groupId,
+        p_category_ids: envelopeIds,
+      });
+      check(error);
+    },
+
     async adjustEnvelopeMonth(envelopeId, month, change) {
       const { error } = await db().rpc("adjust_category_month", {
         p_category_id: envelopeId,

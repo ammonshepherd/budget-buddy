@@ -25,6 +25,13 @@ export function createMemoryStore(): DataStore {
   };
   const nextPosition = (items: { position: number }[]) =>
     items.reduce((max, item) => Math.max(max, item.position + 1), 0);
+  /** Like the SQL reorder functions: the list must name every item once. */
+  const reorder = (items: { id: string; position: number }[], ids: string[], stale: string) => {
+    if (ids.length !== items.length || !items.every((item) => ids.includes(item.id))) {
+      throw new UserFacingError(stale);
+    }
+    for (const item of items) item.position = ids.indexOf(item.id);
+  };
   /** Unlinks a transfer side: a typed-in one is deleted, an imported one becomes Uncategorized. */
   const release = (tx: Transaction) => {
     tx.transferId = null;
@@ -100,7 +107,11 @@ export function createMemoryStore(): DataStore {
       });
       // Like the database trigger: a card gets its payment envelope.
       if (account.type === "credit_card") {
-        let group = b.groups.find((g) => nameKey(g.name) === "credit card payments");
+        // Like the trigger: join the other cards' payment envelopes, wherever they are.
+        const cardGroupId = b.envelopes.find((e) => e.cardAccountId)?.groupId;
+        let group =
+          b.groups.find((g) => g.id === cardGroupId) ??
+          b.groups.find((g) => nameKey(g.name) === "credit card payments");
         if (!group) {
           group = { id: id(), name: "Credit card payments", position: nextPosition(b.groups) };
           b.groups.push(group);
@@ -155,6 +166,28 @@ export function createMemoryStore(): DataStore {
         throw new UserFacingError("It is still in use. Move or delete what uses it first.");
       }
       b.groups = b.groups.filter((g) => g.id !== groupId);
+    },
+    async renameGroup(groupId, name) {
+      const group = budget().groups.find((g) => g.id === groupId);
+      if (!group) throw new UserFacingError("Group not found");
+      group.name = name;
+    },
+    async renameEnvelope(envelopeId, name) {
+      const envelope = budget().envelopes.find((e) => e.id === envelopeId);
+      if (!envelope) throw new UserFacingError("Envelope not found");
+      if (envelope.cardAccountId) {
+        throw new UserFacingError(
+          "A card's payment envelope is named after its card; rename the card instead",
+        );
+      }
+      envelope.name = name;
+    },
+    async reorderGroups(_householdId, groupIds) {
+      reorder(budget().groups, groupIds, "The groups have changed; reload and try again");
+    },
+    async reorderEnvelopes(groupId, envelopeIds) {
+      const siblings = budget().envelopes.filter((e) => e.groupId === groupId);
+      reorder(siblings, envelopeIds, "The envelopes have changed; reload and try again");
     },
 
     async adjustEnvelopeMonth(envelopeId, month, change) {

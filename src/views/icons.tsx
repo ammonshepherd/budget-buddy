@@ -20,3 +20,11 @@ export const InstallIcon = () => (
   <Icon path="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
 );
 export const PlusIcon = () => <Icon path="M12 5v14M5 12h14" />;
+export const PencilIcon = () => <Icon path="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />;
+
+/** Six dots in two columns: "drag me". */
+export const GripIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    {[6, 12, 18].map((y) => [9, 15].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" />))}
+  </svg>
+);

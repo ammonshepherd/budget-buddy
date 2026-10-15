@@ -5,7 +5,7 @@ import type { useBudgetPage } from "../controllers/useBudgetPage";
 import type { RemainingPart } from "../models/envelopeDetail";
 import { centsToInput } from "../models/money";
 import { formatShortDay } from "../models/month";
-import { ErrorMessage, Money, SingleFieldForm } from "./components";
+import { EditableTitle, ErrorMessage, Money, SingleFieldForm } from "./components";
 
 type Page = ReturnType<typeof useBudgetPage>;
 type Detail = NonNullable<ReturnType<Page["detail"]>>;
@@ -14,7 +14,7 @@ const STAR = "M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z";
 
 /**
  * Everything about one envelope this month, in a sheet at the bottom of the
- * screen: what is left and how it adds up, the plan, Planned and Assigned to
+ * screen: its name (to rename), what is left and how it adds up, the plan, Planned and Assigned to
  * edit, Saved with "Move some into Remaining…", and its transactions.
  */
 export function EnvelopeSheet({
@@ -53,7 +53,15 @@ export function EnvelopeSheet({
       <header className="sheet-header">
         <div>
           <span className="sheet-eyebrow">{detail.groupName}</span>
-          <h2>{row.name}</h2>
+          {row.card ? (
+            <h2>{row.name}</h2>
+          ) : (
+            <EditableTitle
+              name={row.name}
+              label="Envelope name"
+              onSave={(name) => page.renameEnvelope(row.id, name)}
+            />
+          )}
         </div>
         <button className="sheet-close" type="button" aria-label="Close" onClick={onClose}>
           ×

@@ -101,3 +101,56 @@ describe("memory store splits", () => {
     );
   });
 });
+
+describe("memory store rename and reorder", () => {
+  const byPosition = <T extends { position: number; name: string }>(items: T[]) =>
+    [...items].sort((a, b) => a.position - b.position).map((item) => item.name);
+
+  it("renames groups and envelopes, but not a card's payment envelope", async () => {
+    const { store, id, visaPayment } = await setUp();
+    const data = (await store.load())!;
+    const everyday = data.groups.find((g) => g.name === "Everyday")!;
+    await store.renameGroup(everyday.id, "Daily");
+    await store.renameEnvelope(id("A"), "Groceries");
+    await expect(store.renameEnvelope(visaPayment, "Mine")).rejects.toThrow(/named after its card/);
+    const after = (await store.load())!;
+    expect(after.groups.map((g) => g.name)).toContain("Daily");
+    expect(after.envelopes.map((e) => e.name)).toEqual(
+      expect.arrayContaining(["Groceries", "B", "Visa payment"]),
+    );
+  });
+
+  it("reorders a whole list, and refuses an out-of-date one", async () => {
+    const { store, id } = await setUp();
+    const data = (await store.load())!;
+    const groupIds = [...data.groups].sort((a, b) => a.position - b.position).map((g) => g.id);
+    await store.reorderGroups(data.household.id, [...groupIds].reverse());
+    const everyday = data.groups.find((g) => g.name === "Everyday")!;
+    await store.reorderEnvelopes(everyday.id, [id("B"), id("A")]);
+
+    const after = (await store.load())!;
+    expect(byPosition(after.groups)).toEqual(byPosition(data.groups).reverse());
+    expect(byPosition(after.envelopes.filter((e) => e.groupId === everyday.id))).toEqual([
+      "B",
+      "A",
+    ]);
+    await expect(store.reorderEnvelopes(everyday.id, [id("A")])).rejects.toThrow(/reload/);
+    await expect(store.reorderEnvelopes(everyday.id, [id("A"), id("A")])).rejects.toThrow(/reload/);
+  });
+
+  it("puts a new card's payment envelope in the renamed card group", async () => {
+    const { store, visaPayment } = await setUp();
+    let data = (await store.load())!;
+    const cardGroup = data.envelopes.find((e) => e.id === visaPayment)!.groupId;
+    await store.renameGroup(cardGroup, "Cards");
+    await store.addAccount(data.household.id, {
+      name: "Amex",
+      type: "credit_card",
+      openingBalance: 0,
+      openingDate: "2026-10-01",
+    });
+    data = (await store.load())!;
+    expect(data.envelopes.find((e) => e.name === "Amex payment")!.groupId).toBe(cardGroup);
+    expect(data.groups.map((g) => g.name)).not.toContain("Credit card payments");
+  });
+});

@@ -252,4 +252,66 @@ describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
     await store.closeAccount(account.id);
     await store.signOut();
   }, 30_000);
+
+  it("renames and reorders groups and envelopes", async () => {
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
+    let data = (await store.load())!;
+    const householdId = data.household.id;
+    const run = `order-${Date.now()}`;
+    await store.addGroup(householdId, run, 99);
+    data = (await store.load())!;
+    const group = data.groups.find((g) => g.name === run)!;
+    for (const [i, name] of ["One", "Two", "Three"].entries()) {
+      await store.addEnvelope(householdId, group.id, name, i);
+    }
+    data = (await store.load())!;
+    const id = (name: string) =>
+      data.envelopes.find((e) => e.groupId === group.id && e.name === name)!.id;
+    const inOrder = <T extends { position: number; name: string }>(items: T[]) =>
+      [...items].sort((x, y) => x.position - y.position).map((item) => item.name);
+
+    await store.renameGroup(group.id, `${run} renamed`);
+    await store.renameEnvelope(id("One"), "First");
+    await store.reorderEnvelopes(group.id, [id("Three"), id("One"), id("Two")]);
+    const groupIds = inOrder(data.groups).map(
+      (name) => data.groups.find((g) => g.name === name)!.id,
+    );
+    const reversed = [...groupIds].reverse();
+    await store.reorderGroups(householdId, reversed);
+
+    const after = (await store.load())!;
+    expect(after.groups.find((g) => g.id === group.id)!.name).toBe(`${run} renamed`);
+    expect(inOrder(after.envelopes.filter((e) => e.groupId === group.id))).toEqual([
+      "Three",
+      "First",
+      "Two",
+    ]);
+    expect([...after.groups].sort((x, y) => x.position - y.position).map((g) => g.id)).toEqual(
+      reversed,
+    );
+
+    // An out-of-date list, a card's payment envelope, and a blank name are refused.
+    await expect(store.reorderEnvelopes(group.id, [id("Two")])).rejects.toThrow(UserFacingError);
+    await expect(store.reorderGroups(householdId, reversed.slice(1))).rejects.toThrow(
+      UserFacingError,
+    );
+    const payment = after.envelopes.find((e) => e.cardAccountId);
+    if (payment) {
+      await expect(store.renameEnvelope(payment.id, "Mine")).rejects.toThrow(
+        /named after its card/,
+      );
+    }
+    await expect(store.renameGroup(group.id, " ")).rejects.toThrow(UserFacingError);
+
+    // Put the seeded order back and tidy up.
+    await store.reorderGroups(householdId, groupIds);
+    for (const name of ["First", "Two", "Three"]) {
+      await store.deleteEnvelope(
+        after.envelopes.find((e) => e.groupId === group.id && e.name === name)!.id,
+      );
+    }
+    await store.deleteGroup(group.id);
+    await store.signOut();
+  }, 30_000);
 });
