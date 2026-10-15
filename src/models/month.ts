@@ -42,6 +42,15 @@ export function formatMonth(month: Month): string {
   });
 }
 
+/** "2026-10-12" → "Oct 12" (short dates in lists). */
+export function formatShortDay(date: IsoDate): string {
+  const [year, mon, day] = date.split("-").map(Number) as [number, number, number];
+  return new Date(year, mon - 1, day).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** "2026-10-12" → "Monday, October 12, 2026" (the Activity page's date headings). */
 export function formatDay(date: IsoDate): string {
   const [year, mon, day] = date.split("-").map(Number) as [number, number, number];

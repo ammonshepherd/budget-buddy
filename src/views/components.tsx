@@ -19,10 +19,13 @@ export function Sheet({
   open,
   label,
   onClose,
+  className = "sheet",
   children,
 }: {
   open: boolean;
   label: string;
+  /** "sheet" (centred) by default; "sheet bottom" sits at the bottom of the screen. */
+  className?: string;
   onClose: () => void;
   children: () => ReactNode;
 }) {
@@ -38,7 +41,7 @@ export function Sheet({
   return (
     <dialog
       ref={dialog}
-      className="sheet"
+      className={className}
       aria-label={label}
       // Escape closes the dialog itself; keep React's state in step.
       onClose={onClose}

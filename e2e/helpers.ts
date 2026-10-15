@@ -30,14 +30,12 @@ export async function editCell(
   await input.press("Enter");
 }
 
-/** Opens an envelope row (tap its top line) and submits one of its forms. */
-export async function envelopeAction(page: Page, name: string, field: string, value: string) {
-  const row = envelope(page, name);
-  const top = row.locator(".envelope-top");
-  if ((await top.getAttribute("aria-expanded")) !== "true") await top.click();
-  const form = row.locator("form").filter({ has: page.getByLabel(field) });
-  await form.getByLabel(field).fill(value);
-  await form.getByRole("button").click();
+/** Opens an envelope's sheet (tap the top line of its row). */
+export async function openEnvelope(page: Page, name: string) {
+  await envelope(page, name).locator(".envelope-top").click();
+  const sheet = page.getByRole("dialog", { name: `${name} envelope` });
+  await sheet.waitFor();
+  return sheet;
 }
 
 export async function addTransaction(

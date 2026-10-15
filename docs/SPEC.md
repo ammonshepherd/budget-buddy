@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.16.0.
+Version described: 0.17.0.
 
 ## 1. Purpose
 
@@ -158,7 +158,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.16.0", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.17.0", and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
@@ -199,11 +199,27 @@ household yet.
   in place; errors show under the row ("Only $X available to assign.", "Some is
   already spent: Assigned can go no lower than $X.", "Planned cannot be
   negative."). Edits show at once (an optimistic update) and are undone if the
-  save fails. Tapping the top line opens Released (if used), "Release from
-  Saved" (only with Saved) and Delete envelope (confirm: money assigned returns
-  to Available to Assign). Card payment envelopes show Available to pay and
-  Remaining debt cells, and open to "Assign (negative to take back)" and an
-  explanation of how they fill instead of Delete.
+  save fails. Card payment envelopes show Available to pay and Remaining debt
+  cells.
+- Tapping an envelope's top line opens its sheet ("⟨name⟩ envelope", a bottom
+  sheet; close with × or Escape):
+  - group name over the envelope name;
+  - "Remaining this month" (large) and how it adds up ("$300.00 assigned +
+    $20.00 released − $187.06 spent"; released and refunded only when used),
+    plus Short if overspent;
+  - the plan line: "Spent $X of $Y planned" with "$Z under", "On plan" or
+    "$Z over" (orange), or "nothing planned this month";
+  - Planned and Assigned fields (blur or Enter saves, Escape undoes the typing
+    without closing; same checks as the cells) and Spent;
+  - Saved: purple with sparkles and "Move some into Remaining…" (opens "Amount
+    to move into Remaining" + Move, i.e. Release from Saved); at $0.00 a quiet
+    "Nothing saved yet" panel;
+  - "This month's transactions": date, payee, account, this envelope's amount
+    (a split shows "part of a $X split");
+  - Delete envelope (confirm: money assigned returns to Available to Assign).
+    A card's payment envelope sheet shows Available to pay, "Owed $X · Remaining
+    debt $Y", "Assign (negative to take back)", the Saved panel and how it fills,
+    and no Delete.
 - "Show N envelopes not used this month" toggle when some are hidden.
 
 ### Accounts
@@ -336,7 +352,4 @@ Decided or wanted, but not in the app: copy last month's spending into Planned;
 renaming and reordering envelopes and groups; matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
-income rule (delete and re-add instead); an envelope detail sheet (tapping the
-name or Remaining: Remaining, planned vs spent, a Saved panel with "Move some
-into Remaining…", and the envelope's transactions), which would replace the
-row's opened forms.
+income rule (delete and re-add instead).

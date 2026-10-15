@@ -7,7 +7,7 @@ budgeting rules are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Version
 
-The current application version is **0.16.0** (kept in `package.json`).
+The current application version is **0.17.0** (kept in `package.json`).
 
 Versions follow:
 

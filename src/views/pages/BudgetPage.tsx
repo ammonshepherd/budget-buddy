@@ -1,13 +1,13 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { messageOf } from "../../controllers/errors";
-import { useAsyncAction } from "../../controllers/useAsyncAction";
 import type { Budget } from "../../controllers/useBudget";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
 import type { EnvelopeRow, GroupRows } from "../../models/budgetMath";
 import { centsToInput, formatCents } from "../../models/money";
 import type { Month } from "../../models/month";
 import type { BudgetData } from "../../models/types";
-import { ErrorMessage, Money, SingleFieldForm } from "../components";
+import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
+import { EnvelopeSheet } from "../EnvelopeSheet";
 
 type Page = ReturnType<typeof useBudgetPage>;
 
@@ -22,6 +22,9 @@ export function BudgetPage({
 }) {
   const page = useBudgetPage(budget, data, month);
   const { view } = page;
+  // The envelope whose sheet is open; it closes by itself if the envelope goes.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const detail = openId ? page.detail(openId) : null;
   const over = view.overAssigned > 0;
 
   return (
@@ -83,7 +86,7 @@ export function BudgetPage({
       )}
 
       {page.groups.map((group) => (
-        <GroupSection key={group.id} group={group} page={page} />
+        <GroupSection key={group.id} group={group} page={page} onOpen={setOpenId} />
       ))}
 
       {view.unusedCount > 0 && (
@@ -95,11 +98,28 @@ export function BudgetPage({
           </button>
         </p>
       )}
+
+      <Sheet
+        open={detail !== null}
+        label={`${detail?.row.name ?? "Envelope"} envelope`}
+        className="sheet bottom"
+        onClose={() => setOpenId(null)}
+      >
+        {() => <EnvelopeSheet detail={detail!} page={page} onClose={() => setOpenId(null)} />}
+      </Sheet>
     </section>
   );
 }
 
-function GroupSection({ group, page }: { group: GroupRows; page: Page }) {
+function GroupSection({
+  group,
+  page,
+  onOpen,
+}: {
+  group: GroupRows;
+  page: Page;
+  onOpen: (envelopeId: string) => void;
+}) {
   const [adding, setAdding] = useState(false);
   return (
     <section className="budget-group" aria-label={group.name}>
@@ -129,7 +149,7 @@ function GroupSection({ group, page }: { group: GroupRows; page: Page }) {
         <ul className="envelope-list">
           {group.envelopes.map((envelope) => (
             <li key={envelope.id}>
-              <EnvelopeItem envelope={envelope} page={page} />
+              <EnvelopeItem envelope={envelope} page={page} onOpen={() => onOpen(envelope.id)} />
             </li>
           ))}
         </ul>
@@ -142,13 +162,18 @@ function GroupSection({ group, page }: { group: GroupRows; page: Page }) {
 
 /**
  * One envelope: name, Saved and what is left; then Planned and Assigned (tap
- * to edit in place) and Spent. Tapping the top line opens the rest: Release
- * from Saved and Delete envelope (or, for a card, Assign).
+ * to edit in place) and Spent. Tapping the top line opens its sheet.
  */
-function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page }) {
-  const [open, setOpen] = useState(false);
+function EnvelopeItem({
+  envelope,
+  page,
+  onOpen,
+}: {
+  envelope: EnvelopeRow;
+  page: Page;
+  onOpen: () => void;
+}) {
   const [error, setError] = useState<string | null>(null);
-  const remove = useAsyncAction(() => page.deleteEnvelope(envelope.id));
   const card = envelope.card;
   const left = card ? envelope.envelopeMoney : envelope.remaining;
 
@@ -163,12 +188,7 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
 
   return (
     <div className={envelope.inUse ? "envelope" : "envelope unused"}>
-      <button
-        className="envelope-top"
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
+      <button className="envelope-top" type="button" aria-haspopup="dialog" onClick={onOpen}>
         <span className="envelope-title">
           <span className="envelope-name">
             {envelope.name}
@@ -234,59 +254,6 @@ function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page })
         </p>
       )}
       <ErrorMessage error={error} />
-
-      {open && (
-        <div className="envelope-actions">
-          {!card && envelope.released > 0 && (
-            <p className="envelope-extra">
-              <span>
-                Released from Saved <Money cents={envelope.released} />
-              </span>
-            </p>
-          )}
-          {card && (
-            <SingleFieldForm
-              label="Assign (negative to take back)"
-              button="Assign"
-              placeholder="0.00"
-              onSubmit={(text) => page.assign(envelope.id, text)}
-            />
-          )}
-          {envelope.saved > 0 && (
-            <SingleFieldForm
-              label="Release from Saved"
-              button="Release"
-              placeholder="0.00"
-              onSubmit={(text) => page.release(envelope.id, text)}
-            />
-          )}
-          {card ? (
-            <p className="empty-state">
-              Card purchases move money in here from their envelopes; payments to the card (a
-              Transfer on both accounts) take it out. Assign here to pay down the remaining debt.
-            </p>
-          ) : (
-            <div className="button-row">
-              <button
-                className="text-button danger"
-                type="button"
-                disabled={remove.pending}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Delete the ${envelope.name} envelope? Money assigned to it returns to Available to Assign.`,
-                    )
-                  )
-                    void remove.run();
-                }}
-              >
-                Delete envelope
-              </button>
-            </div>
-          )}
-          <ErrorMessage error={remove.error} />
-        </div>
-      )}
     </div>
   );
 }
