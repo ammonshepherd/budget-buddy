@@ -3,7 +3,7 @@ import {
   addGroupWithEnvelopes,
   available,
   envelope,
-  envelopeAction,
+  editCell,
   goTo,
   openAddTransaction,
   signInWithHousehold,
@@ -18,7 +18,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await page.getByLabel("Opening balance").fill("500");
   await page.getByRole("button", { name: "Add account" }).click();
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
-  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "100");
+  await editCell(page, "Groceries", "assigned", "100");
   await expect(available(page)).toContainText("$400.00");
   const groceries = envelope(page, "Groceries");
 
@@ -69,12 +69,12 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await expect(groceries.locator(".envelope-remaining")).toHaveText("$10.00");
   await expect(available(page)).toContainText("$320.00");
   // The refund cancels out part of this month's spending: $180 − $10 = $170.
-  await expect(groceries).toContainText("Spent $170.00");
-  // Without opening it, the line shows Saved, Planned, Assigned and Spent (no refund
-  // beyond this month's spending, so no Refunded).
-  await expect(groceries.locator("summary .envelope-figures")).toHaveText(
-    "Saved $0.00Planned $0.00Assigned $180.00Spent $170.00",
+  // Nothing was planned, so Spent is over plan. No refund beyond this month's
+  // spending, so no Refunded line.
+  await expect(groceries.locator(".envelope-cells")).toHaveText(
+    "Planned $0.00Assigned $180.00Spent · over $170.00",
   );
+  await expect(groceries.locator(".envelope-extra")).toHaveCount(0);
 });
 
 test("money into a credit card is a card credit that only lowers what is owed", async ({

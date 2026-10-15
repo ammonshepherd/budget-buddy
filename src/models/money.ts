@@ -37,6 +37,25 @@ export function parseCents(text: string): Cents | null {
   return match[1] && value !== 0 ? -value : value;
 }
 
+/**
+ * Reads a typed dollar amount ("300", "300.5", "$300.50", "1,200") as cents,
+ * rounding any further decimals to the nearest cent (half away from zero:
+ * "2.345" → 235). Works on the digits as text, so no floating-point error
+ * creeps in. Returns null when it is not a number.
+ */
+export function roundMoney(text: string): Cents | null {
+  const match = /^(-)?\$?(\d{1,10}(?:,\d{3})*|\d+)?(?:\.(\d*))?$/.exec(
+    text.trim().replace(/^\$-/, "-$"),
+  );
+  if (!match || (match[2] === undefined && !match[3])) return null;
+  const dollars = Number((match[2] ?? "0").replaceAll(",", ""));
+  const decimals = (match[3] ?? "").padEnd(3, "0");
+  const cents = Number(decimals.slice(0, 2)) + (Number(decimals[2]) >= 5 ? 1 : 0);
+  const value = dollars * 100 + cents;
+  if (!Number.isSafeInteger(value)) return null;
+  return match[1] && value !== 0 ? -value : value;
+}
+
 /** Cents as plain text for an input field, e.g. -123456 → "-1234.56". */
 export function centsToInput(cents: Cents): string {
   assertCents(cents);

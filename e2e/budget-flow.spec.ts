@@ -4,6 +4,7 @@ import {
   addTransaction,
   available,
   envelope,
+  editCell,
   envelopeAction,
   goTo,
   signInWithHousehold,
@@ -28,14 +29,14 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
 
   // Assign, and the block when Available to Assign is insufficient.
-  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "300");
+  await editCell(page, "Groceries", "assigned", "300");
   await expect(available(page)).toContainText("$700.00");
   await expect(envelope(page, "Groceries").locator(".envelope-remaining")).toHaveText("$300.00");
-  await envelopeAction(page, "Fun", "Assign (negative to take back)", "2000");
+  await editCell(page, "Fun", "assigned", "2000");
   await expect(envelope(page, "Fun").getByRole("alert")).toHaveText(
-    /Only \$700\.00 is available to assign/,
+    /Only \$700\.00 available to assign/,
   );
-  await envelopeAction(page, "Fun", "Assign (negative to take back)", "100");
+  await editCell(page, "Fun", "assigned", "100");
   await expect(available(page)).toContainText("$600.00");
 
   // Spending within the envelope.
@@ -83,14 +84,14 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
 
   // Next month: Fun's unspent $100 is now Saved, and the month is in the URL.
   await goTo(page, "Budget");
-  // With nothing saved yet, Saved is a plain, small figure.
-  await expect(envelope(page, "Fun").locator(".saved-amount")).toHaveCount(0);
+  // With nothing saved yet, the Saved pill is quiet (no sparkles).
+  await expect(envelope(page, "Fun").locator(".saved-chip.sparkle")).toHaveCount(0);
   await expect(envelope(page, "Fun")).toContainText("Saved $0.00");
   await page.getByRole("link", { name: "Next month" }).click();
   await expect(page).toHaveURL(/#budget\/\d{4}-\d{2}$/);
   await expect(envelope(page, "Fun")).toContainText("Saved $100.00");
   // Saved stands out to encourage saving.
-  await expect(envelope(page, "Fun").locator(".saved-amount.sparkle")).toBeVisible();
+  await expect(envelope(page, "Fun").locator(".saved-chip.sparkle")).toBeVisible();
   await expect(envelope(page, "Fun").locator(".envelope-remaining")).toHaveText("$0.00");
 
   // Releasing Saved makes it spendable without changing Available to Assign.

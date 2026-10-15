@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { envelope, envelopeAction, goTo, signInWithHousehold } from "./helpers";
+import { envelope, editCell, goTo, signInWithHousehold } from "./helpers";
 
 test("each month shows only the envelopes it uses", async ({ page }) => {
   await signInWithHousehold(page);
@@ -36,7 +36,7 @@ test("each month shows only the envelopes it uses", async ({ page }) => {
   // A hidden envelope can still be shown and used; assigning keeps it in the month.
   await page.getByRole("button", { name: "Show 1 envelope not used this month" }).click();
   await expect(envelope(page, "Trip")).toContainText("not used this month");
-  await envelopeAction(page, "Trip", "Assign (negative to take back)", "50");
+  await editCell(page, "Trip", "assigned", "50");
   await expect(envelope(page, "Trip").locator(".envelope-remaining")).toHaveText("$50.00");
   await expect(envelope(page, "Trip")).not.toContainText("not used this month");
   await expect(page.getByRole("button", { name: /envelopes? not used this month/ })).toHaveCount(0);

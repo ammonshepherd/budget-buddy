@@ -3,7 +3,7 @@ import {
   addGroupWithEnvelopes,
   available,
   envelope,
-  envelopeAction,
+  editCell,
   goTo,
   openAddTransaction,
   signInWithHousehold,
@@ -17,8 +17,8 @@ test("the Budget page is envelopes under a sticky Available to Assign", async ({
 
   const names = Array.from({ length: 15 }, (_, i) => `Envelope ${i + 1}`);
   await addGroupWithEnvelopes(page, "Everyday", names);
-  // Nothing to assign yet: the bar is hidden, the month picker is not.
-  await expect(available(page)).toHaveCount(0);
+  // Nothing to assign yet: the card still shows, at $0.00.
+  await expect(available(page)).toContainText("Available to Assign$0.00");
   await expect(page.getByRole("link", { name: "Next month" })).toBeVisible();
   await goTo(page, "Accounts");
   await page.getByLabel("Account name").fill("Checking");
@@ -27,10 +27,12 @@ test("the Budget page is envelopes under a sticky Available to Assign", async ({
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$50.00");
 
-  // Scroll to the last envelope: the bar stays at the top of the screen.
+  // Scroll to the last envelope: the card stays at the top of the screen,
+  // while the month picker scrolls away.
   await envelope(page, "Envelope 15").scrollIntoViewIfNeeded();
   const box = await available(page).boundingBox();
-  expect(box!.y).toBeLessThan(5);
+  expect(box!.y).toBeLessThan(20);
+  await expect(page.getByRole("link", { name: "Next month" })).not.toBeInViewport();
   await expect(available(page)).toBeInViewport();
 });
 
@@ -66,7 +68,7 @@ test("the + button adds envelopes, and groups are managed in Settings", async ({
   await expect(list.getByRole("listitem")).toHaveCount(1);
 });
 
-test("the bar hides at $0.00 and comes back when over assigned", async ({ page }) => {
+test("the card shows $0.00 when all is assigned, and Over Assigned in red", async ({ page }) => {
   await signInWithHousehold(page);
   await goTo(page, "Accounts");
   await page.getByLabel("Account name").fill("Checking");
@@ -75,18 +77,19 @@ test("the bar hides at $0.00 and comes back when over assigned", async ({ page }
   await addGroupWithEnvelopes(page, "Everyday", ["Fun"]);
   await expect(available(page)).toContainText("$100.00");
 
-  // Assign it all: nothing left, so the bar goes away.
-  await envelopeAction(page, "Fun", "Assign (negative to take back)", "100");
-  await expect(available(page)).toHaveCount(0);
+  // Assign it all: nothing left.
+  await editCell(page, "Fun", "assigned", "100");
+  await expect(available(page)).toContainText("Available to Assign$0.00");
+  await expect(available(page)).not.toHaveClass(/over/);
 
-  // Lower the account's balance: now over assigned, and the bar warns.
+  // Lower the account's balance: now over assigned, and the card warns.
   await goTo(page, "Accounts");
   await page.locator(".item", { hasText: "Checking" }).click();
   await page.getByRole("form", { name: "Edit Checking" }).getByLabel("Opening balance").fill("60");
   await page.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");
-  await expect(available(page)).toContainText("-$40.00");
-  await expect(available(page)).toContainText("Over assigned by $40.00");
+  await expect(available(page)).toContainText("Over Assigned$40.00");
+  await expect(available(page)).toHaveClass(/over/);
 });
 
 test("a refund with no spending this month shows as Refunded, not negative Spent", async ({
@@ -98,7 +101,7 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
   await page.getByLabel("Opening balance").fill("1000");
   await page.getByRole("button", { name: "Add account" }).click();
   await addGroupWithEnvelopes(page, "Bills", ["Car insurance"]);
-  await envelopeAction(page, "Car insurance", "Assign (negative to take back)", "700");
+  await editCell(page, "Car insurance", "assigned", "700");
 
   const dialog = await openAddTransaction(page);
   await dialog.getByRole("radio", { name: "Inflow" }).check();
@@ -110,8 +113,10 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
 
   const insurance = envelope(page, "Car insurance");
   await expect(insurance.locator(".envelope-remaining")).toHaveText("$785.37");
-  // All on the envelope's line, in order: Saved, Planned, Assigned, Refunded, Spent.
-  await expect(insurance.locator("summary .envelope-figures")).toHaveText(
-    "Saved $0.00Planned $0.00Assigned $700.00Refunded $85.37Spent $0.00",
+  // Saved by the name, then Planned, Assigned and Spent, and Refunded on a line below.
+  await expect(insurance.locator(".saved-chip")).toHaveText("Saved $0.00");
+  await expect(insurance.locator(".envelope-cells")).toHaveText(
+    "Planned $0.00Assigned $700.00Spent $0.00",
   );
+  await expect(insurance.locator(".envelope-extra")).toHaveText("Refunded $85.37");
 });

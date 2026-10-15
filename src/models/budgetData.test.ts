@@ -8,6 +8,7 @@ import {
   coverSources,
   transactionShortfalls,
   visibleGroups,
+  withEnvelopeMonth,
 } from "./budgetMath";
 import type { BudgetData, Transaction } from "./types";
 
@@ -334,6 +335,48 @@ describe("budgetWith", () => {
     expect(after.assignable).toBe(before.assignable - 1_000);
     // The original data is left alone.
     expect(data.transactions).toHaveLength(household().transactions.length);
+  });
+});
+
+describe("withEnvelopeMonth", () => {
+  const row = (data: BudgetData, id: string) =>
+    buildBudgetMonth(data, "2026-10").groups[0]!.envelopes.find((e) => e.id === id)!;
+
+  it("adds to Assigned or sets Planned on the month's record", () => {
+    const data = household();
+    const before = buildBudgetMonth(data, "2026-10");
+    const assigned = withEnvelopeMonth(data, "food", "2026-10", { assigned: 2_500 });
+    expect(row(assigned, "food")).toMatchObject({ assigned: 32_500, planned: 45_000 });
+    expect(buildBudgetMonth(assigned, "2026-10").availableToAssign).toBe(
+      before.availableToAssign - 2_500,
+    );
+    const planned = withEnvelopeMonth(data, "food", "2026-10", { planned: 1_000 });
+    expect(row(planned, "food")).toMatchObject({ assigned: 30_000, planned: 1_000 });
+    expect(buildBudgetMonth(planned, "2026-10").availableToAssign).toBe(before.availableToAssign);
+    // The original data is left alone.
+    expect(data.envelopeMonths).toEqual(household().envelopeMonths);
+  });
+
+  it("adds a record for a month that has none", () => {
+    const data = withEnvelopeMonth(household(), "fun", "2026-11", { planned: 700 });
+    const november = buildBudgetMonth(data, "2026-11").groups[0]!.envelopes[1]!;
+    expect(november).toMatchObject({ id: "fun", planned: 700, assigned: 0 });
+  });
+});
+
+describe("overPlan", () => {
+  it("is Spent (as shown) above Planned; equal is within plan", () => {
+    const data = household();
+    // Food in October: Planned $450, Spent $350.
+    const food = () =>
+      buildBudgetMonth(data, "2026-10").groups[0]!.envelopes.find((e) => e.id === "food")!;
+    expect(food()).toMatchObject({ outflow: 35_000, overPlan: false });
+    data.envelopeMonths[1]!.planned = 35_000;
+    expect(food().overPlan).toBe(false);
+    data.envelopeMonths[1]!.planned = 34_999;
+    expect(food().overPlan).toBe(true);
+    // It is not overspending: nothing is short.
+    expect(food().shortfall).toBe(0);
   });
 });
 

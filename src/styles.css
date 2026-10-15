@@ -551,7 +551,6 @@ a:focus-visible {
   text-decoration: none;
 }
 
-.envelope-list,
 .item-list {
   display: grid;
   margin: 0;
@@ -559,48 +558,8 @@ a:focus-visible {
   list-style: none;
 }
 
-.envelope-list > li + li,
 .item-list > li + li {
   border-block-start: 1px solid var(--border);
-}
-
-.envelope summary {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.2rem 0.75rem;
-  padding: 0.75rem 0;
-  cursor: pointer;
-  list-style: none;
-}
-
-.envelope summary::-webkit-details-marker {
-  display: none;
-}
-
-.envelope-name {
-  overflow: hidden;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.envelope-remaining {
-  font-weight: 800;
-}
-
-.envelope-figures {
-  display: flex;
-  flex-wrap: wrap;
-  grid-column: 1 / -1;
-  gap: 0.15rem 0.9rem;
-  color: var(--text-muted);
-  font-size: 0.75rem;
-}
-
-.envelope-actions {
-  display: grid;
-  gap: 0.75rem;
-  padding: 0 0 1rem;
 }
 
 /* .review-row: a row of Activity's To review list, laid out like .item. */
@@ -761,14 +720,6 @@ a:focus-visible {
   text-align: center;
 }
 
-.envelope.unused .envelope-name {
-  color: var(--text-muted);
-}
-
-.envelope.unused small {
-  font-weight: 500;
-}
-
 .import-columns,
 .import-skipped {
   border: 1px solid var(--border);
@@ -854,138 +805,11 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-.budget-page {
-  display: grid;
-  gap: 0.5rem;
-  /* The month picker sits right under the app header. */
-  margin-block-start: -1.1rem;
-}
-
-.budget-month {
-  justify-content: center;
-  color: var(--accent);
-  font-size: 0.78rem;
-  font-weight: 850;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-/* Available to Assign: always visible at the top while envelopes scroll. */
-.assign-bar {
-  position: sticky;
-  inset-block-start: 0;
-  z-index: 5;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.1rem 0.75rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 1rem;
-  color: #fff;
-  background: var(--brand);
-  box-shadow: 0 0.5rem 1.25rem rgba(75, 42, 104, 0.25);
-}
-
-.assign-label,
-.assign-helper {
-  color: #eadcf6;
-  font-size: 0.75rem;
-}
-
-.assign-amount {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  font-size: 1.65rem;
-  letter-spacing: -0.04em;
-  line-height: 1.05;
-  text-align: end;
-}
-
-.assign-helper {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.assign-bar .money.negative {
-  color: #ffd2cc;
-}
-
 .notice.compact {
   margin: 0;
   padding: 0.55rem 0.75rem;
   font-size: 0.8rem;
   line-height: 1.45;
-}
-
-.group-card {
-  padding: 0.4rem 0.8rem 0.2rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: var(--surface);
-}
-
-.group-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-block: 0.15rem;
-}
-
-.group-heading h2 {
-  margin: 0;
-  color: var(--accent);
-  font-size: 0.78rem;
-  font-weight: 850;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.add-envelope-button {
-  display: inline-grid;
-  inline-size: 1.7rem;
-  block-size: 1.7rem;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: var(--brand);
-  background: var(--brand-light);
-  font-size: 1.15rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.group-card > .form {
-  padding-block: 0.35rem 0.5rem;
-}
-
-.group-card > .empty-state {
-  padding-block: 0.2rem 0.5rem;
-  font-size: 0.78rem;
-}
-
-.group-card .envelope summary {
-  gap: 0.05rem 0.6rem;
-  padding: 0.42rem 0;
-}
-
-.group-card .envelope-name {
-  font-size: 0.93rem;
-}
-
-.group-card .envelope-remaining {
-  font-size: 0.95rem;
-}
-
-.group-card .envelope-figures {
-  gap: 0 0.7rem;
-  font-size: 0.7rem;
-}
-
-.group-card .envelope-actions {
-  gap: 0.5rem;
-  padding-block-end: 0.6rem;
 }
 
 /* ---- v0.13.1: Activity dates, tappable rows, tighter sides --------------- */
@@ -1068,10 +892,6 @@ a:focus-visible {
   padding-inline: 0.85rem;
 }
 
-.group-card {
-  padding-inline: 0.7rem;
-}
-
 /* ---- v0.14.0: review list rows (tap to edit, plus Mark as Income) -------- */
 
 .review-item {
@@ -1081,93 +901,381 @@ a:focus-visible {
   gap: 0.5rem;
 }
 
-/* ---- v0.14.1: Saved stands out; payment envelopes ----------------------- */
+/* ---- v0.16.0: Budget page redesign --------------------------------------- */
 
-.envelope-figures {
-  align-items: baseline;
+.budget-page {
+  --bb-purple: #4b2a68;
+  --bb-purple-tint: #f3eef8;
+  --bb-purple-line: #e4dcee;
+  --bb-row-line: #f0ebf5;
+  --bb-ink: #1e1a24;
+  --bb-ink-2: #3a3342;
+  --bb-muted: #6a6175;
+  --bb-muted-zero: #9a90a6;
+  --bb-grey-cell: #efeef1;
+  --bb-grey-label: #5e5866;
+  --bb-over: #a3470a;
+  --bb-over-bg: #fcebdd;
+
+  display: grid;
+  /* Rows run edge to edge: undo the page's side padding, and sit right
+     under the app header. */
+  margin: -1.5rem -0.5rem 0;
+  color: var(--bb-ink);
+  font-variant-numeric: tabular-nums;
 }
 
-.saved-amount {
-  color: var(--accent);
-  font-size: 0.85rem;
+.budget-page > .notice,
+.budget-page > .unused-toggle {
+  margin: 0.6rem 1rem 0;
+}
+
+/* Month picker: a purple band; it scrolls away, Available to Assign does not. */
+.budget-month {
+  justify-content: space-between;
+  padding: 0.5rem 0.5rem 0;
+  color: #fff;
+  background: var(--bb-purple);
+  font-size: 0.94rem;
   font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.saved-amount .money {
-  font-weight: 850;
+.budget-month a {
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  color: #fff;
+  background: transparent;
+  font-size: 1.4rem;
 }
 
-/* Some saved: a purple shimmer runs through the text, and the ✨ twinkles. */
-.saved-amount.sparkle {
-  background: linear-gradient(
-    100deg,
-    var(--brand) 0%,
-    var(--accent) 35%,
-    #c9a0ee 50%,
-    var(--accent) 65%,
-    var(--brand) 100%
-  );
-  background-size: 250% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: saved-shimmer 3.5s linear infinite;
+/* Available to Assign: pinned to the top while the envelopes scroll. */
+.assign-wrap {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+  padding: max(0.5rem, env(safe-area-inset-top)) 1rem 0.875rem;
+  background: var(--bb-purple);
 }
 
-.saved-amount.sparkle .money {
-  color: transparent;
+.assign-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 0.75rem;
+  padding: 0.375rem 0.875rem;
+  border: 6px solid #2e8b57;
+  border-radius: 0.875rem;
+  background: #eef8f2;
 }
 
-.sparkle-icon {
-  display: inline-block;
-  margin-inline-end: 0.15rem;
-  color: initial;
-  animation: saved-twinkle 1.8s ease-in-out infinite;
+.assign-label {
+  color: #1f5e3b;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
-@keyframes saved-shimmer {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -150% 0;
-  }
+.assign-amount {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: #1f6b42;
+  font-size: 1.375rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-@keyframes saved-twinkle {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+.assign-helper {
+  grid-column: 1;
+  grid-row: 2;
+  color: #1f5e3b;
+  font-size: 0.75rem;
+}
+
+.assign-card.over {
+  border-color: #b3261e;
+  background: #fdeceb;
+}
+
+.assign-card.over .assign-label,
+.assign-card.over .assign-helper {
+  color: #8c1d18;
+}
+
+.assign-card.over .assign-amount {
+  color: #b3261e;
+}
+
+/* Groups: a full-width bar with the name and the + button; no totals. */
+.group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.375rem 0 1rem;
+  border-block: 1px solid var(--bb-purple-line);
+  background: var(--bb-purple-tint);
+}
+
+.group-heading h2 {
+  margin: 0;
+  color: var(--bb-purple);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.add-envelope-button {
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: 0;
+  color: var(--bb-purple);
+  background: transparent;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.group-add,
+.group-empty {
+  padding: 0.5rem 1rem;
+  border-block-end: 1px solid var(--bb-row-line);
+  background: var(--surface);
+}
+
+.group-empty {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.envelope-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Envelope rows. */
+.envelope {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-block-end: 1px solid var(--bb-row-line);
+  background: var(--surface);
+}
+
+.envelope-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+}
+
+.envelope-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  min-inline-size: 0;
+}
+
+.envelope-name {
+  font-size: 1rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.envelope.unused .envelope-name {
+  color: var(--bb-muted);
+}
+
+.envelope.unused small {
+  font-weight: 500;
+}
+
+.envelope-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.envelope-remaining {
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.envelope-left.zero .envelope-remaining {
+  color: var(--bb-muted-zero);
+}
+
+.envelope-caption {
+  color: var(--bb-muted);
+  font-size: 0.6875rem;
+}
+
+/* Saved: a pill next to the name; solid purple with sparkles once above $0.00. */
+.saved-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5625rem;
+  border-radius: 999px;
+  color: #6e5a85;
+  background: var(--bb-purple-tint);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.saved-chip.sparkle {
+  position: relative;
+  padding: 0.1875rem 0.625rem 0.1875rem 0.4375rem;
+  color: #fff;
+  background: var(--bb-purple);
+  font-weight: 700;
+}
+
+.saved-chip .star.corner {
+  position: absolute;
+  inset-block-start: -4px;
+  inset-inline-end: -3px;
+}
+
+/* One twinkle when the row appears. */
+.saved-chip .star {
+  animation: chip-twinkle 1.2s ease-in-out 1;
+}
+
+@keyframes chip-twinkle {
   50% {
-    opacity: 0.55;
-    transform: scale(0.85) rotate(12deg);
+    opacity: 0.5;
+    transform: scale(0.75) rotate(20deg);
   }
 }
 
-/* No movement for people who ask their device for less motion. */
 @media (prefers-reduced-motion: reduce) {
-  .saved-amount.sparkle,
-  .sparkle-icon {
+  .saved-chip .star {
     animation: none;
   }
 }
 
-/* ---- v0.14.2: envelope details shown when the envelope is opened -------- */
-
-.envelope-detail {
-  margin: 0;
-  font-size: 0.78rem;
+/* Planned, Assigned, Spent (or a card's Available to pay and Remaining debt). */
+.envelope-cells {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.375rem;
 }
 
-/* ---- v0.14.4: envelope amounts stand out from their labels -------------- */
+.envelope-cells.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 
-.envelope-figures .money {
-  color: var(--text);
+.cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 2.75rem;
+  padding: 0.3125rem 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  color: var(--bb-ink-2);
+  background: transparent;
+  font: inherit;
+  text-align: start;
+}
+
+button.cell {
+  cursor: pointer;
+}
+
+.cell-label {
+  color: var(--bb-muted);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cell .money {
+  font-size: 0.875rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cell.planned {
+  color: var(--bb-purple);
+  background: var(--bb-purple-tint);
+}
+
+.cell.planned .cell-label {
+  color: var(--bb-purple);
+}
+
+.cell.planned .money {
   font-weight: 800;
 }
 
-.envelope-figures .short .money {
+.cell.spent {
+  background: var(--bb-grey-cell);
+}
+
+.cell.spent .cell-label {
+  color: var(--bb-grey-label);
+}
+
+.cell.spent.over {
+  background: var(--bb-over-bg);
+}
+
+.cell.spent.over .cell-label,
+.cell.spent.over .money {
+  color: var(--bb-over);
+}
+
+.cell.debt .money {
+  color: #b3261e;
+}
+
+.cell.editing {
+  box-shadow: inset 0 0 0 2px var(--bb-purple);
+}
+
+.cell.editing input {
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
   color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.envelope-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+  margin: 0;
+  color: var(--bb-muted);
+  font-size: 0.75rem;
+}
+
+.envelope-extra .money {
+  font-weight: 700;
+}
+
+.envelope-actions {
+  display: grid;
+  gap: 0.6rem;
+  padding-block-start: 0.25rem;
 }

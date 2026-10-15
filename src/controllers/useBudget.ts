@@ -12,8 +12,15 @@ export type BudgetState =
 
 export interface Budget {
   state: BudgetState;
-  /** Runs a change against the store, then reloads so every page sees it. */
-  change: (apply: (store: DataStore, data: BudgetData) => Promise<void>) => Promise<void>;
+  /**
+   * Runs a change against the store, then reloads so every page sees it.
+   * With `predict`, pages show the predicted data at once (an optimistic
+   * update); the reload then replaces it, or undoes it if the change failed.
+   */
+  change: (
+    apply: (store: DataStore, data: BudgetData) => Promise<void>,
+    predict?: (data: BudgetData) => BudgetData,
+  ) => Promise<void>;
   createHousehold: (name: string) => Promise<void>;
   reload: () => Promise<void>;
 }
@@ -50,8 +57,12 @@ export function useBudget(store: DataStore): Budget {
   }, [store]);
 
   const change = useCallback(
-    async (apply: (store: DataStore, data: BudgetData) => Promise<void>) => {
+    async (
+      apply: (store: DataStore, data: BudgetData) => Promise<void>,
+      predict?: (data: BudgetData) => BudgetData,
+    ) => {
       if (state.status !== "ready") throw new Error("Budget is not loaded");
+      if (predict) setState({ status: "ready", data: predict(state.data) });
       try {
         await apply(store, state.data);
       } finally {

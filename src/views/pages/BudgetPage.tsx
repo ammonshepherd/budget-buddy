@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
+import { messageOf } from "../../controllers/errors";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import type { Budget } from "../../controllers/useBudget";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
 import type { EnvelopeRow, GroupRows } from "../../models/budgetMath";
+import { centsToInput, formatCents } from "../../models/money";
 import type { Month } from "../../models/month";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, SingleFieldForm } from "../components";
@@ -20,6 +22,7 @@ export function BudgetPage({
 }) {
   const page = useBudgetPage(budget, data, month);
   const { view } = page;
+  const over = view.overAssigned > 0;
 
   return (
     <section className="page-view budget-page" aria-labelledby="budget-title">
@@ -38,27 +41,21 @@ export function BudgetPage({
         </a>
       </div>
 
-      {/* Stays at the top while the envelopes scroll under it; hidden when
-          there is nothing left to assign (but shown when over assigned). */}
-      {view.availableToAssign !== 0 && (
-        <section className="assign-bar" aria-label="Available to Assign">
-          <span className="assign-label">Available to Assign</span>
-          <strong className="assign-amount money">
-            <Money cents={view.availableToAssign} />
+      {/* Stays at the top while the envelopes scroll under it. */}
+      <div className="assign-wrap">
+        <section
+          className={over ? "assign-card over" : "assign-card"}
+          aria-label="Available to Assign"
+        >
+          <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
+          <strong className="assign-amount">
+            <Money cents={over ? view.overAssigned : view.availableToAssign} />
           </strong>
           <span className="assign-helper">
-            {view.overAssigned > 0 ? (
-              <>
-                Over assigned by <Money cents={view.overAssigned} />
-              </>
-            ) : (
-              <>
-                Income this month <Money cents={view.income} />
-              </>
-            )}
+            Income this month <Money cents={view.income} />
           </span>
         </section>
-      )}
+      </div>
 
       {view.toReview.count > 0 && (
         <p className="notice compact">
@@ -83,7 +80,7 @@ export function BudgetPage({
       )}
 
       {page.groups.map((group) => (
-        <GroupCard key={group.id} group={group} page={page} />
+        <GroupSection key={group.id} group={group} page={page} />
       ))}
 
       {view.unusedCount > 0 && (
@@ -99,10 +96,10 @@ export function BudgetPage({
   );
 }
 
-function GroupCard({ group, page }: { group: GroupRows; page: Page }) {
+function GroupSection({ group, page }: { group: GroupRows; page: Page }) {
   const [adding, setAdding] = useState(false);
   return (
-    <section className="group-card" aria-label={group.name}>
+    <section className="budget-group" aria-label={group.name}>
       <div className="group-heading">
         <h2>{group.name}</h2>
         <button
@@ -116,12 +113,14 @@ function GroupCard({ group, page }: { group: GroupRows; page: Page }) {
         </button>
       </div>
       {adding && (
-        <SingleFieldForm
-          label="New envelope"
-          button="Add envelope"
-          inputMode="text"
-          onSubmit={(name) => page.addEnvelope(group.id, name)}
-        />
+        <div className="group-add">
+          <SingleFieldForm
+            label="New envelope"
+            button="Add envelope"
+            inputMode="text"
+            onSubmit={(name) => page.addEnvelope(group.id, name)}
+          />
+        </div>
       )}
       {group.envelopes.length > 0 ? (
         <ul className="envelope-list">
@@ -132,148 +131,263 @@ function GroupCard({ group, page }: { group: GroupRows; page: Page }) {
           ))}
         </ul>
       ) : (
-        !adding && <p className="empty-state">No envelopes yet. Tap + to add one.</p>
+        !adding && <p className="empty-state group-empty">No envelopes yet. Tap + to add one.</p>
       )}
     </section>
   );
 }
 
+/**
+ * One envelope: name, Saved and what is left; then Planned and Assigned (tap
+ * to edit in place) and Spent. Tapping the top line opens the rest: Release
+ * from Saved and Delete envelope (or, for a card, Assign).
+ */
 function EnvelopeItem({ envelope, page }: { envelope: EnvelopeRow; page: Page }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const remove = useAsyncAction(() => page.deleteEnvelope(envelope.id));
+  const card = envelope.card;
+  const left = card ? envelope.envelopeMoney : envelope.remaining;
+
+  const save = (action: (id: string, text: string) => Promise<void>) => async (text: string) => {
+    setError(null);
+    try {
+      await action(envelope.id, text);
+    } catch (e) {
+      setError(messageOf(e));
+    }
+  };
+
   return (
-    <details className={envelope.inUse ? "envelope" : "envelope unused"}>
-      <summary>
-        <span className="envelope-name">
-          {envelope.name}
-          {!envelope.inUse && <small> · not used this month</small>}
+    <div className={envelope.inUse ? "envelope" : "envelope unused"}>
+      <button
+        className="envelope-top"
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="envelope-title">
+          <span className="envelope-name">
+            {envelope.name}
+            {!envelope.inUse && <small> · not used this month</small>}
+          </span>
+          {!card && <SavedChip cents={envelope.saved} />}
         </span>
-        {envelope.card ? (
-          // A card's payment envelope: what can be paid now, and what is left after that.
-          <>
-            <span className="envelope-remaining">
-              <Money cents={envelope.envelopeMoney} />
-            </span>
-            <span className="envelope-figures">
-              <span>
-                Available to pay <Money cents={envelope.envelopeMoney} />
-              </span>
-              <span className={envelope.card.uncovered > 0 ? "short" : undefined}>
-                Remaining debt <Money cents={envelope.card.uncovered} />
-              </span>
-              {envelope.shortfall > 0 && (
-                <span className="short">
-                  Short <Money cents={envelope.shortfall} />
-                </span>
-              )}
-            </span>
-          </>
-        ) : (
-          <>
-            <span className="envelope-remaining">
-              <Money cents={envelope.remaining} />
-            </span>
-            {/* Assigned + Released + Refunded − Spent = what is left. */}
-            <span className="envelope-figures">
-              <SavedAmount cents={envelope.saved} />
-              <span>
-                Planned <Money cents={envelope.planned} />
-              </span>
-              <span>
-                Assigned <Money cents={envelope.assigned} />
-              </span>
-              {envelope.refunded > 0 && (
-                <span>
-                  Refunded <Money cents={envelope.refunded} />
-                </span>
-              )}
-              <span>
-                Spent <Money cents={envelope.outflow} />
-              </span>
-              {envelope.shortfall > 0 && (
-                <span className="short">
-                  Short <Money cents={envelope.shortfall} />
-                </span>
-              )}
-            </span>
-          </>
-        )}
-      </summary>
-      <div className="envelope-actions">
-        {!envelope.card && envelope.released > 0 && (
-          <p className="envelope-figures envelope-detail">
-            <span>
-              Released from Saved <Money cents={envelope.released} />
-            </span>
-          </p>
-        )}
-        <SingleFieldForm
-          label="Assign (negative to take back)"
-          button="Assign"
-          placeholder="0.00"
-          onSubmit={(text) => page.assign(envelope.id, text)}
-        />
-        {envelope.saved > 0 && (
-          <SingleFieldForm
-            label="Release from Saved"
-            button="Release"
-            placeholder="0.00"
-            onSubmit={(text) => page.release(envelope.id, text)}
+        <span className={left === 0 ? "envelope-left zero" : "envelope-left"}>
+          <span className="envelope-remaining">
+            <Money cents={left} />
+          </span>
+          <span className="envelope-caption">{card ? "available to pay" : "remaining"}</span>
+        </span>
+      </button>
+
+      {card ? (
+        <div className="envelope-cells two">
+          <span className="cell">
+            <span className="cell-label">Available to pay</span>{" "}
+            <Money cents={envelope.envelopeMoney} />
+          </span>
+          <span className={card.uncovered > 0 ? "cell debt" : "cell"}>
+            <span className="cell-label">Remaining debt</span> <Money cents={card.uncovered} />
+          </span>
+        </div>
+      ) : (
+        <div className="envelope-cells">
+          <EditableCell
+            className="cell planned"
+            label="Planned"
+            what="planned"
+            envelopeName={envelope.name}
+            cents={envelope.planned}
+            onSave={save(page.setPlanned)}
           />
-        )}
-        <SingleFieldForm
-          label="Planned"
-          button="Set plan"
-          placeholder="0.00"
-          onSubmit={(text) => page.setPlanned(envelope.id, text)}
-        />
-        {envelope.card ? (
-          <p className="empty-state">
-            Card purchases move money in here from their envelopes; payments to the card (a Transfer
-            on both accounts) take it out. Assign here to pay down the remaining debt.
-          </p>
-        ) : (
-          <div className="button-row">
-            <button
-              className="text-button danger"
-              type="button"
-              disabled={remove.pending}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `Delete the ${envelope.name} envelope? Money assigned to it returns to Available to Assign.`,
+          <EditableCell
+            className="cell assigned"
+            label="Assigned"
+            what="assigned"
+            envelopeName={envelope.name}
+            cents={envelope.assigned}
+            onSave={save(page.setAssigned)}
+          />
+          <span className={envelope.overPlan ? "cell spent over" : "cell spent"}>
+            <span className="cell-label">{envelope.overPlan ? "Spent · over" : "Spent"}</span>{" "}
+            <Money cents={envelope.outflow} />
+          </span>
+        </div>
+      )}
+
+      {(envelope.refunded > 0 || envelope.shortfall > 0) && (
+        <p className="envelope-extra">
+          {envelope.refunded > 0 && (
+            <span>
+              Refunded <Money cents={envelope.refunded} />
+            </span>
+          )}
+          {envelope.shortfall > 0 && (
+            <span className="short">
+              Short <Money cents={envelope.shortfall} />
+            </span>
+          )}
+        </p>
+      )}
+      <ErrorMessage error={error} />
+
+      {open && (
+        <div className="envelope-actions">
+          {!card && envelope.released > 0 && (
+            <p className="envelope-extra">
+              <span>
+                Released from Saved <Money cents={envelope.released} />
+              </span>
+            </p>
+          )}
+          {card && (
+            <SingleFieldForm
+              label="Assign (negative to take back)"
+              button="Assign"
+              placeholder="0.00"
+              onSubmit={(text) => page.assign(envelope.id, text)}
+            />
+          )}
+          {envelope.saved > 0 && (
+            <SingleFieldForm
+              label="Release from Saved"
+              button="Release"
+              placeholder="0.00"
+              onSubmit={(text) => page.release(envelope.id, text)}
+            />
+          )}
+          {card ? (
+            <p className="empty-state">
+              Card purchases move money in here from their envelopes; payments to the card (a
+              Transfer on both accounts) take it out. Assign here to pay down the remaining debt.
+            </p>
+          ) : (
+            <div className="button-row">
+              <button
+                className="text-button danger"
+                type="button"
+                disabled={remove.pending}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Delete the ${envelope.name} envelope? Money assigned to it returns to Available to Assign.`,
+                    )
                   )
-                )
-                  void remove.run();
-              }}
-            >
-              Delete envelope
-            </button>
-          </div>
-        )}
-        <ErrorMessage error={remove.error} />
-      </div>
-    </details>
+                    void remove.run();
+                }}
+              >
+                Delete envelope
+              </button>
+            </div>
+          )}
+          <ErrorMessage error={remove.error} />
+        </div>
+      )}
+    </div>
   );
 }
 
 /**
- * Saved stays a plain figure at $0.00. Once money is saved it stands out
- * (bigger, purple and sparkling) to encourage saving.
+ * A Planned or Assigned amount that turns into a text field when tapped.
+ * Leaving the field (tapping anywhere else) or Enter saves; Escape cancels.
  */
-function SavedAmount({ cents }: { cents: number }) {
+function EditableCell({
+  className,
+  label,
+  what,
+  envelopeName,
+  cents,
+  onSave,
+}: {
+  className: string;
+  label: string;
+  what: string;
+  envelopeName: string;
+  cents: number;
+  onSave: (text: string) => Promise<void>;
+}) {
+  const [text, setText] = useState<string | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  // Enter and Escape end editing themselves; the blur that follows must not save again.
+  const finished = useRef(false);
+
+  const finish = (saveIt: boolean, refocus: boolean) => {
+    if (finished.current || text === null) return;
+    finished.current = true;
+    const typed = text;
+    setText(null);
+    if (saveIt) void onSave(typed);
+    // Back to the cell, unless the tap that ended editing went somewhere else.
+    if (refocus) requestAnimationFrame(() => button.current?.focus());
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finish(true, true);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      finish(false, true);
+    }
+  };
+
+  if (text !== null) {
+    return (
+      <label className={`${className} editing`}>
+        <span className="cell-label">{label}</span>
+        <input
+          aria-label={`${label} amount for ${envelopeName}`}
+          inputMode="decimal"
+          autoFocus
+          value={text}
+          onFocus={(event) => event.target.select()}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={() => finish(true, false)}
+        />
+      </label>
+    );
+  }
+  return (
+    <button
+      ref={button}
+      className={className}
+      type="button"
+      aria-label={`Edit ${what} amount for ${envelopeName}, currently ${formatCents(cents)}`}
+      onClick={() => {
+        finished.current = false;
+        setText(centsToInput(cents));
+      }}
+    >
+      <span className="cell-label">{label}</span> <Money cents={cents} />
+    </button>
+  );
+}
+
+const STAR = "M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z";
+
+/**
+ * Saved as a pill on the name line. Once money is saved it is solid purple
+ * with sparkles, to encourage saving; at $0.00 it is quiet.
+ */
+function SavedChip({ cents }: { cents: number }) {
   if (cents <= 0) {
     return (
-      <span>
+      <span className="saved-chip">
         Saved <Money cents={cents} />
       </span>
     );
   }
   return (
-    <span className="saved-amount sparkle">
-      <span className="sparkle-icon" aria-hidden="true">
-        ✨
-      </span>
+    <span className="saved-chip sparkle">
+      <svg className="star" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+        <path d={STAR} fill="#F3D36B" />
+      </svg>
       Saved <Money cents={cents} />
+      <svg className="star corner" width="9" height="9" viewBox="0 0 24 24" aria-hidden="true">
+        <path d={STAR} fill="#B48BE0" />
+      </svg>
     </span>
   );
 }
