@@ -3,7 +3,7 @@ import {
   addGroupWithEnvelopes,
   available,
   envelope,
-  envelopeAction,
+  editCell,
   goTo,
   openAddTransaction,
   signInWithHousehold,
@@ -28,8 +28,8 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   await addAccount(page, "Checking", "1000");
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Household"]);
-  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "200");
-  await envelopeAction(page, "Household", "Assign (negative to take back)", "100");
+  await editCell(page, "Groceries", "assigned", "200");
+  await editCell(page, "Household", "assigned", "100");
 
   const dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").first().fill("75");
@@ -91,9 +91,9 @@ test("a split that overdraws two envelopes covers them one at a time", async ({ 
   await addAccount(page, "Checking", "1000");
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun", "Gifts"]);
-  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "100");
-  await envelopeAction(page, "Fun", "Assign (negative to take back)", "100");
-  await envelopeAction(page, "Gifts", "Assign (negative to take back)", "200");
+  await editCell(page, "Groceries", "assigned", "100");
+  await editCell(page, "Fun", "assigned", "100");
+  await editCell(page, "Gifts", "assigned", "200");
   await expect(available(page)).toContainText("$600.00");
 
   const dialog = await openAddTransaction(page);
@@ -134,8 +134,8 @@ test("a card purchase can be split; money into a card cannot", async ({ page }) 
   await addAccount(page, "Visa", "0", true);
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
-  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "100");
-  await envelopeAction(page, "Fun", "Assign (negative to take back)", "100");
+  await editCell(page, "Groceries", "assigned", "100");
+  await editCell(page, "Fun", "assigned", "100");
 
   const dialog = await openAddTransaction(page);
   await dialog.getByLabel("Account").selectOption({ label: "Visa" });

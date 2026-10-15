@@ -3,7 +3,7 @@ import {
   addGroupWithEnvelopes,
   available,
   envelope,
-  envelopeAction,
+  editCell,
   goTo,
   openAddTransaction,
   signInWithHousehold,
@@ -79,7 +79,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await page.getByRole("button", { name: "Add account" }).click();
 
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
-  await envelopeAction(page, "Groceries", "Assign (negative to take back)", "100");
+  await editCell(page, "Groceries", "assigned", "100");
 
   await goTo(page, "Accounts");
   const add = page.getByRole("form", { name: "Add an account" });

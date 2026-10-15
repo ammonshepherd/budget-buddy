@@ -14,16 +14,27 @@ export async function signInWithHousehold(page: Page) {
 export const available = (page: Page) => page.getByRole("region", { name: "Available to Assign" });
 
 export const envelope = (page: Page, name: string) =>
-  page
-    .locator("details.envelope")
-    .filter({ has: page.locator(".envelope-name", { hasText: name }) });
+  page.locator("div.envelope").filter({ has: page.locator(".envelope-name", { hasText: name }) });
 
-/** Opens an envelope row and submits one of its forms. */
+/** Types a new amount into an envelope's Planned or Assigned cell and presses Enter. */
+export async function editCell(
+  page: Page,
+  name: string,
+  cell: "planned" | "assigned",
+  value: string,
+) {
+  const row = envelope(page, name);
+  await row.getByRole("button", { name: new RegExp(`^Edit ${cell} amount`) }).click();
+  const input = row.getByRole("textbox", { name: new RegExp(`^${cell} amount`, "i") });
+  await input.fill(value);
+  await input.press("Enter");
+}
+
+/** Opens an envelope row (tap its top line) and submits one of its forms. */
 export async function envelopeAction(page: Page, name: string, field: string, value: string) {
   const row = envelope(page, name);
-  if (!(await row.evaluate((el) => (el as HTMLDetailsElement).open))) {
-    await row.locator("summary").click();
-  }
+  const top = row.locator(".envelope-top");
+  if ((await top.getAttribute("aria-expanded")) !== "true") await top.click();
   const form = row.locator("form").filter({ has: page.getByLabel(field) });
   await form.getByLabel(field).fill(value);
   await form.getByRole("button").click();

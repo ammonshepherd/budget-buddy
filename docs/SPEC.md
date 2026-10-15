@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.15.2.
+Version described: 0.16.0.
 
 ## 1. Purpose
 
@@ -158,7 +158,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.15.2", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.16.0", and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
@@ -183,18 +183,27 @@ household yet.
 ### Budget
 
 - No page title or totals (the `h1` exists for screen readers only).
-- Month picker row (‹ OCTOBER 2026 ›) changes `#budget/YYYY-MM`.
-- Sticky "Available to Assign" bar (hidden at exactly $0.00): amount on the
-  right; on the left "Income this month $X" or "Over assigned by $X".
+- Month picker (‹ OCTOBER 2026 ›, 44px buttons) in a purple band; changes
+  `#budget/YYYY-MM` and scrolls away.
+- Sticky "Available to Assign" card pinned to the top on the purple band
+  (hidden at exactly $0.00): 6px green border, light green background, amount on the
+  right, "Income this month $X" under the label. Over assigned: red, labelled
+  "Over Assigned" with the amount over.
 - Notices: "N transactions to review ($X in, $Y out) are not in Available to
   Assign yet. Review them on Activity."; no accounts → link to Accounts; no
   groups → link to Settings.
-- One card per group: uppercase group name and a + that opens "New envelope"
-  (+ becomes ×). Envelope rows as in CLAUDE.md; tapping one opens Released (if
-  used), "Assign (negative to take back)", "Release from Saved" (only with
-  Saved), "Planned" with Set plan, and Delete envelope (confirm: money assigned
-  returns to Available to Assign). Card payment envelopes explain how they fill
-  instead of offering Delete.
+- Each group: a full-width tinted bar with the uppercase name and a + that
+  opens "New envelope" (+ becomes ×); no totals.
+- Envelope rows as in CLAUDE.md. Planned and Assigned cells are buttons ("Edit
+  planned amount for Groceries, currently $300.00") that turn into a text field
+  in place; errors show under the row ("Only $X available to assign.", "Some is
+  already spent: Assigned can go no lower than $X.", "Planned cannot be
+  negative."). Edits show at once (an optimistic update) and are undone if the
+  save fails. Tapping the top line opens Released (if used), "Release from
+  Saved" (only with Saved) and Delete envelope (confirm: money assigned returns
+  to Available to Assign). Card payment envelopes show Available to pay and
+  Remaining debt cells, and open to "Assign (negative to take back)" and an
+  explanation of how they fill instead of Delete.
 - "Show N envelopes not used this month" toggle when some are hidden.
 
 ### Accounts
@@ -327,4 +336,7 @@ Decided or wanted, but not in the app: copy last month's spending into Planned;
 renaming and reordering envelopes and groups; matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
-income rule (delete and re-add instead).
+income rule (delete and re-add instead); an envelope detail sheet (tapping the
+name or Remaining: Remaining, planned vs spent, a Saved panel with "Move some
+into Remaining…", and the envelope's transactions), which would replace the
+row's opened forms.

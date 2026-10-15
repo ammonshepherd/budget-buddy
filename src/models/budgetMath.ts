@@ -420,6 +420,11 @@ export interface EnvelopeRow extends EnvelopeMonth {
   id: string;
   name: string;
   planned: Cents;
+  /**
+   * Spent (as shown) is more than Planned. Only a hint about keeping to the
+   * plan: unlike `shortfall` it is not overspending and needs no cover.
+   */
+  overPlan: boolean;
   /** Whether the envelope belongs on this month's page (see envelopeInUse). */
   inUse: boolean;
   /** Set on a credit card's payment envelope. */
@@ -536,11 +541,13 @@ export function buildBudgetMonth(data: BudgetData, month: Month): BudgetMonthVie
       openCardPayment: card?.open === true,
     });
     if (!inUse) unusedCount++;
+    const plannedHere = planned.get(envelope.id) ?? 0;
     const row = {
       ...state,
       id: envelope.id,
       name: envelope.name,
-      planned: planned.get(envelope.id) ?? 0,
+      planned: plannedHere,
+      overPlan: state.outflow > plannedHere,
       inUse,
       card,
     };
@@ -681,6 +688,39 @@ export function budgetWith(
       })),
     ],
   };
+}
+
+/**
+ * The budget as it will be once one envelope-month change is saved: Assigned
+ * moved by `assigned` and/or Planned set to `planned`. Lets the Budget page
+ * show an edit straight away, before the store confirms it.
+ */
+export function withEnvelopeMonth(
+  data: BudgetData,
+  envelopeId: string,
+  month: Month,
+  change: { assigned?: Cents; planned?: Cents },
+): BudgetData {
+  let found = false;
+  const envelopeMonths = data.envelopeMonths.map((r) => {
+    if (found || r.envelopeId !== envelopeId || r.month !== month) return r;
+    found = true;
+    return {
+      ...r,
+      assigned: r.assigned + (change.assigned ?? 0),
+      planned: change.planned ?? r.planned,
+    };
+  });
+  if (!found) {
+    envelopeMonths.push({
+      envelopeId,
+      month,
+      assigned: change.assigned ?? 0,
+      released: 0,
+      planned: change.planned ?? 0,
+    });
+  }
+  return { ...data, envelopeMonths };
 }
 
 /** Envelopes that could give `amount` in `month` without going negative (cover step 2). */

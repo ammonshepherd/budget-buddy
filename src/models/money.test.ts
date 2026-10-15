@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertCents, centsToInput, formatCents, parseCents } from "./money";
+import { assertCents, centsToInput, formatCents, parseCents, roundMoney } from "./money";
 
 describe("assertCents", () => {
   it("accepts whole cents and rejects fractions and non-numbers", () => {
@@ -31,6 +31,33 @@ describe("parseCents", () => {
   it("rejects anything else", () => {
     for (const bad of ["", "abc", "1.234", "1,23", "--1", "1e3", "."]) {
       expect(parseCents(bad), bad).toBeNull();
+    }
+  });
+});
+
+describe("roundMoney", () => {
+  it("reads typed amounts the way the Budget page accepts them", () => {
+    expect(roundMoney("300")).toBe(30_000);
+    expect(roundMoney("300.5")).toBe(30_050);
+    expect(roundMoney("300.50")).toBe(30_050);
+    expect(roundMoney("$300.50")).toBe(30_050);
+    expect(roundMoney("1,200")).toBe(120_000);
+    expect(roundMoney(" -4.05 ")).toBe(-405);
+  });
+
+  it("rounds further decimals to the nearest cent, half away from zero", () => {
+    expect(roundMoney("2.344")).toBe(234);
+    expect(roundMoney("2.345")).toBe(235);
+    expect(roundMoney("2.3449")).toBe(234);
+    expect(roundMoney("0.999")).toBe(100);
+    expect(roundMoney("-2.345")).toBe(-235);
+    // No floating-point drift: 1.005 * 100 is 100.49999… as a float.
+    expect(roundMoney("1.005")).toBe(101);
+  });
+
+  it("rejects anything that is not a number", () => {
+    for (const bad of ["", "abc", "1,23", "--1", "1e3", ".", "12abc"]) {
+      expect(roundMoney(bad), bad).toBeNull();
     }
   });
 });

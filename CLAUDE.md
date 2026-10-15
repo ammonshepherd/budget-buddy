@@ -126,17 +126,28 @@ non-card budget balances − all envelope money (P included)`.
   envelopes always show). Others sit behind a "show unused" toggle. Money is
   never hidden. Rule lives in `envelopeInUse` in `budgetMath.ts`.
 - Imported transactions arrive Uncategorized (to review), except card credits.
-- The Budget page is for envelopes: no page title or summary totals; Available
-  to Assign is a sticky bar at the top, hidden when it is exactly $0.00 (shown
-  when positive or over assigned); the month picker sits above it; envelopes
-  are added with each group's + button; groups are added/deleted in Settings.
-- Envelope rows show name, what is left, then in this order: Saved (large,
-  purple, sparkling once above $0.00), Planned, Assigned, Refunded (only when
-  above $0.00), Spent, and Short if overspent; amounts are bold. Released from
-  Saved shows only when the row is opened (and used). Spent shown = max(0, net spent);
-  Refunded = refunds beyond the month's spending (`outflow` / `refunded` in
-  `EnvelopeMonth`; math unchanged). A card's payment envelope shows only
-  Available to pay (Saved + Remaining) and Remaining debt (Uncovered).
+- The Budget page is for envelopes (layout decided in v0.16.0): no page title or
+  summary totals; the month picker sits in a purple band that scrolls away;
+  Available to Assign is a sticky card pinned to the top, hidden when it is
+  exactly $0.00 (green when positive; red "Over Assigned" with the positive
+  amount when over); groups are
+  full-width bars with the name and a + button (no totals); envelopes are added
+  with each group's + button; groups are added/deleted in Settings.
+- Envelope rows run edge to edge. Line 1: name and a Saved pill ("Saved $X":
+  solid purple with sparkles once above $0.00, quiet at $0.00), and what is
+  left on the right (muted at $0.00). Line 2: Planned, Assigned and Spent
+  cells. Planned and Assigned are edited in place (tap; blur or Enter saves,
+  Escape cancels; amounts rounded to the cent by `roundMoney`; never
+  negative). Raising Assigned is blocked beyond Available to Assign, and
+  lowering it below what is spent is blocked. Spent shows "Spent · over"
+  (orange) when above Planned (`overPlan`, a hint only: not overspending).
+  Refunded (only when above $0.00) and Short (if overspent) sit on a line
+  below. Tapping line 1 opens Released from Saved (if used), Release from
+  Saved and Delete envelope. Spent shown = max(0, net spent); Refunded =
+  refunds beyond the month's spending (`outflow` / `refunded` in
+  `EnvelopeMonth`; math unchanged). A card's payment envelope shows Available
+  to pay (Saved + Remaining) and Remaining debt (Uncovered), no Saved pill,
+  and keeps an Assign form (negative to take back) when opened.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
   in a modal `<dialog>` (`TransactionDialog`). On Activity, transactions sit under

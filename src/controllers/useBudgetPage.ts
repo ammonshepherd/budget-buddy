@@ -1,12 +1,25 @@
 import { useMemo, useState } from "react";
-import { buildBudgetMonth, visibleGroups, type EnvelopeRow } from "../models/budgetMath";
+import {
+  buildBudgetMonth,
+  visibleGroups,
+  withEnvelopeMonth,
+  type EnvelopeRow,
+} from "../models/budgetMath";
 import { UserFacingError } from "../models/dataStore";
-import { formatCents } from "../models/money";
+import { formatCents, roundMoney } from "../models/money";
 import { addMonths, formatMonth, type Month } from "../models/month";
 import { budgetHref } from "../models/routes";
 import type { BudgetData } from "../models/types";
 import { requireCents, requireName } from "./input";
 import type { Budget } from "./useBudget";
+
+/** A typed Planned or Assigned amount: a number of dollars, zero or more, rounded to the cent. */
+function amountTyped(text: string, label: string) {
+  const cents = roundMoney(text);
+  if (cents === null) throw new UserFacingError(`${label}: enter an amount like 12.34`);
+  if (cents < 0) throw new UserFacingError(`${label} cannot be negative.`);
+  return cents;
+}
 
 export const nextPosition = (items: { position: number }[]) =>
   items.reduce((max, item) => Math.max(max, item.position + 1), 0);
@@ -33,7 +46,10 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     previousHref: budgetHref(addMonths(month, -1)),
     nextHref: budgetHref(addMonths(month, 1)),
 
-    /** Positive assigns from Available to Assign; negative takes money back. */
+    /**
+     * Adds to Assigned (negative takes money back). Used where there is no
+     * Assigned cell to edit: a card's payment envelope.
+     */
     assign: async (envelopeId: string, text: string) => {
       const amount = requireCents(text);
       if (amount === 0) return;
@@ -62,10 +78,43 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       );
     },
 
+    /**
+     * Sets this month's Planned (typed in the row; rounded to the cent).
+     * Planned is a forecast only: nothing else changes.
+     */
     setPlanned: async (envelopeId: string, text: string) => {
-      const planned = requireCents(text, "Planned");
-      if (planned < 0) throw new UserFacingError("Planned cannot be negative.");
-      await budget.change((store) => store.setPlanned(householdId, envelopeId, month, planned));
+      const planned = amountTyped(text, "Planned");
+      if (planned === envelope(envelopeId).planned) return;
+      await budget.change(
+        (store) => store.setPlanned(householdId, envelopeId, month, planned),
+        (current) => withEnvelopeMonth(current, envelopeId, month, { planned }),
+      );
+    },
+
+    /**
+     * Sets this month's Assigned to a new total (typed in the row). The
+     * difference comes from, or goes back to, Available to Assign.
+     */
+    setAssigned: async (envelopeId: string, text: string) => {
+      const row = envelope(envelopeId);
+      const change = amountTyped(text, "Assigned") - row.assigned;
+      if (change === 0) return;
+      if (change > view.assignable) {
+        throw new UserFacingError(
+          `Only ${formatCents(Math.max(0, view.assignable))} available to assign.`,
+        );
+      }
+      // Remaining = Assigned + Released − Spent may not drop below zero.
+      if (row.remaining + change < 0) {
+        const lowest = formatCents(Math.max(0, row.assigned - row.remaining));
+        throw new UserFacingError(
+          `Some is already spent: Assigned can go no lower than ${lowest}.`,
+        );
+      }
+      await budget.change(
+        (store) => store.adjustEnvelopeMonth(envelopeId, month, { assigned: change }),
+        (current) => withEnvelopeMonth(current, envelopeId, month, { assigned: change }),
+      );
     },
 
     addEnvelope: async (groupId: string, name: string) => {

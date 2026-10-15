@@ -53,7 +53,7 @@ test("import an envelope plan CSV for a month from Settings", async ({ page }) =
   await expect(card.getByRole("status")).toContainText("Imported 1 envelope");
 
   await page.goto("./#budget/2030-01");
-  await expect(page.locator("details.envelope")).toHaveCount(2);
+  await expect(page.locator("div.envelope")).toHaveCount(2);
   await expect(envelope(page, "Rent")).toContainText("Planned $1,300.00");
 });
 
