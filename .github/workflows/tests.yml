@@ -1,0 +1,54 @@
+# UI tests and tests against the test database, on every pull request.
+# Formatting, lint, unit tests and the build run in deploy.yml.
+# The test-database values come from repository secrets (see docs/testing.md);
+# without them the database tests skip instead of failing. Nothing here uses
+# the production project.
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui:
+    name: UI tests (in-memory store)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+
+  test-db:
+    name: Integration and UI tests (test database)
+    runs-on: ubuntu-latest
+    # One run at a time: every run reseeds the same two test users.
+    concurrency:
+      group: test-database
+      cancel-in-progress: false
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+      TEST_USER_A_EMAIL: test-a@budgetbuddy.test
+      TEST_USER_A_PASSWORD: ${{ secrets.TEST_USER_A_PASSWORD }}
+      TEST_USER_B_EMAIL: test-b@budgetbuddy.test
+      TEST_USER_B_PASSWORD: ${{ secrets.TEST_USER_B_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      # Reseeds the test database, then runs the integration tests.
+      - run: npm run test:integration
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui:db

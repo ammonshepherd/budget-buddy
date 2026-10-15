@@ -8,6 +8,8 @@
     "types": ["node", "vite/client"],
     "resolveJsonModule": true,
     "noEmit": true,
+    // scripts/ runs directly in Node, which needs the .ts in local imports.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
@@ -18,9 +20,12 @@
   "include": [
     "vite.config.ts",
     "playwright.config.ts",
+    "playwright.db.config.ts",
     "eslint.config.js",
     "e2e",
     "integration",
+    "e2e-db",
+    "scripts",
     "src/vite-env.d.ts"
   ]
 }

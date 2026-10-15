@@ -1,7 +1,7 @@
 {
   "name": "budget-buddy",
   "private": true,
-  "version": "0.17.1",
+  "version": "0.17.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,13 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "vitest run --project unit",
+    "test:unit": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:integration": "vitest run --project integration",
     "test:ui": "playwright test",
-    "test:integration": "vitest run integration"
+    "test:ui:db": "playwright test --config playwright.db.config.ts",
+    "db:seed:test": "node scripts/seed-test-db.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

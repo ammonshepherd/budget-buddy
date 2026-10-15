@@ -5,6 +5,11 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.test.example
+
+# Supabase CLI scratch (the linked project ref lives here)
+supabase/.temp/
+supabase/.branches/
 
 #ignore private files
 private/
@@ -19,3 +24,4 @@ dev-dist/
 playwright-report/
 test-results/
 dist-e2e/
+dist-e2e-db/
