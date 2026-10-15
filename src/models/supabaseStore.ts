@@ -5,6 +5,7 @@
 import { createClient, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "./database.types";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
+import { fetchAll } from "./fetchAll";
 import { asImportFormat } from "./transactionImport";
 
 type Client = SupabaseClient<Database>;
@@ -81,30 +82,69 @@ export function createSupabaseStore(
       check(household.error);
       if (!household.data) return null;
 
+      // Each query is paged, so each ends its order on a unique key: rows
+      // tied on the earlier columns then keep their place between pages.
+      const exact = { count: "exact" } as const;
       const [accounts, groups, envelopes, months, transactions, rules] = await Promise.all([
-        db().from("accounts").select("*").order("created_at"),
-        db().from("category_groups").select("*"),
-        db().from("categories").select("*"),
-        db().from("category_months").select("*"),
-        db()
-          .from("transactions")
-          .select("*, transaction_allocations(category_id, amount)")
-          .order("date", { ascending: false })
-          .order("created_at", { ascending: false }),
-        db().from("income_rules").select("id, pattern, account_id").order("created_at"),
+        fetchAll(
+          (from, to) =>
+            db()
+              .from("accounts")
+              .select("*", exact)
+              .order("created_at")
+              .order("id")
+              .range(from, to),
+          check,
+        ),
+        fetchAll(
+          (from, to) => db().from("category_groups").select("*", exact).order("id").range(from, to),
+          check,
+        ),
+        fetchAll(
+          (from, to) => db().from("categories").select("*", exact).order("id").range(from, to),
+          check,
+        ),
+        fetchAll(
+          (from, to) =>
+            db()
+              .from("category_months")
+              .select("*", exact)
+              .order("category_id")
+              .order("month")
+              .range(from, to),
+          check,
+        ),
+        fetchAll(
+          (from, to) =>
+            db()
+              .from("transactions")
+              .select("*, transaction_allocations(category_id, amount)", exact)
+              .order("date", { ascending: false })
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+              .range(from, to),
+          check,
+        ),
+        fetchAll(
+          (from, to) =>
+            db()
+              .from("income_rules")
+              .select("id, pattern, account_id", exact)
+              .order("created_at")
+              .order("id")
+              .range(from, to),
+          check,
+        ),
       ]);
-      for (const result of [accounts, groups, envelopes, months, transactions, rules]) {
-        check(result.error);
-      }
 
       return {
         household: household.data,
-        incomeRules: (rules.data ?? []).map((r) => ({
+        incomeRules: rules.map((r) => ({
           id: r.id,
           pattern: r.pattern,
           accountId: r.account_id,
         })),
-        accounts: (accounts.data ?? []).map((a) => ({
+        accounts: accounts.map((a) => ({
           id: a.id,
           name: a.name,
           type: a.type === "credit_card" ? "credit_card" : "checking",
@@ -114,22 +154,22 @@ export function createSupabaseStore(
           closedAt: a.closed_at,
           importFormat: asImportFormat(a.import_format),
         })),
-        groups: (groups.data ?? []).map((g) => ({ id: g.id, name: g.name, position: g.position })),
-        envelopes: (envelopes.data ?? []).map((c) => ({
+        groups: groups.map((g) => ({ id: g.id, name: g.name, position: g.position })),
+        envelopes: envelopes.map((c) => ({
           id: c.id,
           groupId: c.group_id,
           name: c.name,
           position: c.position,
           cardAccountId: c.card_account_id,
         })),
-        envelopeMonths: (months.data ?? []).map((m) => ({
+        envelopeMonths: months.map((m) => ({
           envelopeId: m.category_id,
           month: m.month,
           assigned: m.assigned,
           released: m.released,
           planned: m.planned,
         })),
-        transactions: (transactions.data ?? []).map((t) => ({
+        transactions: transactions.map((t) => ({
           id: t.id,
           accountId: t.account_id,
           date: t.date,

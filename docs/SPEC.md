@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.17.0.
+Version described: 0.17.1.
 
 ## 1. Purpose
 
@@ -46,7 +46,9 @@ Two implementations:
 
 - `supabaseStore` — the real one. Loads the whole household at once (`load()`
   returns `BudgetData`: household, accounts, groups, envelopes, envelope months,
-  transactions with allocations, income rules) and writes through table
+  transactions with allocations, income rules; each table is read in pages by
+  `fetchAll`, since Supabase returns at most 1000 rows per request without
+  saying so) and writes through table
   inserts/updates for simple changes and SQL functions for multi-row ones.
 - `memoryStore` — in-memory, any password signs in. Used when the build sets
   `VITE_DATA_STORE=memory` (the Playwright build). It must enforce the same rules
@@ -158,7 +160,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.17.0", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.17.1", and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
