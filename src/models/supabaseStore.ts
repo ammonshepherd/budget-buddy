@@ -405,6 +405,7 @@ export function createSupabaseStore(
           memo: r.memo,
           import_key: r.importKey,
           is_income: r.isIncome,
+          match_id: r.matchId,
         })),
       });
       check(error);

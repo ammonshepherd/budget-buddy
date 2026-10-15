@@ -134,6 +134,11 @@ non-card budget balances − all envelope money (P included)`.
   envelopes always show). Others sit behind a "show unused" toggle. Money is
   never hidden. Rule lives in `envelopeInUse` in `budgetMath.ts`.
 - Imported transactions arrive Uncategorized (to review), except card credits.
+- A new bank row matching a transaction typed into the same account (same
+  amount, within 10 days, `findImportMatches` in `transactionImport.ts`) is
+  matched instead of added: the typed transaction takes the row's import key
+  (cleared) and keeps everything entered. The preview lists matches with a
+  Match checkbox (unticked = import as new).
 - The Budget page is for envelopes (layout decided in v0.16.0): no page title or
   summary totals; the month picker sits in a purple band that scrolls away;
   Available to Assign is a sticky card pinned to the top, hidden when it is
@@ -223,8 +228,9 @@ left plus Saved / Planned / Assigned / Refunded / Spent per envelope; month pick
 kept in the URL; linked transfers (both sides in one entry) so transfers are not
 spending.
 
-Later: matching typed transactions to imported ones (transfers already
-link to matching bank rows), reconciliation, tithing/fast-offering rules. See
+Later: matching a transaction typed after its bank row was imported (import
+already matches typed transactions, and transfers link to bank rows),
+reconciliation, tithing/fast-offering rules. See
 `docs/SPEC.md` §9 for everything not built yet.
 
 ## Supabase state
