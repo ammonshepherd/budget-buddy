@@ -375,4 +375,5 @@ Decided or wanted, but not in the app: copy last month's spending into Planned;
 moving an envelope to another group; matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
-income rule (delete and re-add instead).
+income rule (delete and re-add instead); an envelope icon next to each envelope
+name on the Budget page and in Settings.
