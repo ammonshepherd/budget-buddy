@@ -6,6 +6,7 @@
 import { paymentEnvelopeName } from "./accounts";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
 import { nameKey } from "./envelopePlan";
+import { MAX_SPLIT_LINES } from "./splits";
 import type { BudgetData, Transaction } from "./types";
 
 export function createMemoryStore(): DataStore {
@@ -201,18 +202,37 @@ export function createMemoryStore(): DataStore {
 
     async saveTransaction(_householdId, input) {
       const b = budget();
-      if (b.envelopes.find((e) => e.id === input.envelopeId)?.cardAccountId) {
+      const lines = input.allocations;
+      if (lines.some((a) => b.envelopes.find((e) => e.id === a.envelopeId)?.cardAccountId)) {
         throw new UserFacingError(
           "A card's payment envelope fills itself; choose another envelope",
         );
       }
-      if (input.isIncome && (input.amount <= 0 || input.envelopeId)) {
+      if (lines.some((a) => !b.envelopes.some((e) => e.id === a.envelopeId))) {
+        throw new UserFacingError("Envelope not found");
+      }
+      if (lines.length > MAX_SPLIT_LINES) {
+        throw new UserFacingError(`Split into at most ${MAX_SPLIT_LINES} envelopes`);
+      }
+      if (new Set(lines.map((a) => a.envelopeId)).size !== lines.length) {
+        throw new UserFacingError("Each envelope can appear only once in a split");
+      }
+      if (input.isIncome && (input.amount <= 0 || lines.length > 0)) {
         throw new UserFacingError("Income is money coming in, without an envelope");
       }
       const onCard = b.accounts.find((a) => a.id === input.accountId)?.type === "credit_card";
-      if (onCard && input.amount > 0 && (input.envelopeId || input.isIncome)) {
+      if (onCard && input.amount > 0 && (lines.length > 0 || input.isIncome)) {
         throw new UserFacingError(
           "A card credit lowers what you owe; it cannot go in an envelope or be Income",
+        );
+      }
+      if (lines.some((a) => a.amount === 0 || Math.sign(a.amount) !== Math.sign(input.amount))) {
+        throw new UserFacingError("Every line of a split goes the same way as the transaction");
+      }
+      const sum = lines.reduce((total, a) => total + a.amount, 0);
+      if (lines.length > 0 && sum !== input.amount) {
+        throw new UserFacingError(
+          `Allocations (${sum}) must sum to the transaction amount (${input.amount})`,
         );
       }
       if (input.id) releaseTransfer(input.id);
@@ -228,9 +248,7 @@ export function createMemoryStore(): DataStore {
         isIncome: input.isIncome,
         transferId: null,
         voided: false,
-        allocations: input.envelopeId
-          ? [{ envelopeId: input.envelopeId, amount: input.amount }]
-          : [],
+        allocations: lines.map((a) => ({ ...a })),
         importKey: previous?.importKey ?? null,
       };
       const index = b.transactions.findIndex((t) => t.id === tx.id);

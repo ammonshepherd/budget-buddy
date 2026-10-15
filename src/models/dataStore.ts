@@ -9,7 +9,7 @@ import type { Month } from "./month";
 import type { ImportedTransaction, ImportFormat } from "./transactionImport";
 import type { NewIncomeRule } from "./incomeRules";
 import type { TransferInput } from "./transfers";
-import type { AccountType, BudgetData, IsoDate } from "./types";
+import type { AccountType, Allocation, BudgetData, IsoDate } from "./types";
 
 export interface UserSession {
   userId: string;
@@ -36,10 +36,14 @@ export interface TransactionInput {
   amount: Cents;
   payee: string;
   memo: string;
-  /** An inflow to Available to Assign (needs envelopeId null and a positive amount). */
+  /** An inflow to Available to Assign (needs no allocations and a positive amount). */
   isIncome: boolean;
-  /** null = Uncategorized. Transfers are saved with saveTransfer. */
-  envelopeId: string | null;
+  /**
+   * One line per envelope, each with the transaction's sign, summing to the
+   * amount (several = a split; see splits.ts). Empty = Uncategorized.
+   * Transfers are saved with saveTransfer.
+   */
+  allocations: Allocation[];
 }
 
 export interface DataStore {

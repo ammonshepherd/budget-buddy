@@ -51,7 +51,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $80.00 short");
-  await cover.getByRole("radio", { name: /Available to Assign/ }).check();
+  await cover.getByLabel(/cover .* from/i).selectOption("available");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(available(page)).toContainText("$320.00");
   await expect(groceries).toContainText("Assigned $180.00");

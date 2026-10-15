@@ -145,7 +145,11 @@ non-card budget balances − all envelope money (P included)`.
   no Edit/Delete links. Transactions to review show "Uncategorized" on an amber
   label; Activity's "To review" list sits above the transactions.
 - Categories are applied through `transaction_allocations` (one row for a normal
-  transaction, several for a split). Allocations must sum to the transaction amount.
+  transaction, several for a split). Allocations must sum to the transaction amount,
+  each has the transaction's sign (no mixed refund lines) and an envelope appears
+  once. Any outflow (card purchases too) or non-card inflow can be split; a split
+  that overdraws several envelopes prompts to cover them one at a time, saving
+  only after the last.
 - Accounts are closed (soft delete), never deleted with their transactions.
 - An account's opening balance is its balance on the opening date, before any
   of its transactions, so the opening date can be edited only up to the date
@@ -174,12 +178,12 @@ Checking and credit card accounts; CSV import with preview, invalid-row report a
 prevention (bank ID, else date+amount+description fingerprint); transaction
 add/edit/delete; envelope groups and envelopes add/delete (rename and reorder not
 built yet);
-assign transactions to envelopes; Budget page as the main screen showing what is
+assign transactions to envelopes, including splits; Budget page as the main screen showing what is
 left plus Saved / Planned / Assigned / Refunded / Spent per envelope; month picker
 kept in the URL; linked transfers (both sides in one entry) so transfers are not
 spending.
 
-Later: split UI, matching typed transactions to imported ones (transfers already
+Later: matching typed transactions to imported ones (transfers already
 link to matching bank rows), reconciliation, tithing/fast-offering rules. See
 `docs/SPEC.md` §9 for everything not built yet.
 

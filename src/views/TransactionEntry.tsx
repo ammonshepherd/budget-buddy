@@ -4,13 +4,16 @@ import type { Budget } from "../controllers/useBudget";
 import {
   blankTransactionForm,
   INCOME,
+  SPLIT,
   TRANSFER,
   useTransactionEntry,
   type CoverChoice,
   type CoverPlan,
   type TransactionForm,
 } from "../controllers/useTransactionEntry";
+import { formatCents } from "../models/money";
 import { formatMonth } from "../models/month";
+import { MAX_SPLIT_LINES, type SplitLine } from "../models/splits";
 import type { BudgetData } from "../models/types";
 import { ErrorMessage, Money } from "./components";
 import { PlusIcon } from "./icons";
@@ -54,7 +57,15 @@ export function TransactionEntry({
     );
   }
   return plan ? (
-    <CoverCard entry={entry} plan={plan} onDone={onDone} onBack={() => setPlan(null)} />
+    <CoverCard
+      // A new card per short envelope, so its choice starts fresh.
+      key={plan.envelopeId}
+      entry={entry}
+      plan={plan}
+      onNext={setPlan}
+      onDone={onDone}
+      onBack={() => setPlan(null)}
+    />
   ) : (
     <TransactionEditor
       entry={entry}
@@ -184,12 +195,18 @@ function TransactionEditor({
   const transferNote = entry.describeTransfer(form);
   const transferOptions = entry.transferOptions(form);
   const update = (change: Partial<TransactionForm>) => {
-    const next = { ...form, ...change };
+    let next = { ...form, ...change };
+    if (next.category === SPLIT && form.category !== SPLIT) next = entry.startSplit(form);
     // A card credit has no envelope: drop one picked before switching to it.
     const keep = next.category === "" || next.category === TRANSFER;
-    setForm(entry.isCardCredit(next) && !keep ? { ...next, category: "" } : next);
+    if (entry.isCardCredit(next) && !keep) next = { ...next, category: "" };
+    if (next.category !== SPLIT) next = { ...next, split: [] };
+    setForm(next);
     save.clearError();
   };
+  const updateLine = (index: number, change: Partial<SplitLine>) =>
+    update({ split: form.split.map((line, i) => (i === index ? { ...line, ...change } : line)) });
+  const left = entry.leftToSplit(form);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -242,15 +259,8 @@ function TransactionEditor({
               <option value={INCOME} disabled={form.direction === "outflow"}>
                 Income (to Available to Assign)
               </option>
-              {entry.groups.map((group) => (
-                <optgroup key={group.id} label={group.name}>
-                  {group.envelopes.map((envelope) => (
-                    <option key={envelope.id} value={envelope.id}>
-                      {envelope.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
+              <EnvelopeOptions entry={entry} />
+              <option value={SPLIT}>Split across envelopes</option>
             </>
           )}
           <option value={TRANSFER} disabled={entry.openAccounts.length < 2}>
@@ -258,6 +268,72 @@ function TransactionEditor({
           </option>
         </select>
       </label>
+      {form.category === SPLIT && (
+        <fieldset className="split">
+          <legend>Split</legend>
+          {form.split.map((line, index) => (
+            <div className="split-line" key={index}>
+              <select
+                aria-label={`Envelope ${index + 1}`}
+                value={line.envelopeId}
+                onChange={(e) => updateLine(index, { envelopeId: e.target.value })}
+              >
+                <option value="">Choose an envelope</option>
+                <EnvelopeOptions entry={entry} />
+              </select>
+              <input
+                aria-label={`Amount ${index + 1}`}
+                value={line.amount}
+                inputMode="decimal"
+                placeholder="0.00"
+                onChange={(e) => updateLine(index, { amount: e.target.value })}
+              />
+              <button
+                className="text-button split-remove"
+                type="button"
+                aria-label={`Remove line ${index + 1}`}
+                title="Remove line"
+                disabled={form.split.length <= 2}
+                onClick={() => update({ split: form.split.filter((_, i) => i !== index) })}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <div className="split-footer">
+            <button
+              className="text-button"
+              type="button"
+              disabled={form.split.length >= MAX_SPLIT_LINES}
+              onClick={() => update({ split: [...form.split, { envelopeId: "", amount: "" }] })}
+            >
+              + Add line
+            </button>
+            <span role="status" className={left === 0 ? "split-done" : "split-left"}>
+              {left > 0 ? (
+                <>
+                  <Money cents={left} /> left to split
+                </>
+              ) : left < 0 ? (
+                <>
+                  <Money cents={-left} /> too much
+                </>
+              ) : (
+                "Adds up"
+              )}
+            </span>
+          </div>
+          {left > 0 && (
+            <button
+              className="text-button"
+              type="button"
+              onClick={() => update({ split: entry.fillRest(form, form.split.length - 1) })}
+            >
+              Put the rest in the last line
+            </button>
+          )}
+        </fieldset>
+      )}
       <label className="field">
         Account
         <select value={form.accountId} onChange={(e) => update({ accountId: e.target.value })}>
@@ -340,14 +416,33 @@ function TransactionEditor({
   );
 }
 
+/** The envelopes a transaction can go in, under their groups. */
+function EnvelopeOptions({ entry }: { entry: Entry }) {
+  return entry.groups.map((group) => (
+    <optgroup key={group.id} label={group.name}>
+      {group.envelopes.map((envelope) => (
+        <option key={envelope.id} value={envelope.id}>
+          {envelope.name}
+        </option>
+      ))}
+    </optgroup>
+  ));
+}
+
+/** The CoverChoice a "Cover from" option stands for. */
+const AVAILABLE = "available";
+
 function CoverCard({
   entry,
   plan,
+  onNext,
   onDone,
   onBack,
 }: {
   entry: Entry;
   plan: CoverPlan;
+  /** A split with another short envelope: show its prompt. */
+  onNext: (plan: CoverPlan) => void;
   onDone: () => void;
   onBack: () => void;
 }) {
@@ -357,15 +452,21 @@ function CoverCard({
       : plan.sources[0]
         ? { fromEnvelopeId: plan.sources[0].id }
         : plan.canUseAvailable
-          ? "available"
+          ? AVAILABLE
           : null,
   );
   const cover = useAsyncAction(entry.coverAndSave);
   const noWayToCover = plan.stillShort > 0 && plan.sources.length === 0 && !plan.canUseAvailable;
-  const chosen = (id: string) => typeof choice === "object" && choice?.fromEnvelopeId === id;
+  const step = plan.covered.length + 1;
+  const steps = step + plan.moreShort;
 
   return (
     <section className="cover-card" aria-labelledby="cover-title" role="alertdialog">
+      {steps > 1 && (
+        <p className="cover-step">
+          Envelope {step} of {steps} to cover
+        </p>
+      )}
       <h3 id="cover-title">
         {plan.envelopeName} would be <Money cents={plan.shortfall} /> short in{" "}
         {formatMonth(plan.month)}
@@ -377,29 +478,29 @@ function CoverCard({
             Release <Money cents={plan.fromSaved} /> from {plan.envelopeName}’s Saved.
           </li>
         )}
-        {plan.stillShort > 0 && (
+        {plan.stillShort > 0 && !noWayToCover && (
           <li>
-            Then cover <Money cents={plan.stillShort} /> from:
-            {plan.sources.map((source) => (
-              <label className="choice" key={source.id}>
-                <input
-                  type="radio"
-                  name="cover"
-                  checked={chosen(source.id)}
-                  onChange={() => setChoice({ fromEnvelopeId: source.id })}
-                />
-                {source.name} (has <Money cents={source.remaining} />)
-              </label>
-            ))}
-            <label className="choice">
-              <input
-                type="radio"
-                name="cover"
-                disabled={!plan.canUseAvailable}
-                checked={choice === "available"}
-                onChange={() => setChoice("available")}
-              />
-              Available to Assign (<Money cents={plan.available} /> free)
+            <label className="field">
+              <span>
+                {plan.fromSaved > 0 ? "Then cover" : "Cover"} <Money cents={plan.stillShort} /> from
+              </span>
+              <select
+                value={choice === AVAILABLE ? AVAILABLE : (choice?.fromEnvelopeId ?? "")}
+                onChange={(e) =>
+                  setChoice(
+                    e.target.value === AVAILABLE ? AVAILABLE : { fromEnvelopeId: e.target.value },
+                  )
+                }
+              >
+                {plan.sources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.name} (has {formatCents(source.remaining)})
+                  </option>
+                ))}
+                <option value={AVAILABLE} disabled={!plan.canUseAvailable}>
+                  Available to Assign ({formatCents(plan.available)} free)
+                </option>
+              </select>
             </label>
           </li>
         )}
@@ -423,10 +524,13 @@ function CoverCard({
           type="button"
           disabled={cover.pending || noWayToCover}
           onClick={async () => {
-            if ((await cover.run(plan, choice)).ok) onDone();
+            const result = await cover.run(plan, choice);
+            if (!result.ok) return;
+            if (result.value.kind === "cover") onNext(result.value.plan);
+            else onDone();
           }}
         >
-          Cover and save
+          {plan.moreShort > 0 ? "Cover and continue" : "Cover and save"}
         </button>
         <button className="secondary-button" type="button" onClick={onBack}>
           Back

@@ -119,7 +119,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   // Visa payment holds only $40, so the other $100 must be covered.
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Visa payment would be $100.00 short");
-  await cover.getByRole("radio", { name: /Available to Assign/ }).check();
+  await cover.getByLabel(/cover .* from/i).selectOption("available");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(dialog).toBeHidden();
 
