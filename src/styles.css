@@ -1695,3 +1695,98 @@ div.sheet-field .sheet-field-value {
   font-size: 1.375rem;
   font-weight: 800;
 }
+
+/* ---- v0.19.0: move envelopes between groups ------------------------------ */
+
+/* A select that looks like a small purple pill with a ▾ (the envelope sheet's
+   group, and "Move to…" in the group sheet). */
+.group-picker,
+.move-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.group-picker select,
+.move-picker select {
+  padding: 0.25rem 1.6rem 0.25rem 0.65rem;
+  border: 1px solid var(--bb-purple-line);
+  border-radius: 999px;
+  background: var(--bb-purple-tint);
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
+}
+
+.group-picker > span,
+.move-picker > span {
+  position: absolute;
+  inset-inline-end: 0.6rem;
+  color: var(--bb-purple);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+.group-picker select.sheet-eyebrow {
+  color: var(--bb-purple);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.move-picker select {
+  color: var(--bb-purple);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.group-envelope {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.3rem;
+}
+
+.group-envelope > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* An envelope's name in the group sheet: tap to rename. */
+.row-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.row-name svg {
+  flex: none;
+  inline-size: 0.95rem;
+  block-size: 0.95rem;
+  fill: none;
+  stroke: var(--bb-muted);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.title-input.row {
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.move-status {
+  margin: 0;
+  color: var(--bb-muted);
+  font-size: 0.8rem;
+}
+
+.move-status:empty {
+  display: none;
+}

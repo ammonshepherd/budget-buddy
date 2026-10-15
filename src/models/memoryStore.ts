@@ -182,6 +182,16 @@ export function createMemoryStore(): DataStore {
       }
       envelope.name = name;
     },
+    async moveEnvelope(envelopeId, groupId, position) {
+      const b = budget();
+      const envelope = b.envelopes.find((e) => e.id === envelopeId);
+      if (!envelope) throw new UserFacingError("Envelope not found");
+      if (!b.groups.some((g) => g.id === groupId)) throw new UserFacingError("Group not found");
+      if (envelope.cardAccountId && envelope.groupId !== groupId) {
+        throw new UserFacingError("A card's payment envelope stays in its group");
+      }
+      Object.assign(envelope, { groupId, position });
+    },
     async reorderGroups(_householdId, groupIds) {
       reorder(budget().groups, groupIds, "The groups have changed; reload and try again");
     },
