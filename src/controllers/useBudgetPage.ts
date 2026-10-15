@@ -7,6 +7,7 @@ import {
 } from "../models/budgetMath";
 import { UserFacingError } from "../models/dataStore";
 import { envelopeActivity, planCheck, remainingParts } from "../models/envelopeDetail";
+import { monthHasPlan, planToCopy, type PlanSource } from "../models/envelopePlan";
 import { formatCents, roundMoney } from "../models/money";
 import { addMonths, formatMonth, type Month } from "../models/month";
 import { budgetHref } from "../models/routes";
@@ -28,6 +29,23 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
   const view = useMemo(() => buildBudgetMonth(data, month), [data, month]);
   const [showUnused, setShowUnused] = useState(false);
   const householdId = data.household.id;
+  const previous = addMonths(month, -1);
+  // Whether to offer ways to start the plan is decided when the month opens
+  // (it has no plan: every Planned at $0.00), not after each edit, so typing
+  // the first Planned does not make the page jump under the user's finger.
+  const [offer, setOffer] = useState({ month, show: !monthHasPlan(view) });
+  if (offer.month !== month) setOffer({ month, show: !monthHasPlan(view) });
+  const planStart = useMemo(
+    () =>
+      offer.show && offer.month === month
+        ? {
+            previousLabel: formatMonth(previous),
+            planned: planToCopy(data, month, "planned"),
+            spent: planToCopy(data, month, "spent"),
+          }
+        : null,
+    [data, month, previous, offer],
+  );
 
   const envelope = (id: string): EnvelopeRow => {
     const row = view.groups.flatMap((g) => g.envelopes).find((e) => e.id === id);
@@ -44,6 +62,31 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     monthLabel: formatMonth(month),
     previousHref: budgetHref(addMonths(month, -1)),
     nextHref: budgetHref(addMonths(month, 1)),
+
+    /**
+     * Ways to start this month's plan, or null if it had one when opened:
+     * copy last month's Planned or Spent (empty lists when there is nothing
+     * to copy), or upload a plan CSV.
+     */
+    planStart,
+    /** Stops offering ways to start the plan (after an upload). */
+    planStarted: () => setOffer({ month, show: false }),
+
+    /** Fills this month's Planned (where still $0.00) from last month's Planned or Spent. */
+    copyPlan: async (source: PlanSource) => {
+      const rows = planStart?.[source] ?? [];
+      if (rows.length === 0)
+        throw new UserFacingError(`Nothing to copy from ${formatMonth(previous)}.`);
+      await budget.change(
+        (store) => store.setPlannedAmounts(householdId, month, rows),
+        (current) =>
+          rows.reduce(
+            (next, row) => withEnvelopeMonth(next, row.envelopeId, month, { planned: row.planned }),
+            current,
+          ),
+      );
+      setOffer({ month, show: false });
+    },
 
     /** Every group, in order (to move an envelope to). */
     allGroups: [...data.groups]

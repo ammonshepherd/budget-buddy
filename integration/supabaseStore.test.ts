@@ -198,6 +198,23 @@ describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
       store.importEnvelopePlan(householdId, month, [{ group: run, envelope: "", planned: 1 }]),
     ).rejects.toThrow(UserFacingError);
 
+    // Copying a plan into the next month sets several Planned at once, all or nothing.
+    const [rent, water] = ["Rent", "Water"].map((n) => envelopes.find((e) => e.name === n)!.id);
+    await store.setPlannedAmounts(householdId, "2030-02", [
+      { envelopeId: rent!, planned: 130_000 },
+      { envelopeId: water!, planned: 4_550 },
+    ]);
+    await expect(
+      store.setPlannedAmounts(householdId, "2030-02", [
+        { envelopeId: rent!, planned: 1 },
+        { envelopeId: water!, planned: -1 },
+      ]),
+    ).rejects.toThrow();
+    const february = (await store.load())!.envelopeMonths.filter((r) => r.month === "2030-02");
+    expect([rent, water].map((id) => february.find((r) => r.envelopeId === id)?.planned)).toEqual([
+      130_000, 4_550,
+    ]);
+
     for (const envelope of envelopes) await store.deleteEnvelope(envelope.id);
     await store.deleteGroup(groups[0]!.id);
     await store.signOut();

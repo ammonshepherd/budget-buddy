@@ -213,6 +213,18 @@ export function createMemoryStore(): DataStore {
     async setPlanned(_householdId, envelopeId, month, planned) {
       envelopeMonth(envelopeId, month).planned = planned;
     },
+    async setPlannedAmounts(_householdId, month, rows) {
+      const b = budget();
+      for (const row of rows) {
+        if (!b.envelopes.some((e) => e.id === row.envelopeId)) {
+          throw new UserFacingError("Envelope not found");
+        }
+        if (!Number.isSafeInteger(row.planned) || row.planned < 0) {
+          throw new UserFacingError("Planned cannot be negative.");
+        }
+      }
+      for (const row of rows) envelopeMonth(row.envelopeId, month).planned = row.planned;
+    },
     async importEnvelopePlan(_householdId, month, rows) {
       const b = budget();
       const byPosition = <T extends { position: number }>(items: T[]) =>

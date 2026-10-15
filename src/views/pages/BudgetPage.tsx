@@ -1,12 +1,14 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { messageOf } from "../../controllers/errors";
 import type { Budget } from "../../controllers/useBudget";
+import { useAsyncAction } from "../../controllers/useAsyncAction";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
 import type { EnvelopeRow, GroupRows } from "../../models/budgetMath";
 import { centsToInput, formatCents } from "../../models/money";
 import type { Month } from "../../models/month";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
+import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
 
 type Page = ReturnType<typeof useBudgetPage>;
@@ -26,6 +28,7 @@ export function BudgetPage({
   const [openId, setOpenId] = useState<string | null>(null);
   const detail = openId ? page.detail(openId) : null;
   const over = view.overAssigned > 0;
+  const [uploading, setUploading] = useState(false);
 
   return (
     <section className="page-view budget-page" aria-labelledby="budget-title">
@@ -85,6 +88,8 @@ export function BudgetPage({
         </p>
       )}
 
+      {page.planStart && <PlanStart page={page} onUpload={() => setUploading(true)} />}
+
       {page.groups.map((group) => (
         <GroupSection key={group.id} group={group} page={page} onOpen={setOpenId} />
       ))}
@@ -107,6 +112,81 @@ export function BudgetPage({
       >
         {() => <EnvelopeSheet detail={detail!} page={page} onClose={() => setOpenId(null)} />}
       </Sheet>
+
+      <Sheet
+        open={uploading}
+        label={`Upload a plan for ${page.monthLabel}`}
+        className="sheet bottom"
+        onClose={() => setUploading(false)}
+      >
+        {() => (
+          <div className="envelope-sheet">
+            <div className="sheet-handle" aria-hidden="true" />
+            <header className="sheet-header">
+              <span className="sheet-eyebrow">Plan for {page.monthLabel}</span>
+              <button
+                className="sheet-close"
+                type="button"
+                aria-label="Close"
+                onClick={() => setUploading(false)}
+              >
+                ×
+              </button>
+            </header>
+            <EnvelopePlanImport
+              budget={budget}
+              data={data}
+              month={month}
+              onDone={() => {
+                setUploading(false);
+                page.planStarted();
+              }}
+            />
+          </div>
+        )}
+      </Sheet>
+    </section>
+  );
+}
+
+/**
+ * Shown when the month opens with no plan (every Planned at $0.00): start it
+ * from last month's Planned or Spent, or from a plan CSV. Copy buttons appear
+ * only when last month has something to copy.
+ */
+function PlanStart({ page, onUpload }: { page: Page; onUpload: () => void }) {
+  const copy = useAsyncAction(page.copyPlan);
+  const start = page.planStart!;
+  return (
+    <section className="plan-start" aria-labelledby="plan-start-title">
+      <h2 id="plan-start-title">No plan for {page.monthLabel} yet</h2>
+      <p>Fill in Planned for every envelope at once, then adjust it here.</p>
+      <div className="plan-start-actions">
+        {start.planned.length > 0 && (
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={copy.pending}
+            onClick={() => void copy.run("planned")}
+          >
+            Copy {start.previousLabel}’s Planned
+          </button>
+        )}
+        {start.spent.length > 0 && (
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={copy.pending}
+            onClick={() => void copy.run("spent")}
+          >
+            Copy {start.previousLabel}’s Spent
+          </button>
+        )}
+        <button className="secondary-button" type="button" onClick={onUpload}>
+          Upload a plan CSV
+        </button>
+      </div>
+      <ErrorMessage error={copy.error} />
     </section>
   );
 }
