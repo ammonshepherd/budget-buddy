@@ -32,7 +32,7 @@ export function EnvelopeGroups({ budget, data }: { budget: Budget; data: BudgetD
       <p className="empty-state">
         Groups hold envelopes, for example “Bills” or “Everyday”. Add envelopes to a group with its
         + button on the Budget page. Drag the dots to change the order; tap a group to rename it or
-        order its envelopes.
+        organize its envelopes.
       </p>
       {page.groups.length > 0 && (
         <SortableList
@@ -73,9 +73,20 @@ export function EnvelopeGroups({ budget, data }: { budget: Budget; data: BudgetD
   );
 }
 
-/** One group: its name to edit, its envelopes to reorder, and Delete when empty. */
+/**
+ * One group: its name to edit; its envelopes to reorder, rename and move to
+ * another group; and Delete when empty.
+ */
 function GroupSheet({ group, page, onClose }: { group: Group; page: Page; onClose: () => void }) {
   const reorder = useAsyncAction((ids: string[]) => page.reorderEnvelopes(group.id, ids));
+  // What the last move did, read out and shown: the envelope leaves this list.
+  const [moved, setMoved] = useState<string | null>(null);
+  const move = useAsyncAction(async (envelopeId: string, name: string, groupId: string) => {
+    setMoved(null);
+    await page.moveEnvelope(envelopeId, groupId);
+    setMoved(`Moved ${name} to ${page.groups.find((g) => g.id === groupId)?.name ?? "its group"}.`);
+  });
+  const otherGroups = page.groups.filter((g) => g.id !== group.id);
   const remove = useAsyncAction(async () => {
     await page.deleteGroup(group.id);
     onClose();
@@ -111,15 +122,55 @@ function GroupSheet({ group, page, onClose }: { group: Group; page: Page; onClos
               items={group.envelopes}
               onReorder={(ids) => void reorder.run(ids)}
             >
-              {(envelope) => <span className="item item-title">{envelope.name}</span>}
+              {(envelope) =>
+                envelope.cardAccountId ? (
+                  // Named after its card, and kept with the other card payments.
+                  <span className="item item-title">{envelope.name}</span>
+                ) : (
+                  <div className="group-envelope">
+                    <EditableTitle
+                      row
+                      name={envelope.name}
+                      label="Envelope name"
+                      onSave={(name) => page.renameEnvelope(envelope.id, name)}
+                    />
+                    {otherGroups.length > 0 && (
+                      <span className="move-picker">
+                        <select
+                          aria-label={`Move ${envelope.name} to another group`}
+                          value=""
+                          disabled={move.pending}
+                          onChange={(event) =>
+                            void move.run(envelope.id, envelope.name, event.target.value)
+                          }
+                        >
+                          <option value="" disabled>
+                            Move to…
+                          </option>
+                          {otherGroups.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span aria-hidden="true">▾</span>
+                      </span>
+                    )}
+                  </div>
+                )
+              }
             </SortableList>
             <p className="empty-state">
-              Drag the dots to change the order on the Budget page. Rename an envelope by tapping it
-              on the Budget page.
+              Drag the dots to change the order on the Budget page. Tap a name to rename it; use
+              Move to… to put it in another group (its money and history go with it).
             </p>
           </>
         )}
         <ErrorMessage error={reorder.error} />
+        <ErrorMessage error={move.error} />
+        <p className="move-status" role="status">
+          {moved}
+        </p>
       </section>
 
       {group.envelopes.length === 0 ? (

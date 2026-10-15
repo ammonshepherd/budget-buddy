@@ -154,3 +154,26 @@ describe("memory store rename and reorder", () => {
     expect(data.groups.map((g) => g.name)).not.toContain("Credit card payments");
   });
 });
+
+describe("memory store moving envelopes", () => {
+  it("moves an envelope to another group, but not a card's payment envelope", async () => {
+    const { store, id, visaPayment } = await setUp();
+    let data = (await store.load())!;
+    await store.addGroup(data.household.id, "Bills", 5);
+    data = (await store.load())!;
+    const bills = data.groups.find((g) => g.name === "Bills")!;
+
+    await store.moveEnvelope(id("A"), bills.id, 0);
+    data = (await store.load())!;
+    expect(data.envelopes.find((e) => e.id === id("A"))).toMatchObject({
+      groupId: bills.id,
+      position: 0,
+    });
+    await expect(store.moveEnvelope(visaPayment, bills.id, 1)).rejects.toThrow(
+      /stays in its group/,
+    );
+    await expect(store.moveEnvelope(id("B"), "no-such-group", 0)).rejects.toThrow(
+      /Group not found/,
+    );
+  });
+});

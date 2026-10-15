@@ -219,7 +219,10 @@ household yet.
   cells.
 - Tapping an envelope's top line opens its sheet ("⟨name⟩ envelope", a bottom
   sheet; close with × or Escape):
-  - group name over the envelope name, with a pencil button to rename it
+  - the group as a small purple picker ("Group for ⟨name⟩"; choosing another
+    group moves the envelope to the bottom of it, money and history included;
+    a card's payment envelope shows its group as plain text) over the envelope
+    name, with a pencil button to rename it
     ("Envelope name"; blur or Enter saves, Escape puts the name back; not on
     a card's payment envelope, which is named after its card);
   - "Remaining this month" (large) and how it adds up ("$300.00 assigned +
@@ -300,7 +303,10 @@ Envelope groups; Import transactions; Income rules; Import envelope plan.
   left of each row (mouse, touch, or keyboard: Space, arrows, Space) to reorder
   the groups on the Budget page, and "Group name" + Add group. Tapping a group
   opens its bottom sheet: the name with a pencil button to rename it, its
-  envelopes with drag handles to reorder them, and Delete group (confirm) when
+  envelopes with drag handles to reorder them (tap a name to rename it; a
+  "Move to…" picker moves it to the bottom of another group and says "Moved
+  ⟨name⟩ to ⟨group⟩."; a card's payment envelope can do neither), and Delete
+  group (confirm) when
   it has no envelopes ("Only an empty group can be deleted." otherwise). A
   new order shows at once and is saved for the whole list.
 - **Import transactions:** see §6.
@@ -372,7 +378,7 @@ Envelopes not in the file are left alone.
 ## 9. Not built yet
 
 Decided or wanted, but not in the app: copy last month's spending into Planned;
-moving an envelope to another group; matching
+matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead); an envelope icon next to each envelope

@@ -1,7 +1,7 @@
 import type { BudgetData } from "../models/types";
 import { requireName } from "./input";
 import type { Budget } from "./useBudget";
-import { nextPosition } from "./useBudgetPage";
+import { envelopeEdits, nextPosition } from "./envelopeEdits";
 
 const byPosition = <T extends { position: number; name: string }>(a: T, b: T) =>
   a.position - b.position || a.name.localeCompare(b.name);
@@ -13,9 +13,14 @@ function withOrder<T extends { id: string; position: number }>(items: T[], ids: 
   );
 }
 
-/** Settings → Envelope groups: add, rename, reorder, and delete empty groups; reorder envelopes. */
+/**
+ * Settings → Envelope groups: add, rename, reorder, and delete empty groups;
+ * rename, reorder and move envelopes.
+ */
 export function useEnvelopeGroups(budget: Budget, data: BudgetData) {
   return {
+    ...envelopeEdits(budget, data),
+
     groups: [...data.groups].sort(byPosition).map((group) => ({
       ...group,
       envelopes: data.envelopes.filter((e) => e.groupId === group.id).sort(byPosition),

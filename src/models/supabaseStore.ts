@@ -259,6 +259,16 @@ export function createSupabaseStore(
       if (!data?.length) throw new UserFacingError("Envelope not found");
     },
 
+    async moveEnvelope(envelopeId, groupId, position) {
+      const { data, error } = await db()
+        .from("categories")
+        .update({ group_id: groupId, position })
+        .eq("id", envelopeId)
+        .select("id");
+      check(error);
+      if (!data?.length) throw new UserFacingError("Envelope not found");
+    },
+
     async reorderGroups(householdId, groupIds) {
       const { error } = await db().rpc("reorder_category_groups", {
         p_household_id: householdId,

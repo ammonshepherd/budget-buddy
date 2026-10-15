@@ -69,6 +69,11 @@ export interface DataStore {
   renameGroup(groupId: string, name: string): Promise<void>;
   /** A card's payment envelope cannot be renamed: it is named after its card. */
   renameEnvelope(envelopeId: string, name: string): Promise<void>;
+  /**
+   * Moves an envelope to another group, at `position` there. A card's payment
+   * envelope stays in its group.
+   */
+  moveEnvelope(envelopeId: string, groupId: string, position: number): Promise<void>;
   /** Saves a new order. The list names every group of the household once, top first. */
   reorderGroups(householdId: string, groupIds: string[]): Promise<void>;
   /** Saves a new order. The list names every envelope of the group once, top first. */

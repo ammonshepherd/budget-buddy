@@ -111,7 +111,7 @@ Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Pl
 non-card budget balances − all envelope money (P included)`.
 - Transactions are never categorized to P; P cannot be deleted while its card is open;
   an open card's P always shows on the Budget page; P is named after its card and
-  renamed only with it. Card purchases filling P do not
+  renamed only with it, and stays in its group (database triggers). Card purchases filling P do not
   count in the month's Spent total.
 - Only money taken out can need covering: spending in an envelope, or a card
   payment from P. Refunds and card credits never prompt.
@@ -137,7 +137,8 @@ non-card budget balances − all envelope money (P included)`.
   full-width bars with the name and a + button (no totals); envelopes are added
   with each group's + button; groups are added, renamed, reordered and deleted
   in Settings (drag handles; tapping a group opens its sheet, where its
-  envelopes are reordered).
+  envelopes are reordered, renamed and moved to another group with "Move
+  to…"). Renaming and moving go through `src/controllers/envelopeEdits.ts`.
 - Envelope rows run edge to edge. Line 1: name and a Saved pill ("Saved $X":
   solid purple with sparkles once above $0.00, quiet at $0.00), and what is
   left on the right (muted at $0.00). Line 2: Planned, Assigned and Spent
@@ -149,7 +150,8 @@ non-card budget balances − all envelope money (P included)`.
   hint only: not overspending).
   Refunded (only when above $0.00) and Short (if overspent) sit on a line
   below. Tapping line 1 opens the envelope sheet (`EnvelopeSheet`, a bottom
-  sheet): group and name (renamed with its pencil button), Remaining this month with how it adds up, the plan
+  sheet): group (a picker that moves the envelope to another group) and
+  name (renamed with its pencil button), Remaining this month with how it adds up, the plan
   line (under/on/over Planned), Planned and Assigned fields (same rules as the
   cells), Spent, the purple Saved panel with "Move some into Remaining…"
   (Release from Saved), this month's transactions in the envelope, and Delete
@@ -200,8 +202,7 @@ non-card budget balances − all envelope money (P included)`.
 
 Checking and credit card accounts; CSV import with preview, invalid-row report and duplicate
 prevention (bank ID, else date+amount+description fingerprint); transaction
-add/edit/delete; envelope groups and envelopes add/rename/reorder/delete (moving an
-envelope to another group not built yet);
+add/edit/delete; envelope groups and envelopes add/rename/reorder/move/delete;
 assign transactions to envelopes, including splits; Budget page as the main screen showing what is
 left plus Saved / Planned / Assigned / Refunded / Spent per envelope; month picker
 kept in the URL; linked transfers (both sides in one entry) so transfers are not

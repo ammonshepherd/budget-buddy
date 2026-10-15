@@ -119,18 +119,21 @@ export function SingleFieldForm({
 }
 
 /**
- * A sheet's title with a pencil button to rename it. While renaming, Enter
- * or leaving the field saves (when it changed); Escape puts the name back.
+ * A sheet's title with a pencil button to rename it, or (`row`) a list row's
+ * name that is renamed by tapping it. While renaming, Enter or leaving the
+ * field saves (when it changed); Escape puts the name back.
  */
 export function EditableTitle({
   name,
   label,
   onSave,
+  row = false,
 }: {
   name: string;
   /** "Envelope name" or "Group name": the field's label. */
   label: string;
   onSave: (name: string) => Promise<void>;
+  row?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(name);
@@ -163,6 +166,24 @@ export function EditableTitle({
     }
   };
 
+  const startEditing = () => {
+    setText(name);
+    setEditing(true);
+  };
+
+  if (!editing && row) {
+    return (
+      <button
+        className="row-name"
+        type="button"
+        aria-label={`Rename ${name}`}
+        onClick={startEditing}
+      >
+        <span className="item-title">{name}</span>
+        <PencilIcon />
+      </button>
+    );
+  }
   if (!editing) {
     return (
       <div className="editable-title">
@@ -171,10 +192,7 @@ export function EditableTitle({
           className="title-edit"
           type="button"
           aria-label={`Rename ${name}`}
-          onClick={() => {
-            setText(name);
-            setEditing(true);
-          }}
+          onClick={startEditing}
         >
           <PencilIcon />
         </button>
@@ -184,7 +202,7 @@ export function EditableTitle({
   return (
     <div className="editable-title editing">
       <input
-        className="title-input"
+        className={row ? "title-input row" : "title-input"}
         aria-label={label}
         maxLength={100}
         autoFocus

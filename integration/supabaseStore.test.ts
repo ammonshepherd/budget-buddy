@@ -304,6 +304,18 @@ describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
     }
     await expect(store.renameGroup(group.id, " ")).rejects.toThrow(UserFacingError);
 
+    // An envelope moves to another group and back; a payment envelope stays put.
+    const elsewhere = groupIds.find((groupId) => groupId !== group.id)!;
+    await store.moveEnvelope(id("Two"), elsewhere, 99);
+    const moved = (await store.load())!.envelopes.find((e) => e.id === id("Two"))!;
+    expect(moved).toMatchObject({ groupId: elsewhere, position: 99 });
+    await store.moveEnvelope(id("Two"), group.id, 2);
+    if (payment) {
+      await expect(store.moveEnvelope(payment.id, group.id, 0)).rejects.toThrow(
+        /stays in its group/,
+      );
+    }
+
     // Put the seeded order back and tidy up.
     await store.reorderGroups(householdId, groupIds);
     for (const name of ["First", "Two", "Three"]) {

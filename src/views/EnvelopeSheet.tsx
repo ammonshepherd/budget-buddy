@@ -14,7 +14,7 @@ const STAR = "M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z";
 
 /**
  * Everything about one envelope this month, in a sheet at the bottom of the
- * screen: its name (to rename), what is left and how it adds up, the plan, Planned and Assigned to
+ * screen: its group (to move it) and name (to rename), what is left and how it adds up, the plan, Planned and Assigned to
  * edit, Saved with "Move some into Remaining…", and its transactions.
  */
 export function EnvelopeSheet({
@@ -28,6 +28,7 @@ export function EnvelopeSheet({
 }) {
   const { row } = detail;
   const [error, setError] = useState<string | null>(null);
+  const move = useAsyncAction(page.moveEnvelope);
   const remove = useAsyncAction(async () => {
     await page.deleteEnvelope(row.id);
     onClose();
@@ -52,7 +53,26 @@ export function EnvelopeSheet({
       <div className="sheet-handle" aria-hidden="true" />
       <header className="sheet-header">
         <div>
-          <span className="sheet-eyebrow">{detail.groupName}</span>
+          {row.card ? (
+            <span className="sheet-eyebrow">{detail.groupName}</span>
+          ) : (
+            <span className="group-picker">
+              <select
+                className="sheet-eyebrow"
+                aria-label={`Group for ${row.name}`}
+                value={detail.groupId}
+                disabled={move.pending}
+                onChange={(event) => void move.run(row.id, event.target.value)}
+              >
+                {page.allGroups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+              <span aria-hidden="true">▾</span>
+            </span>
+          )}
           {row.card ? (
             <h2>{row.name}</h2>
           ) : (
@@ -67,6 +87,7 @@ export function EnvelopeSheet({
           ×
         </button>
       </header>
+      <ErrorMessage error={move.error} />
 
       {row.card ? (
         <>

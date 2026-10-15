@@ -12,6 +12,7 @@ import { addMonths, formatMonth, type Month } from "../models/month";
 import { budgetHref } from "../models/routes";
 import type { BudgetData } from "../models/types";
 import { requireCents, requireName } from "./input";
+import { envelopeEdits, nextPosition } from "./envelopeEdits";
 import type { Budget } from "./useBudget";
 
 /** A typed Planned or Assigned amount: a number of dollars, zero or more, rounded to the cent. */
@@ -21,9 +22,6 @@ function amountTyped(text: string, label: string) {
   if (cents < 0) throw new UserFacingError(`${label} cannot be negative.`);
   return cents;
 }
-
-export const nextPosition = (items: { position: number }[]) =>
-  items.reduce((max, item) => Math.max(max, item.position + 1), 0);
 
 /** The Budget page for one month: the numbers to show and what the user can do. */
 export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
@@ -47,6 +45,11 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     previousHref: budgetHref(addMonths(month, -1)),
     nextHref: budgetHref(addMonths(month, 1)),
 
+    /** Every group, in order (to move an envelope to). */
+    allGroups: [...data.groups]
+      .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name))
+      .map(({ id, name }) => ({ id, name })),
+
     /** What the envelope sheet shows; null once the envelope is gone (deleted). */
     detail: (envelopeId: string) => {
       const group = view.groups.find((g) => g.envelopes.some((e) => e.id === envelopeId));
@@ -54,6 +57,7 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       if (!group || !row) return null;
       return {
         row,
+        groupId: group.id,
         groupName: group.name,
         plan: planCheck(row),
         parts: remainingParts(row),
@@ -140,21 +144,7 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       );
     },
 
-    renameEnvelope: async (envelopeId: string, name: string) => {
-      const envelopeName = requireName(name, "Envelope name");
-      if (envelope(envelopeId).card) {
-        throw new UserFacingError("A card's payment envelope is named after its card.");
-      }
-      await budget.change(
-        (store) => store.renameEnvelope(envelopeId, envelopeName),
-        (current) => ({
-          ...current,
-          envelopes: current.envelopes.map((e) =>
-            e.id === envelopeId ? { ...e, name: envelopeName } : e,
-          ),
-        }),
-      );
-    },
+    ...envelopeEdits(budget, data),
 
     deleteEnvelope: async (envelopeId: string) => {
       await budget.change((store) => store.deleteEnvelope(envelopeId));
