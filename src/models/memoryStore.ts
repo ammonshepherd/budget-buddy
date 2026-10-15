@@ -66,10 +66,6 @@ export function createMemoryStore(): DataStore {
     async signIn(email) {
       setSession({ userId: "memory-user", email });
     },
-    async signUp(email) {
-      setSession({ userId: "memory-user", email });
-      return false;
-    },
     async signOut() {
       setSession(null);
     },

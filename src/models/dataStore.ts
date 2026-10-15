@@ -51,8 +51,6 @@ export interface DataStore {
   /** Calls back on sign-in and sign-out; returns an unsubscribe function. */
   onSessionChange(callback: (session: UserSession | null) => void): () => void;
   signIn(email: string, password: string): Promise<void>;
-  /** Resolves true when the user must confirm their email before signing in. */
-  signUp(email: string, password: string): Promise<boolean>;
   signOut(): Promise<void>;
 
   /** The signed-in user's whole budget, or null if they have no household yet. */

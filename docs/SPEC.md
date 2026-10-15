@@ -180,12 +180,13 @@ These are implemented in `budgetMath.ts` and the controllers:
   Activity opens the transaction dialog.
 - States: "Loading Budget Buddy…", sign-in, create household, or the app.
 
-### Sign in / Create account
+### Sign in
 
-Email and password (8+ characters to create). "New here? Create an account" /
-"Have an account? Sign in" toggles. If email confirmation is required: "Check
-⟨email⟩ for a confirmation link, then come back and sign in." Sign-in uses PKCE
-so the `?code=` in the URL leaves the `#route` alone.
+Email and password, and Sign in. There is no create-account form or link:
+public sign-up is off in Supabase Auth, and the owner adds each household
+member in the dashboard (Authentication → Users → Add user, with a password of
+at least 12 characters and "Auto confirm"). Sign-in uses PKCE so a `?code=` in
+the URL leaves the `#route` alone.
 
 ### Create household
 
