@@ -388,4 +388,6 @@ Decided or wanted, but not in the app: matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead); an envelope icon next to each envelope
-name on the Budget page and in Settings.
+name on the Budget page and in Settings; tapping a transaction in the envelope
+sheet's "This month's transactions" list to open it in the transaction edit
+dialog (as on Activity).
