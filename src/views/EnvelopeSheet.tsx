@@ -3,7 +3,7 @@ import { messageOf } from "../controllers/errors";
 import { useAsyncAction } from "../controllers/useAsyncAction";
 import type { useBudgetPage } from "../controllers/useBudgetPage";
 import type { RemainingPart } from "../models/envelopeDetail";
-import { centsToInput } from "../models/money";
+import { centsToInput, formatCents } from "../models/money";
 import { formatShortDay } from "../models/month";
 import { EditableTitle, ErrorMessage, Money, SingleFieldForm } from "./components";
 
@@ -15,16 +15,20 @@ const STAR = "M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z";
 /**
  * Everything about one envelope this month, in a sheet at the bottom of the
  * screen: its group (to move it) and name (to rename), what is left and how it adds up, the plan, Planned and Assigned to
- * edit, Saved with "Move some into Remaining…", and its transactions.
+ * edit, Saved with "Move some into Remaining…", and its transactions (tap one
+ * to edit it).
  */
 export function EnvelopeSheet({
   detail,
   page,
   onClose,
+  onEditTransaction,
 }: {
   detail: Detail;
   page: Page;
   onClose: () => void;
+  /** Opens a transaction in the edit dialog, over this sheet. */
+  onEditTransaction: (id: string) => void;
 }) {
   const { row } = detail;
   const [error, setError] = useState<string | null>(null);
@@ -173,21 +177,28 @@ export function EnvelopeSheet({
               <ul>
                 {detail.activity.map((item) => (
                   <li key={item.id}>
-                    <span className="activity-what">
-                      {formatShortDay(item.date)} · {item.payee || "(no payee)"}
-                      <small>
-                        {item.accountName}
-                        {item.splitTotal !== null && (
-                          <>
-                            {" "}
-                            · part of a <Money cents={item.splitTotal} /> split
-                          </>
-                        )}
-                      </small>
-                    </span>
-                    <strong>
-                      <Money cents={item.amount} />
-                    </strong>
+                    <button
+                      className="sheet-activity-row"
+                      type="button"
+                      aria-label={`Edit ${item.payee || "(no payee)"}, ${formatCents(item.amount)}, ${formatShortDay(item.date)}`}
+                      onClick={() => onEditTransaction(item.id)}
+                    >
+                      <span className="activity-what">
+                        {formatShortDay(item.date)} · {item.payee || "(no payee)"}
+                        <small>
+                          {item.accountName}
+                          {item.splitTotal !== null && (
+                            <>
+                              {" "}
+                              · part of a <Money cents={item.splitTotal} /> split
+                            </>
+                          )}
+                        </small>
+                      </span>
+                      <strong>
+                        <Money cents={item.amount} />
+                      </strong>
+                    </button>
                   </li>
                 ))}
               </ul>
