@@ -6,3 +6,4 @@ test-results
 package-lock.json
 src/models/database.types.ts
 dist-e2e
+docs/mockups/

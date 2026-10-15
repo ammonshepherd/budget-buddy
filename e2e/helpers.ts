@@ -59,6 +59,23 @@ export async function openAddTransaction(page: Page) {
   return dialog;
 }
 
+/** Shows a month ("2030-01") on the Activity page, without reloading (the test store lives in memory). */
+export async function openActivityMonth(page: Page, month: string) {
+  await page.evaluate((m) => (location.hash = `#activity/${m}`), month);
+  await expect(page.getByRole("region", { name: "Transactions" })).toBeVisible();
+}
+
+/** The Activity row (with any split parts) whose payee is exactly `payee` (ignoring case). */
+export const activityRow = (page: Page, payee: string) =>
+  page
+    .getByRole("region", { name: "Transactions" })
+    .locator(".activity-item")
+    .filter({ has: page.locator(".activity-payee", { hasText: new RegExp(`^${payee}$`, "i") }) });
+
+/** Taps an Activity row's payee, which opens the edit dialog. */
+export const editActivityRow = (page: Page, payee: string) =>
+  activityRow(page, payee).locator(".activity-who").click();
+
 /** Clicks a page in the bottom navigation. */
 export const goTo = (page: Page, name: "Budget" | "Accounts" | "Activity" | "Settings") =>
   page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name }).click();

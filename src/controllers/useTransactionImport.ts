@@ -10,13 +10,21 @@ import {
   type CsvTable,
   type ImportFormat,
 } from "../models/transactionImport";
+import { monthOf } from "../models/month";
+import { activityHref } from "../models/routes";
 import type { BudgetData } from "../models/types";
 import type { Budget } from "./useBudget";
 
 const MAX_FILE_BYTES = 2_000_000;
 
 type Loaded = { fileName: string; table: CsvTable };
-type Done = { accountName: string; added: number; alreadyThere: number };
+type Done = {
+  accountName: string;
+  added: number;
+  alreadyThere: number;
+  /** Activity for the month of the newest imported row. */
+  activityHref: string;
+};
 
 /**
  * Settings → Import transactions: choose an account and a bank CSV, check
@@ -112,7 +120,13 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
       });
       setFile(null);
       setEdited(null);
-      setDone({ accountName: account.name, added, alreadyThere: rows.length - added });
+      const newest = rows.reduce((latest, row) => (row.date > latest ? row.date : latest), "");
+      setDone({
+        accountName: account.name,
+        added,
+        alreadyThere: rows.length - added,
+        activityHref: activityHref(monthOf(newest)),
+      });
     },
   };
 }

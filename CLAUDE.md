@@ -168,11 +168,20 @@ non-card budget balances − all envelope money (P included)`.
   take back) and the Saved panel, and no Delete.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
-  in a modal `<dialog>` (`TransactionDialog`). On Activity, transactions sit under
-  collapsible date headings (newest first); tapping a row opens the same dialog
-  to edit, with Delete (Delete transfer for a transfer) at the bottom. Rows have
-  no Edit/Delete links. Transactions to review show "Uncategorized" on an amber
-  label; Activity's "To review" list sits above the transactions.
+  in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in
+  v0.21.0, `docs/mockups/activity-screen.html`) shows one month, the same month
+  as Budget (`#activity/YYYY-MM`; the nav keeps it between the two): a purple
+  month band, an In / Out / Transfers strip (display only, from
+  `src/models/activity.ts`; transfers never count as In or Out), then day
+  headings (newest first, with the day's net without transfers; not
+  collapsible). Each row: a status mark (cleared = imported, uncleared = typed,
+  until reconciliation stores a status), payee over account, envelope, signed
+  amount. A transfer shows once, from its money-out side ("From → To",
+  unsigned). A split shows a "Split (N)" pill and its parts, open until closed
+  (not remembered). Tapping the payee opens the same dialog to edit, with
+  Delete (Delete transfer for a transfer) at the bottom. Rows have no
+  Edit/Delete links. Transactions to review show "Uncategorized" on an amber
+  label; Activity's "To review" list (every month) sits above the transactions.
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount,
   each has the transaction's sign (no mixed refund lines) and an envelope appears

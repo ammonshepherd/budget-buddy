@@ -1,9 +1,11 @@
 import { expect, test } from "@playwright/test";
 import {
+  activityRow,
   addGroupWithEnvelopes,
   addTransaction,
   available,
   envelope,
+  editActivityRow,
   editCell,
   openEnvelope,
   goTo,
@@ -41,7 +43,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
 
   // Spending within the envelope.
   await addTransaction(page, { amount: "50", payee: "Market", envelope: "Groceries" });
-  await expect(page.locator(".item", { hasText: "Market" })).toContainText("-$50.00");
+  await expect(activityRow(page, "Market")).toContainText("−$50.00");
 
   // Overspending: the cover prompt. Saved is 0 here, so Fun or Available to Assign covers it.
   await addTransaction(page, { amount: "400", payee: "Big shop", envelope: "Groceries" });
@@ -50,11 +52,11 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await expect(cover.getByRole("option", { name: /Fun/ })).toHaveCount(0); // Fun has only $100
   await cover.getByLabel(/cover .* from/i).selectOption("available");
   await cover.getByRole("button", { name: "Cover and save" }).click();
-  await expect(page.locator(".item", { hasText: "Big shop" })).toContainText("-$400.00");
+  await expect(activityRow(page, "Big shop")).toContainText("−$400.00");
 
   // Uncategorized spending and a transfer.
   await addTransaction(page, { amount: "20", payee: "Coffee" });
-  await expect(page.locator(".item", { hasText: "Coffee" })).toContainText("Uncategorized");
+  await expect(activityRow(page, "Coffee")).toContainText("Uncategorized");
   await goTo(page, "Accounts");
   await page.getByLabel("Account name").fill("Savings");
   await page.getByRole("button", { name: "Add account" }).click();
@@ -64,10 +66,11 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
     payee: "To savings",
     envelope: "Transfer (not spending or income)",
   });
-  const sides = page.locator(".item", { hasText: "To savings" });
-  await expect(sides).toHaveCount(2);
-  await expect(sides.filter({ hasText: "Transfer to Savings" })).toContainText("-$5.00");
-  await expect(sides.filter({ hasText: "Transfer from Checking" })).toContainText("$5.00");
+  // Activity shows the transfer once: from → to, unsigned.
+  const transfer = activityRow(page, "To savings");
+  await expect(transfer).toHaveCount(1);
+  await expect(transfer).toContainText("Checking → Savings");
+  await expect(transfer.locator(".activity-amount")).toHaveText("$5.00");
 
   // Budget: 1,000 − 300 − 100 − 150 (cover); the $20 coffee is still to review
   // and the transfer is neither spending nor income.
@@ -113,30 +116,30 @@ test("edit and delete a transaction", async ({ page }) => {
   await page.getByRole("button", { name: "Add account" }).click();
 
   await addTransaction(page, { amount: "12.5", payee: "Lunch" });
-  const row = page.locator(".item", { hasText: "Lunch" });
-  await expect(row).toContainText("-$12.50");
+  const row = activityRow(page, "Lunch");
+  await expect(row).toContainText("−$12.50");
 
-  // Tapping the row opens it for editing.
-  await row.click();
+  // Tapping the payee opens it for editing.
+  await editActivityRow(page, "Lunch");
   const form = page.getByRole("form", { name: "Edit transaction" });
   await expect(form.getByLabel("Amount")).toHaveValue("12.50");
   await form.getByLabel("Amount").fill("15");
   await form.getByLabel("Memo").fill("with a friend");
   await form.getByRole("button", { name: "Save changes" }).click();
   await expect(form).toHaveCount(0);
-  await expect(row).toContainText("-$15.00");
-  await expect(row).toContainText("with a friend");
+  await expect(row).toContainText("−$15.00");
 
   // Cancel leaves the row as it was.
-  await row.click();
+  await editActivityRow(page, "Lunch");
+  await expect(form.getByLabel("Memo")).toHaveValue("with a friend");
   await form.getByLabel("Amount").fill("99");
   await form.getByRole("button", { name: "Cancel" }).click();
-  await expect(row).toContainText("-$15.00");
+  await expect(row).toContainText("−$15.00");
 
-  await row.click();
+  await editActivityRow(page, "Lunch");
   await form.getByRole("button", { name: "Delete transaction" }).click();
-  await expect(page.locator(".item", { hasText: "Lunch" })).toHaveCount(0);
-  await expect(page.getByText("No transactions yet.")).toBeVisible();
+  await expect(row).toHaveCount(0);
+  await expect(page.getByText(/^No transactions in \w+ \d{4}\.$/)).toBeVisible();
 });
 
 test("an account can only be closed at a zero balance", async ({ page }) => {

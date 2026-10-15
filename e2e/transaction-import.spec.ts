@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { available, goTo, signInWithHousehold } from "./helpers";
+import { activityRow, available, goTo, openActivityMonth, signInWithHousehold } from "./helpers";
 
 // Made-up rows in the same layout as the bank's checking export.
 const CHECKING = [
@@ -52,8 +52,13 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
 
   // They arrive Uncategorized and wait for review: none of them counts toward
   // Available to Assign until it is decided.
+  // The link opens Activity at the month of the newest imported row.
   await card.getByRole("link", { name: "Give them envelopes on Activity" }).click();
-  await expect(page.locator(".item", { hasText: "HARDWARE STORE" })).toContainText("Uncategorized");
+  await expect(page).toHaveURL(/#activity\/2030-01$/);
+  const hardware = activityRow(page, "Withdrawal Debit Card HARDWARE STORE");
+  await expect(hardware).toContainText("Uncategorized");
+  // Imported rows came from the bank: cleared.
+  await expect(hardware.getByRole("img", { name: "Cleared" })).toBeVisible();
   await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,300.00");
   await expect(
@@ -69,9 +74,7 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
     .getByRole("button", { name: "Mark as Income" })
     .click();
   await expect(review).not.toContainText("PAYROLL");
-  await expect(
-    page.getByRole("region", { name: "Transactions" }).locator(".item", { hasText: "PAYROLL" }),
-  ).toContainText("Income");
+  await expect(activityRow(page, "Deposit ACH PAYROLL")).toContainText("Income");
   await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,800.00");
   await expect(available(page)).toContainText("Income this month $500.00");
@@ -118,10 +121,10 @@ test("a card export with positive purchases and changed columns", async ({ page 
   await card.getByRole("button", { name: "Import 4 transactions" }).click();
   await expect(card.getByRole("status")).toContainText("Imported 4 transactions into Card");
 
-  await goTo(page, "Activity");
-  await expect(page.locator(".item", { hasText: "GROCERY" })).toContainText("-$45.10");
+  await openActivityMonth(page, "2030-01");
+  await expect(activityRow(page, "GROCERY")).toContainText("−$45.10");
   // Listed under its posting date's heading.
   await expect(
-    page.locator("details.day-group", { hasText: "Friday, January 4, 2030" }).locator(".item"),
-  ).toContainText("GROCERY");
+    page.getByRole("region", { name: "Fri Jan 4" }).locator(".activity-payee"),
+  ).toHaveText(["GROCERY"]);
 });

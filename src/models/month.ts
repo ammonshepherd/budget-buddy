@@ -51,13 +51,9 @@ export function formatShortDay(date: IsoDate): string {
   });
 }
 
-/** "2026-10-12" → "Monday, October 12, 2026" (the Activity page's date headings). */
+/** "2026-10-12" → "Mon Oct 12" (the Activity page's day headings; the month band shows the year). */
 export function formatDay(date: IsoDate): string {
   const [year, mon, day] = date.split("-").map(Number) as [number, number, number];
-  return new Date(year, mon - 1, day).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const weekday = new Date(year, mon - 1, day).toLocaleDateString("en-US", { weekday: "short" });
+  return `${weekday} ${formatShortDay(date)}`;
 }

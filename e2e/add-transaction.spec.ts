@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { available, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
+import { activityRow, available, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
 
 const plus = (page: import("@playwright/test").Page) =>
   page.getByRole("button", { name: "Add transaction", exact: true });
@@ -50,5 +50,5 @@ test("add a transaction from the Budget page without leaving it", async ({ page 
   await expect(available(page)).toContainText("$575.00");
 
   await goTo(page, "Activity");
-  await expect(page.locator(".item", { hasText: "Paycheck" })).toContainText("Income");
+  await expect(activityRow(page, "Paycheck")).toContainText("Income");
 });

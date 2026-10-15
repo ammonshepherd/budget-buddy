@@ -1,8 +1,10 @@
 import { expect, test } from "@playwright/test";
 import {
+  activityRow,
   addGroupWithEnvelopes,
   available,
   envelope,
+  editActivityRow,
   editCell,
   goTo,
   openAddTransaction,
@@ -31,10 +33,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await expect(available(page)).toContainText("$400.00");
   await expect(page.getByText("1 transaction to review ($0.00 in, $30.00 out)")).toBeVisible();
   await goTo(page, "Activity");
-  await page
-    .getByRole("region", { name: "Transactions" })
-    .locator(".item", { hasText: "Market" })
-    .click();
+  await editActivityRow(page, "Market");
   const edit = page.getByRole("dialog", { name: "Edit transaction" });
   await edit.getByLabel("Envelope").selectOption({ label: "Groceries" });
   await edit.getByRole("button", { name: "Save changes" }).click();
@@ -112,9 +111,8 @@ test("money into a credit card is a card credit that only lowers what is owed", 
   await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
   await expect(payment).toContainText("Remaining debt $170.00");
   await goTo(page, "Activity");
-  await expect(
-    page
-      .getByRole("region", { name: "Transactions" })
-      .locator(".item", { hasText: "Returned shoes" }),
-  ).toContainText("Visa · Card credit");
+  const credit = activityRow(page, "Returned shoes");
+  await expect(credit.locator(".activity-account")).toHaveText("Visa");
+  await expect(credit.locator(".activity-category")).toHaveText("Card credit");
+  await expect(credit.locator(".activity-amount")).toHaveText("+$30.00");
 });

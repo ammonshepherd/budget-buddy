@@ -22,7 +22,7 @@ describe("month helpers", () => {
 
 describe("formatDay", () => {
   it("names the weekday and date, in the local calendar", () => {
-    expect(formatDay("2026-10-12")).toBe("Monday, October 12, 2026");
-    expect(formatDay("2030-01-01")).toBe("Tuesday, January 1, 2030");
+    expect(formatDay("2026-10-12")).toBe("Mon Oct 12");
+    expect(formatDay("2030-01-01")).toBe("Tue Jan 1");
   });
 });
