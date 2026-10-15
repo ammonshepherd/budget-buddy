@@ -28,8 +28,10 @@ src/views/        React components (pages in src/views/pages/)
 src/styles.css    all styling
 public/icons/     app icons (see CLAUDE.md "App icons")
 supabase/migrations/  every schema change, applied in order
-e2e/              Playwright UI tests
-integration/      opt-in tests against the real Supabase project
+e2e/              Playwright UI tests (in-memory store)
+e2e-db/           Playwright UI tests against the test database
+integration/      integration and RLS tests against the test database
+scripts/          test-database seed script and its safety guard
 ```
 
 Key model modules: `budgetMath.ts` (all budget math), `money.ts` (parse and
@@ -62,20 +64,28 @@ always show what the store holds.
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — in `.env.local` locally and as
   repository Actions variables for the deploy build. Never the service-role key.
 - `VITE_DATA_STORE=memory` — the in-memory store (UI tests).
+- `.env.test` — the test project (`--mode test`, seed script, database tests);
+  see `docs/testing.md`.
 - `vite.config.ts`: `base: "/budget-buddy/"`, `vite-plugin-pwa` with
   `registerType: "autoUpdate"`, manifest (name/short name "Budget Buddy",
   `start_url`/`scope`/`id` = base, `display: standalone`, background `#faf8fc`,
-  theme `#4b2a68`, icons per CLAUDE.md), and `__APP_VERSION__` from `package.json`.
+  theme `#4b2a68`, icons per CLAUDE.md), `__APP_VERSION__` from `package.json`,
+  a build check (no secret-looking `VITE_` variable; production never points
+  at the test project), and the Vitest projects `unit` and `integration`.
 
 ### Commands and CI
 
 `npm run dev | build | preview | typecheck | lint | format | format:check |
-test | test:ui | test:integration`. UI tests build with the memory store into
-`dist-e2e/` and run against `vite preview` on port 4173 (Pixel 7 viewport).
+test (= test:unit) | test:ui | test:integration | test:ui:db | db:seed:test`.
+UI tests build with the memory store into `dist-e2e/` and run against
+`vite preview` on port 4173 (Pixel 7 viewport); `test:ui:db` builds with
+`--mode test` into `dist-e2e-db/` (port 4174) and signs in as test user A.
 
-GitHub Actions (`.github/workflows/deploy.yml`) runs on pushes to `main` and on
-pull requests: `npm ci`, `format:check`, `lint`, `npm test` (unit), `build`.
-Only pushes to `main` deploy to Pages. UI tests run locally before a PR.
+GitHub Actions: `deploy.yml` runs on pushes to `main` and on pull requests:
+`npm ci`, `format:check`, `lint`, `npm test` (unit), `build`. Only pushes to
+`main` deploy to Pages. `tests.yml` runs on pull requests: the UI tests, and
+the integration and `test:ui:db` tests against the test project using
+repository secrets (skipped without them).
 
 ## 3. Data model
 

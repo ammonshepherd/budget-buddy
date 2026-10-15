@@ -12,8 +12,10 @@ Keep all three in step when behaviour changes.
 ## Stack (decided)
 
 - Vite + React + TypeScript, `vite-plugin-pwa` for installability.
-- Supabase (Postgres + email auth + Row Level Security). Dev project ref:
-  `lkaurrcarzzkbqdwqfge` ("budget-buddy").
+- Supabase (Postgres + email auth + Row Level Security). Production project
+  ref: `lkaurrcarzzkbqdwqfge` ("budget-buddy"). Test project ref:
+  `kiqbgjgvptgknmboazaq` ("budget-buddy-test"), used only by tests; see
+  `docs/testing.md`.
 - Vitest (unit/integration) and Playwright (UI).
 - Hash routing so the app still works on GitHub Pages.
 - Hosting: GitHub Pages at `https://ammonshepherd.github.io/budget-buddy/`,
@@ -234,9 +236,17 @@ uses only the project URL and publishable/anon key: `VITE_SUPABASE_URL` and
 `VITE_SUPABASE_ANON_KEY`, in `.env.local` and as repository Actions variables.
 UI tests build with `VITE_DATA_STORE=memory`, an in-memory store
 (`src/models/memoryStore.ts`) that must enforce the same rules as the database. Do not
-create test users by writing to `auth.users`/`auth.identities` with SQL; the
-integration tests (`integration/`) stay opt-in through `SUPABASE_TEST_EMAIL` and
-`SUPABASE_TEST_PASSWORD`. When querying the owner's real data to answer a
+create test users by writing to `auth.users`/`auth.identities` with SQL.
+
+Tests never touch production. The test project's settings live in `.env.test`
+(gitignored; `.env.test.example` is committed) and in repository secrets; its
+service-role key is used only by `scripts/seed-test-db.ts` and never gets a
+`VITE_` prefix. Anything that writes test data calls `assertTestTarget`
+(`scripts/testTarget.ts`: test project or local Supabase only). The seed script
+(`npm run db:seed:test`) recreates two test users and their households through
+the app's tables and SQL functions; the integration tests reseed first and skip
+when `.env.test` is incomplete. Apply each new migration to the test project
+too, with the same version and name as production (the CLI is linked to test). When querying the owner's real data to answer a
 question, read only what the question needs (prefer totals and counts).
 
 ## Private data
@@ -260,7 +270,8 @@ the base path.
 Before changing code: pull latest, check the version, check open PRs and ask
 before modifying code if an unrelated PR is open. Make focused changes on a
 branch, bump the version (x = production-ready, y = feature, z = incremental),
-run format, lint, unit and UI tests, and open a PR. In the final message report
+run format, lint, unit, UI and (when `.env.test` is set up) integration tests,
+and open a PR. In the final message report
 the version, changed files, tests run, remaining limitations, and the PR link.
 
 - Display-only or cosmetic changes are a patch version (z); anything that changes

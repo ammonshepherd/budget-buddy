@@ -1,29 +1,23 @@
 /**
- * Runs the real Supabase data store against the dev project. Skipped unless
- * a dedicated test account is given, because it writes real rows:
- *
- *   SUPABASE_TEST_EMAIL=... SUPABASE_TEST_PASSWORD=... npm run test:integration
- *
- * Uses VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from .env.local. Each run
- * leaves a closed account in the test account's household (accounts are
- * never deleted, by design); groups and envelopes it creates are removed.
+ * Runs the real Supabase data store against the test project as test user A
+ * (never production). Skipped unless the test database is configured in
+ * .env.test (see docs/testing.md). The integration setup reseeds the test
+ * households before every run, so whatever this test adds is cleared then.
  */
-import { loadEnv } from "vite";
 import { describe, expect, it } from "vitest";
 import { buildBudgetMonth } from "../src/models/budgetMath";
 import { UserFacingError } from "../src/models/dataStore";
 import { createSupabaseStore } from "../src/models/supabaseStore";
 import { detectFormat, previewTransactionImport, readTable } from "../src/models/transactionImport";
 import { parseCsv } from "../src/models/csv";
+import { skipReason, testEnv } from "./testDb";
 
-const email = process.env.SUPABASE_TEST_EMAIL;
-const password = process.env.SUPABASE_TEST_PASSWORD;
-const env = loadEnv("development", process.cwd(), "VITE_");
+const { email, password } = testEnv.users.a;
 
-describe.skipIf(!email || !password)("supabaseStore against the dev project", () => {
+describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
   it("round-trips a budget and enforces the database rules", async () => {
-    const store = createSupabaseStore(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
-    await store.signIn(email!, password!);
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
     expect((await store.getSession())?.email).toBe(email);
 
     if (!(await store.load())) await store.createHousehold("Integration test");
@@ -172,8 +166,8 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
   }, 30_000);
 
   it("imports an envelope plan, matching existing names", async () => {
-    const store = createSupabaseStore(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
-    await store.signIn(email!, password!);
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
     if (!(await store.load())) await store.createHousehold("Integration test");
     const householdId = (await store.load())!.household.id;
     const run = `plan-${Date.now()}`;
@@ -209,8 +203,8 @@ describe.skipIf(!email || !password)("supabaseStore against the dev project", ()
     await store.signOut();
   }, 30_000);
   it("imports transactions once, remembering the account's columns", async () => {
-    const store = createSupabaseStore(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
-    await store.signIn(email!, password!);
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
     if (!(await store.load())) await store.createHousehold("Integration test");
     let data = (await store.load())!;
     const run = `import-${Date.now()}`;
