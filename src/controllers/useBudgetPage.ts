@@ -6,6 +6,7 @@ import {
   type EnvelopeRow,
 } from "../models/budgetMath";
 import { UserFacingError } from "../models/dataStore";
+import { envelopeActivity, planCheck, remainingParts } from "../models/envelopeDetail";
 import { formatCents, roundMoney } from "../models/money";
 import { addMonths, formatMonth, type Month } from "../models/month";
 import { budgetHref } from "../models/routes";
@@ -45,6 +46,20 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     monthLabel: formatMonth(month),
     previousHref: budgetHref(addMonths(month, -1)),
     nextHref: budgetHref(addMonths(month, 1)),
+
+    /** What the envelope sheet shows; null once the envelope is gone (deleted). */
+    detail: (envelopeId: string) => {
+      const group = view.groups.find((g) => g.envelopes.some((e) => e.id === envelopeId));
+      const row = group?.envelopes.find((e) => e.id === envelopeId);
+      if (!group || !row) return null;
+      return {
+        row,
+        groupName: group.name,
+        plan: planCheck(row),
+        parts: remainingParts(row),
+        activity: envelopeActivity(data, envelopeId, month),
+      };
+    },
 
     /**
      * Adds to Assigned (negative takes money back). Used where there is no

@@ -5,7 +5,7 @@ import {
   available,
   envelope,
   editCell,
-  envelopeAction,
+  openEnvelope,
   goTo,
   signInWithHousehold,
 } from "./helpers";
@@ -95,7 +95,12 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await expect(envelope(page, "Fun").locator(".envelope-remaining")).toHaveText("$0.00");
 
   // Releasing Saved makes it spendable without changing Available to Assign.
-  await envelopeAction(page, "Fun", "Release from Saved", "40");
+  const sheet = await openEnvelope(page, "Fun");
+  await sheet.getByRole("button", { name: "Move some into Remaining…" }).click();
+  await sheet.getByLabel("Amount to move into Remaining").fill("40");
+  await sheet.getByRole("button", { name: "Move", exact: true }).click();
+  await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$40.00");
+  await sheet.getByRole("button", { name: "Close" }).click();
   await expect(envelope(page, "Fun").locator(".envelope-remaining")).toHaveText("$40.00");
   await expect(envelope(page, "Fun")).toContainText("Saved $60.00");
   await expect(available(page)).toContainText("$450.00");

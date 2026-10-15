@@ -142,12 +142,17 @@ non-card budget balances − all envelope money (P included)`.
   lowering it below what is spent is blocked. Spent shows "Spent · over"
   (orange) when above Planned (`overPlan`, a hint only: not overspending).
   Refunded (only when above $0.00) and Short (if overspent) sit on a line
-  below. Tapping line 1 opens Released from Saved (if used), Release from
-  Saved and Delete envelope. Spent shown = max(0, net spent); Refunded =
+  below. Tapping line 1 opens the envelope sheet (`EnvelopeSheet`, a bottom
+  sheet): group and name, Remaining this month with how it adds up, the plan
+  line (under/on/over Planned), Planned and Assigned fields (same rules as the
+  cells), Spent, the purple Saved panel with "Move some into Remaining…"
+  (Release from Saved), this month's transactions in the envelope, and Delete
+  envelope. Spent shown = max(0, net spent); Refunded =
   refunds beyond the month's spending (`outflow` / `refunded` in
   `EnvelopeMonth`; math unchanged). A card's payment envelope shows Available
-  to pay (Saved + Remaining) and Remaining debt (Uncovered), no Saved pill,
-  and keeps an Assign form (negative to take back) when opened.
+  to pay (Saved + Remaining) and Remaining debt (Uncovered), no Saved pill;
+  its sheet shows Available to pay, what is owed, an Assign form (negative to
+  take back) and the Saved panel, and no Delete.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
   in a modal `<dialog>` (`TransactionDialog`). On Activity, transactions sit under
