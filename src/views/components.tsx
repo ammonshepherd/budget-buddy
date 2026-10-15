@@ -1,6 +1,14 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
 import { formatCents, type Cents } from "../models/money";
+import { PencilIcon } from "./icons";
 
 /** A formatted amount; negative amounts are shown in red. */
 export function Money({ cents, className = "" }: { cents: Cents; className?: string }) {
@@ -107,5 +115,89 @@ export function SingleFieldForm({
       </div>
       <ErrorMessage error={action.error} />
     </form>
+  );
+}
+
+/**
+ * A sheet's title with a pencil button to rename it. While renaming, Enter
+ * or leaving the field saves (when it changed); Escape puts the name back.
+ */
+export function EditableTitle({
+  name,
+  label,
+  onSave,
+}: {
+  name: string;
+  /** "Envelope name" or "Group name": the field's label. */
+  label: string;
+  onSave: (name: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(name);
+  const action = useAsyncAction(onSave);
+  // Enter saves and the field then loses focus: save only once.
+  const saving = useRef(false);
+
+  const commit = async () => {
+    if (saving.current) return;
+    if (text.trim() === name) {
+      setEditing(false);
+      action.clearError();
+      return;
+    }
+    saving.current = true;
+    const result = await action.run(text);
+    saving.current = false;
+    if (result.ok) setEditing(false);
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void commit();
+    } else if (event.key === "Escape") {
+      // Only undo the typing; do not close the sheet.
+      event.preventDefault();
+      setText(name);
+      setEditing(false);
+      action.clearError();
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="editable-title">
+        <h2>{name}</h2>
+        <button
+          className="title-edit"
+          type="button"
+          aria-label={`Rename ${name}`}
+          onClick={() => {
+            setText(name);
+            setEditing(true);
+          }}
+        >
+          <PencilIcon />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="editable-title editing">
+      <input
+        className="title-input"
+        aria-label={label}
+        maxLength={100}
+        autoFocus
+        value={text}
+        onFocus={(event) => event.target.select()}
+        onChange={(event) => {
+          setText(event.target.value);
+          action.clearError();
+        }}
+        onKeyDown={onKeyDown}
+        onBlur={() => void commit()}
+      />
+      <ErrorMessage error={action.error} />
+    </div>
   );
 }

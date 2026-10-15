@@ -1,13 +1,27 @@
+import { useState } from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
 import type { Budget } from "../controllers/useBudget";
 import { useEnvelopeGroups } from "../controllers/useEnvelopeGroups";
 import type { BudgetData } from "../models/types";
-import { ErrorMessage, SingleFieldForm } from "./components";
+import { EditableTitle, ErrorMessage, Sheet, SingleFieldForm } from "./components";
+import { SortableList } from "./SortableList";
 
-/** Settings card: the groups that hold envelopes on the Budget page. */
+type Page = ReturnType<typeof useEnvelopeGroups>;
+type Group = Page["groups"][number];
+
+const countEnvelopes = (count: number) =>
+  count === 0 ? "No envelopes" : `${count} ${count === 1 ? "envelope" : "envelopes"}`;
+
+/**
+ * Settings card: the groups that hold envelopes on the Budget page. Drag a
+ * group's handle to reorder; tap it to rename it and reorder its envelopes.
+ */
 export function EnvelopeGroups({ budget, data }: { budget: Budget; data: BudgetData }) {
   const page = useEnvelopeGroups(budget, data);
-  const remove = useAsyncAction(page.deleteGroup);
+  const reorder = useAsyncAction(page.reorderGroups);
+  // The group open in the sheet; it closes by itself if the group goes.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = page.groups.find((g) => g.id === openId);
 
   return (
     <section className="list-card" aria-labelledby="groups-title">
@@ -17,41 +31,112 @@ export function EnvelopeGroups({ budget, data }: { budget: Budget; data: BudgetD
       </div>
       <p className="empty-state">
         Groups hold envelopes, for example “Bills” or “Everyday”. Add envelopes to a group with its
-        + button on the Budget page.
+        + button on the Budget page. Drag the dots to change the order; tap a group to rename it or
+        order its envelopes.
       </p>
       {page.groups.length > 0 && (
-        <ul className="item-list" aria-label="Envelope groups">
-          {page.groups.map((group) => (
-            <li className="item" key={group.id}>
+        <SortableList
+          label="Envelope groups"
+          items={page.groups}
+          onReorder={(ids) => void reorder.run(ids)}
+        >
+          {(group) => (
+            <button
+              className="item item-button"
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => setOpenId(group.id)}
+            >
               <span className="item-title">{group.name}</span>
-              {group.envelopeCount === 0 ? (
-                <button
-                  className="text-button danger"
-                  type="button"
-                  disabled={remove.pending}
-                  onClick={() => void remove.run(group.id)}
-                >
-                  Delete
-                </button>
-              ) : (
-                <span />
-              )}
-              <span className="item-detail">
-                {group.envelopeCount === 0
-                  ? "No envelopes"
-                  : `${group.envelopeCount} ${group.envelopeCount === 1 ? "envelope" : "envelopes"}`}
-              </span>
-            </li>
-          ))}
-        </ul>
+              <span className="item-detail">{countEnvelopes(group.envelopes.length)}</span>
+            </button>
+          )}
+        </SortableList>
       )}
-      <ErrorMessage error={remove.error} />
+      <ErrorMessage error={reorder.error} />
       <SingleFieldForm
         label="Group name"
         button="Add group"
         inputMode="text"
         onSubmit={page.addGroup}
       />
+
+      <Sheet
+        open={open !== undefined}
+        label={open?.name ?? "Envelope group"}
+        className="sheet bottom"
+        onClose={() => setOpenId(null)}
+      >
+        {() => <GroupSheet group={open!} page={page} onClose={() => setOpenId(null)} />}
+      </Sheet>
     </section>
+  );
+}
+
+/** One group: its name to edit, its envelopes to reorder, and Delete when empty. */
+function GroupSheet({ group, page, onClose }: { group: Group; page: Page; onClose: () => void }) {
+  const reorder = useAsyncAction((ids: string[]) => page.reorderEnvelopes(group.id, ids));
+  const remove = useAsyncAction(async () => {
+    await page.deleteGroup(group.id);
+    onClose();
+  });
+
+  return (
+    <div className="envelope-sheet">
+      <div className="sheet-handle" aria-hidden="true" />
+      <header className="sheet-header">
+        <div>
+          <span className="sheet-eyebrow">Envelope group</span>
+          <EditableTitle
+            name={group.name}
+            label="Group name"
+            onSave={(name) => page.renameGroup(group.id, name)}
+          />
+        </div>
+        <button className="sheet-close" type="button" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      </header>
+
+      <section className="group-envelopes" aria-labelledby="group-envelopes-title">
+        <h3 id="group-envelopes-title">Envelopes</h3>
+        {group.envelopes.length === 0 ? (
+          <p className="empty-state">
+            No envelopes yet. Add them with the group&apos;s + button on the Budget page.
+          </p>
+        ) : (
+          <>
+            <SortableList
+              label={`Envelopes in ${group.name}`}
+              items={group.envelopes}
+              onReorder={(ids) => void reorder.run(ids)}
+            >
+              {(envelope) => <span className="item item-title">{envelope.name}</span>}
+            </SortableList>
+            <p className="empty-state">
+              Drag the dots to change the order on the Budget page. Rename an envelope by tapping it
+              on the Budget page.
+            </p>
+          </>
+        )}
+        <ErrorMessage error={reorder.error} />
+      </section>
+
+      {group.envelopes.length === 0 ? (
+        <button
+          className="text-button danger sheet-delete"
+          type="button"
+          disabled={remove.pending}
+          onClick={() => {
+            if (window.confirm(`Delete the ${group.name} group?`)) void remove.run();
+          }}
+        >
+          Delete group
+        </button>
+      ) : (
+        <p className="empty-state">Only an empty group can be deleted.</p>
+      )}
+      <ErrorMessage error={remove.error} />
+    </div>
   );
 }

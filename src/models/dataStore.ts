@@ -66,6 +66,13 @@ export interface DataStore {
   addEnvelope(householdId: string, groupId: string, name: string, position: number): Promise<void>;
   deleteEnvelope(envelopeId: string): Promise<void>;
   deleteGroup(groupId: string): Promise<void>;
+  renameGroup(groupId: string, name: string): Promise<void>;
+  /** A card's payment envelope cannot be renamed: it is named after its card. */
+  renameEnvelope(envelopeId: string, name: string): Promise<void>;
+  /** Saves a new order. The list names every group of the household once, top first. */
+  reorderGroups(householdId: string, groupIds: string[]): Promise<void>;
+  /** Saves a new order. The list names every envelope of the group once, top first. */
+  reorderEnvelopes(groupId: string, envelopeIds: string[]): Promise<void>;
 
   /** Adds to (not replaces) an envelope's Assigned and Released for a month. */
   adjustEnvelopeMonth(

@@ -110,7 +110,8 @@ Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Pl
   `Available to Assign + non-card inflows to review − non-card outflows to review =
 non-card budget balances − all envelope money (P included)`.
 - Transactions are never categorized to P; P cannot be deleted while its card is open;
-  an open card's P always shows on the Budget page. Card purchases filling P do not
+  an open card's P always shows on the Budget page; P is named after its card and
+  renamed only with it. Card purchases filling P do not
   count in the month's Spent total.
 - Only money taken out can need covering: spending in an envelope, or a card
   payment from P. Refunds and card credits never prompt.
@@ -134,18 +135,21 @@ non-card budget balances − all envelope money (P included)`.
   exactly $0.00 (green when positive; red "Over Assigned" with the positive
   amount when over); groups are
   full-width bars with the name and a + button (no totals); envelopes are added
-  with each group's + button; groups are added/deleted in Settings.
+  with each group's + button; groups are added, renamed, reordered and deleted
+  in Settings (drag handles; tapping a group opens its sheet, where its
+  envelopes are reordered).
 - Envelope rows run edge to edge. Line 1: name and a Saved pill ("Saved $X":
   solid purple with sparkles once above $0.00, quiet at $0.00), and what is
   left on the right (muted at $0.00). Line 2: Planned, Assigned and Spent
   cells. Planned and Assigned are edited in place (tap; blur or Enter saves,
   Escape cancels; amounts rounded to the cent by `roundMoney`; never
   negative). Raising Assigned is blocked beyond Available to Assign, and
-  lowering it below what is spent is blocked. Spent shows "Spent · over"
-  (orange) when above Planned (`overPlan`, a hint only: not overspending).
+  lowering it below what is spent is blocked. Spent turns orange (no extra
+  word; screen readers hear "over Planned") when above Planned (`overPlan`, a
+  hint only: not overspending).
   Refunded (only when above $0.00) and Short (if overspent) sit on a line
   below. Tapping line 1 opens the envelope sheet (`EnvelopeSheet`, a bottom
-  sheet): group and name, Remaining this month with how it adds up, the plan
+  sheet): group and name (renamed with its pencil button), Remaining this month with how it adds up, the plan
   line (under/on/over Planned), Planned and Assigned fields (same rules as the
   cells), Spent, the purple Saved panel with "Move some into Remaining…"
   (Release from Saved), this month's transactions in the envelope, and Delete
@@ -196,8 +200,8 @@ non-card budget balances − all envelope money (P included)`.
 
 Checking and credit card accounts; CSV import with preview, invalid-row report and duplicate
 prevention (bank ID, else date+amount+description fingerprint); transaction
-add/edit/delete; envelope groups and envelopes add/delete (rename and reorder not
-built yet);
+add/edit/delete; envelope groups and envelopes add/rename/reorder/delete (moving an
+envelope to another group not built yet);
 assign transactions to envelopes, including splits; Budget page as the main screen showing what is
 left plus Saved / Planned / Assigned / Refunded / Spent per envelope; month picker
 kept in the URL; linked transfers (both sides in one entry) so transfers are not
@@ -216,7 +220,8 @@ category_groups, categories (= envelopes), category_months, transactions,
 transaction_allocations, income_rules. Every table has household-scoped RLS; multi-row
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
-`import_envelope_plan`, `import_transactions`, `save_transfer`, `mark_income`). Triggers create, rename and protect
+`import_envelope_plan`, `import_transactions`, `save_transfer`, `mark_income`,
+`reorder_category_groups`, `reorder_categories`). Triggers create, rename and protect
 each credit card's payment envelope and reject allocations to it. Imported transactions carry an
 `import_key` (unique per account) for duplicate prevention; each account keeps
 its CSV column mapping in `import_format`. Budget math stays in

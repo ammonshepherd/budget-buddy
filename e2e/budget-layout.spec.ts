@@ -53,18 +53,22 @@ test("the + button adds envelopes, and groups are managed in Settings", async ({
   await bills.getByRole("button", { name: "Add envelope" }).click();
   await expect(envelope(page, "Rent")).toBeVisible();
 
-  // Only an empty group can be deleted.
+  // Only an empty group can be deleted, from its sheet.
+  page.on("dialog", (dialog) => void dialog.accept()); // confirm()
   await goTo(page, "Settings");
   const list = groups.getByRole("list", { name: "Envelope groups" });
   await expect(list.getByRole("listitem").filter({ hasText: "Bills" })).toContainText("1 envelope");
-  await expect(
-    list.getByRole("listitem").filter({ hasText: "Bills" }).getByRole("button", { name: "Delete" }),
-  ).toHaveCount(0);
-  await list
-    .getByRole("listitem")
-    .filter({ hasText: "Spare" })
-    .getByRole("button", { name: "Delete" })
+  await list.getByRole("button", { name: /^Bills/ }).click();
+  const sheet = page.getByRole("dialog", { name: "Bills" });
+  await expect(sheet.getByRole("button", { name: "Delete group" })).toHaveCount(0);
+  await expect(sheet).toContainText("Only an empty group can be deleted.");
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await list.getByRole("button", { name: /^Spare/ }).click();
+  await page
+    .getByRole("dialog", { name: "Spare" })
+    .getByRole("button", { name: "Delete group" })
     .click();
+  await expect(page.getByRole("dialog")).toBeHidden();
   await expect(list.getByRole("listitem")).toHaveCount(1);
 });
 

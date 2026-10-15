@@ -233,7 +233,10 @@ function EnvelopeItem({
             onSave={save(page.setAssigned)}
           />
           <span className={envelope.overPlan ? "cell spent over" : "cell spent"}>
-            <span className="cell-label">{envelope.overPlan ? "Spent · over" : "Spent"}</span>{" "}
+            {/* Orange when over Planned; screen readers hear it in words. */}
+            <span className="cell-label">
+              Spent{envelope.overPlan && <span className="visually-hidden"> (over Planned)</span>}
+            </span>{" "}
             <Money cents={envelope.outflow} />
           </span>
         </div>

@@ -406,6 +406,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      reorder_categories: {
+        Args: { p_category_ids: string[]; p_group_id: string }
+        Returns: undefined
+      }
+      reorder_category_groups: {
+        Args: { p_group_ids: string[]; p_household_id: string }
+        Returns: undefined
+      }
       save_transaction: {
         Args: {
           p_account_id: string

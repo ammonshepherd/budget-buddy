@@ -903,7 +903,8 @@ a:focus-visible {
 
 /* ---- v0.16.0: Budget page redesign --------------------------------------- */
 
-.budget-page {
+/* Shared by the Budget page and the bottom sheets (also used on Settings). */
+:root {
   --bb-purple: #4b2a68;
   --bb-purple-tint: #f3eef8;
   --bb-purple-line: #e4dcee;
@@ -916,7 +917,9 @@ a:focus-visible {
   --bb-grey-label: #5e5866;
   --bb-over: #a3470a;
   --bb-over-bg: #fcebdd;
+}
 
+.budget-page {
   display: grid;
   /* Rows run edge to edge: undo the page's side padding, and sit right
      under the app header. */
@@ -1570,4 +1573,125 @@ div.sheet-field .sheet-field-value {
 
 .sheet-activity li strong {
   white-space: nowrap;
+}
+
+/* ---- v0.18.0: rename and reorder groups and envelopes -------------------- */
+
+/* A row with a drag handle (six dots) on the left. */
+.sortable-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--surface);
+}
+
+.sortable-row > :last-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.sortable-row.dragging {
+  z-index: 1;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow);
+}
+
+.drag-handle {
+  display: grid;
+  flex: none;
+  inline-size: 2.25rem;
+  block-size: 2.75rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  background: none;
+  cursor: grab;
+  /* The finger drags the row instead of scrolling the page. */
+  touch-action: none;
+}
+
+.drag-handle:hover {
+  color: var(--brand);
+  background: var(--surface-muted);
+}
+
+.sortable-row.dragging .drag-handle {
+  cursor: grabbing;
+}
+
+.drag-handle svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: currentColor;
+}
+
+.group-envelopes {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.group-envelopes h3 {
+  margin: 0;
+  color: var(--bb-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+/* A sheet's title with its pencil button, or the field to rename it. */
+.sheet-header > div {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.editable-title {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.editable-title.editing {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.title-edit {
+  display: grid;
+  flex: none;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--bb-purple);
+  background: none;
+  cursor: pointer;
+}
+
+.title-edit:hover {
+  background: var(--bb-purple-tint);
+}
+
+.title-edit svg {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.title-input {
+  inline-size: 100%;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--bb-purple-line);
+  border-radius: 0.5rem;
+  color: var(--bb-ink);
+  background: var(--surface);
+  font: inherit;
+  font-size: 1.375rem;
+  font-weight: 800;
 }

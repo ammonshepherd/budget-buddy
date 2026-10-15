@@ -128,9 +128,12 @@ SQL functions (all `security invoker` except `create_household`):
 | `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added.                     |
 | `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                      |
 | `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                 |
+| `reorder_category_groups(household, ids)`                        | Saves the order of the household's groups; the list must name every group once.                                                                                                                                |
+| `reorder_categories(group, ids)`                                 | Saves the order of a group's envelopes; the list must name every envelope of the group once.                                                                                                                   |
 
 Triggers also: create/rename/protect each card's payment envelope (in the
-"Credit card payments" group, named "⟨card⟩ payment"); release a transfer's other
+group that holds the other cards' payment envelopes, else "Credit card
+payments"; named "⟨card⟩ payment" and renamed only with its card); release a transfer's other
 side when one side is deleted (a typed-in side is deleted, an imported one kept
 as Uncategorized). Errors with codes `23514`, `23505`, `P0002`, `22023`, `42501`
 carry readable messages shown to the user; `23503` shows "It is still in use".
@@ -216,7 +219,9 @@ household yet.
   cells.
 - Tapping an envelope's top line opens its sheet ("⟨name⟩ envelope", a bottom
   sheet; close with × or Escape):
-  - group name over the envelope name;
+  - group name over the envelope name, with a pencil button to rename it
+    ("Envelope name"; blur or Enter saves, Escape puts the name back; not on
+    a card's payment envelope, which is named after its card);
   - "Remaining this month" (large) and how it adds up ("$300.00 assigned +
     $20.00 released − $187.06 spent"; released and refunded only when used),
     plus Short if overspent;
@@ -291,8 +296,13 @@ the matching inflow in ⟨account⟩.", "Also updates the ⟨account⟩ side.").
 In order: household name and "Signed in as ⟨email⟩"; About (version); Sign out;
 Envelope groups; Import transactions; Income rules; Import envelope plan.
 
-- **Envelope groups:** list with envelope counts, Delete for empty groups, "Group
-  name" + Add group.
+- **Envelope groups:** list with envelope counts, a six-dot drag handle on the
+  left of each row (mouse, touch, or keyboard: Space, arrows, Space) to reorder
+  the groups on the Budget page, and "Group name" + Add group. Tapping a group
+  opens its bottom sheet: the name with a pencil button to rename it, its
+  envelopes with drag handles to reorder them, and Delete group (confirm) when
+  it has no envelopes ("Only an empty group can be deleted." otherwise). A
+  new order shows at once and is saved for the whole list.
 - **Import transactions:** see §6.
 - **Income rules:** list ("Contains “TEXT”", account or Any account, Delete);
   "Description contains" + "In account" + Add rule; when waiting inflows match:
@@ -362,7 +372,7 @@ Envelopes not in the file are left alone.
 ## 9. Not built yet
 
 Decided or wanted, but not in the app: copy last month's spending into Planned;
-renaming and reordering envelopes and groups; matching
+moving an envelope to another group; matching
 typed transactions to imported ones (other than transfers); reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead).
