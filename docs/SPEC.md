@@ -186,7 +186,7 @@ household yet.
 - Month picker (‹ OCTOBER 2026 ›, 44px buttons) in a purple band; changes
   `#budget/YYYY-MM` and scrolls away.
 - Sticky "Available to Assign" card pinned to the top on the purple band
-  (always shown): 6px green border, light green background, amount on the
+  (hidden at exactly $0.00): 6px green border, light green background, amount on the
   right, "Income this month $X" under the label. Over assigned: red, labelled
   "Over Assigned" with the amount over.
 - Notices: "N transactions to review ($X in, $Y out) are not in Available to

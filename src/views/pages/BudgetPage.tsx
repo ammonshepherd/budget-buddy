@@ -41,21 +41,24 @@ export function BudgetPage({
         </a>
       </div>
 
-      {/* Stays at the top while the envelopes scroll under it. */}
-      <div className="assign-wrap">
-        <section
-          className={over ? "assign-card over" : "assign-card"}
-          aria-label="Available to Assign"
-        >
-          <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
-          <strong className="assign-amount">
-            <Money cents={over ? view.overAssigned : view.availableToAssign} />
-          </strong>
-          <span className="assign-helper">
-            Income this month <Money cents={view.income} />
-          </span>
-        </section>
-      </div>
+      {/* Stays at the top while the envelopes scroll under it; hidden when
+          there is nothing left to assign (but shown when over assigned). */}
+      {view.availableToAssign !== 0 && (
+        <div className="assign-wrap">
+          <section
+            className={over ? "assign-card over" : "assign-card"}
+            aria-label="Available to Assign"
+          >
+            <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
+            <strong className="assign-amount">
+              <Money cents={over ? view.overAssigned : view.availableToAssign} />
+            </strong>
+            <span className="assign-helper">
+              Income this month <Money cents={view.income} />
+            </span>
+          </section>
+        </div>
+      )}
 
       {view.toReview.count > 0 && (
         <p className="notice compact">

@@ -128,8 +128,9 @@ non-card budget balances − all envelope money (P included)`.
 - Imported transactions arrive Uncategorized (to review), except card credits.
 - The Budget page is for envelopes (layout decided in v0.16.0): no page title or
   summary totals; the month picker sits in a purple band that scrolls away;
-  Available to Assign is a sticky card pinned to the top, always shown (green;
-  red "Over Assigned" with the positive amount when over); groups are
+  Available to Assign is a sticky card pinned to the top, hidden when it is
+  exactly $0.00 (green when positive; red "Over Assigned" with the positive
+  amount when over); groups are
   full-width bars with the name and a + button (no totals); envelopes are added
   with each group's + button; groups are added/deleted in Settings.
 - Envelope rows run edge to edge. Line 1: name and a Saved pill ("Saved $X":

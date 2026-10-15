@@ -17,8 +17,8 @@ test("the Budget page is envelopes under a sticky Available to Assign", async ({
 
   const names = Array.from({ length: 15 }, (_, i) => `Envelope ${i + 1}`);
   await addGroupWithEnvelopes(page, "Everyday", names);
-  // Nothing to assign yet: the card still shows, at $0.00.
-  await expect(available(page)).toContainText("Available to Assign$0.00");
+  // Nothing to assign yet: the card is hidden, the month picker is not.
+  await expect(available(page)).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Next month" })).toBeVisible();
   await goTo(page, "Accounts");
   await page.getByLabel("Account name").fill("Checking");
@@ -68,7 +68,7 @@ test("the + button adds envelopes, and groups are managed in Settings", async ({
   await expect(list.getByRole("listitem")).toHaveCount(1);
 });
 
-test("the card shows $0.00 when all is assigned, and Over Assigned in red", async ({ page }) => {
+test("the card hides at $0.00 and comes back red when over assigned", async ({ page }) => {
   await signInWithHousehold(page);
   await goTo(page, "Accounts");
   await page.getByLabel("Account name").fill("Checking");
@@ -77,10 +77,9 @@ test("the card shows $0.00 when all is assigned, and Over Assigned in red", asyn
   await addGroupWithEnvelopes(page, "Everyday", ["Fun"]);
   await expect(available(page)).toContainText("$100.00");
 
-  // Assign it all: nothing left.
+  // Assign it all: nothing left, so the card goes away.
   await editCell(page, "Fun", "assigned", "100");
-  await expect(available(page)).toContainText("Available to Assign$0.00");
-  await expect(available(page)).not.toHaveClass(/over/);
+  await expect(available(page)).toHaveCount(0);
 
   // Lower the account's balance: now over assigned, and the card warns.
   await goTo(page, "Accounts");
