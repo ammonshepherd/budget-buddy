@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { activityMonth } from "./activity";
+import { activityAccounts, activityMonth } from "./activity";
+import { transactionsToReview } from "./budgetMath";
 import type { Account, BudgetData, Transaction } from "./types";
 
 const account = (id: string, name: string, extra: Partial<Account> = {}): Account => ({
@@ -216,5 +217,71 @@ describe("activity rows", () => {
   it("still names a closed account", () => {
     const accounts = [account("checking", "Old Checking", { closedAt: "2026-10-20T00:00:00Z" })];
     expect(rowsOf([tx({})], accounts)[0]!.accountLine).toBe("Old Checking");
+  });
+});
+
+describe("one account's activity", () => {
+  const savings = account("savings", "Savings");
+  const accounts = [
+    account("checking", "Main Checking"),
+    account("card", "Discover Card", { type: "credit_card" }),
+    savings,
+    account("old", "Old Checking", { closedAt: "2026-09-01T00:00:00Z" }),
+    account("offbudget", "Mortgage", { onBudget: false }),
+  ];
+
+  it("offers budget accounts, open ones first, then closed", () => {
+    expect(activityAccounts(budget([], accounts))).toEqual([
+      { id: "card", name: "Discover Card", closed: false },
+      { id: "checking", name: "Main Checking", closed: false },
+      { id: "savings", name: "Savings", closed: false },
+      { id: "old", name: "Old Checking", closed: true },
+    ]);
+  });
+
+  it("shows only that account's transactions and transfers to or from it", () => {
+    const data = budget(
+      [
+        tx({ amount: -2_000, payee: "Grocer" }),
+        tx({ accountId: "card", amount: -500, payee: "Cafe" }),
+        tx({ amount: 100_000, isIncome: true, payee: "Pay" }),
+        ...transfer("checking", "card", 30_000),
+        ...transfer("savings", "checking", 7_000),
+      ],
+      accounts,
+    );
+    const payees = (id: string | null) =>
+      activityMonth(data, "2026-10", id).days.flatMap((d) => d.rows.map((r) => r.tx.payee));
+
+    expect(payees("card")).toEqual(["Cafe", "Payment"]);
+    expect(activityMonth(data, "2026-10", "card").totals).toEqual({
+      moneyIn: 0,
+      moneyOut: 500,
+      transfers: 30_000,
+    });
+    // A transfer into the account shows too, from its money-out side.
+    const checking = activityMonth(data, "2026-10", "checking");
+    expect(checking.days.flatMap((d) => d.rows.map((r) => r.accountLine))).toEqual([
+      "Main Checking",
+      "Main Checking",
+      "Main Checking → Discover Card",
+      "Savings → Main Checking",
+    ]);
+    expect(checking.totals).toEqual({ moneyIn: 100_000, moneyOut: 2_000, transfers: 37_000 });
+    expect(payees(null)).toHaveLength(5);
+  });
+
+  it("narrows the transactions to review to the account", () => {
+    const data = budget(
+      [tx({ amount: -2_000 }), tx({ amount: 5_000 }), tx({ accountId: "card", amount: -500 })],
+      accounts,
+    );
+    expect(transactionsToReview(data, "checking")).toMatchObject({
+      count: 2,
+      inflow: 5_000,
+      outflow: 2_000,
+    });
+    expect(transactionsToReview(data, "card")).toMatchObject({ count: 1, outflow: 500 });
+    expect(transactionsToReview(data).count).toBe(3);
   });
 });

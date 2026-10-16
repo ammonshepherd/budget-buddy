@@ -81,6 +81,27 @@ function shownTransactions(data: BudgetData): Transaction[] {
   });
 }
 
+/** An account Activity can be narrowed to. */
+export interface ActivityAccount {
+  id: string;
+  name: string;
+  closed: boolean;
+}
+
+/** The budget accounts to pick from: open ones first, then closed, each by name. */
+export function activityAccounts(data: BudgetData): ActivityAccount[] {
+  return data.accounts
+    .filter((a) => a.onBudget)
+    .map((a) => ({ id: a.id, name: a.name, closed: a.closedAt !== null }))
+    .sort((a, b) => Number(a.closed) - Number(b.closed) || a.name.localeCompare(b.name));
+}
+
+/** Whether a shown transaction belongs to the account (a transfer: either side). */
+function inAccount(data: BudgetData, tx: Transaction, accountId: string): boolean {
+  if (tx.accountId === accountId) return true;
+  return tx.isTransfer && transferPartner(data, tx)?.accountId === accountId;
+}
+
 function activityRow(data: BudgetData, tx: Transaction): ActivityRow {
   const account = (id: string) => data.accounts.find((a) => a.id === id);
   const accountName = account(tx.accountId)?.name ?? "Unknown account";
@@ -131,14 +152,23 @@ function activityRow(data: BudgetData, tx: Transaction): ActivityRow {
   };
 }
 
-/** Activity for month M: rows by day (by transaction date) and the month's totals. */
-export function activityMonth(data: BudgetData, month: Month): ActivityMonth {
+/**
+ * Activity for month M: rows by day (by transaction date) and the month's
+ * totals; with `accountId`, only that account's transactions (and transfers
+ * to or from it), totals included.
+ */
+export function activityMonth(
+  data: BudgetData,
+  month: Month,
+  accountId: string | null = null,
+): ActivityMonth {
   const totals: ActivityTotals = { moneyIn: 0, moneyOut: 0, transfers: 0 };
   const days: ActivityDay[] = [];
   const byDate = new Map<IsoDate, ActivityDay>();
 
   for (const tx of shownTransactions(data)) {
     if (monthOf(tx.date) !== month) continue;
+    if (accountId !== null && !inAccount(data, tx, accountId)) continue;
     const row = activityRow(data, tx);
     let day = byDate.get(tx.date);
     if (!day) {

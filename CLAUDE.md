@@ -7,7 +7,9 @@ descriptions and when asked, without being condescending.
 This file holds the decided math, rules and process. `docs/SPEC.md` describes
 everything else (structure, data model summary, screens, CSV import, look and
 feel, what is not built yet), and `supabase/migrations/` is the exact database.
-Keep all three in step when behaviour changes.
+Keep all three in step when behaviour changes. Every version bump also
+updates SPEC.md's "Version described" line to the new version, so the file
+always describes the app as of that version (including §9, not built yet).
 
 ## Stack (decided)
 
@@ -185,7 +187,10 @@ non-card budget balances − all envelope money (P included)`.
   in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in
   v0.21.0, `docs/mockups/activity-screen.html`) shows one month, the same month
   as Budget (`#activity/YYYY-MM`; the nav keeps it between the two): a purple
-  month band, an In / Out / Transfers strip (display only, from
+  month band, an Account picker ("All accounts" or one budget account,
+  closed ones last; kept between months and pages until reload; it narrows
+  the rows, totals and To review list, and a transfer shows when either side
+  is in the account), an In / Out / Transfers strip (display only, from
   `src/models/activity.ts`; transfers never count as In or Out), then day
   headings (newest first, with the day's net without transfers; not
   collapsible). Each row: a status mark (cleared = imported, uncleared = typed,
