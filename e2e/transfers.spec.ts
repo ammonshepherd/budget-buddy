@@ -33,13 +33,25 @@ const otherSideChosen = (page: Page) =>
     .getByLabel("Other side")
     .locator("option:checked");
 
-async function importCsv(page: Page, account: string, name: string, text: string) {
+/** Imports a CSV; `asNew` unticks every match with a typed-in transaction first. */
+async function importCsv(
+  page: Page,
+  account: string,
+  name: string,
+  text: string,
+  { asNew = false } = {},
+) {
   await goTo(page, "Settings");
   const card = page.getByRole("region", { name: "Import transactions" });
   await card.getByLabel("Account").selectOption({ label: account });
   await card.getByLabel("Bank CSV file").setInputFiles(file(name, text));
-  await card.getByRole("button", { name: /^Import \d+ transactions?$/ }).click();
-  await expect(card.getByRole("status")).toContainText(`into ${account}`);
+  if (asNew) {
+    for (const box of await card.getByRole("checkbox", { name: /^Match / }).all()) {
+      await box.uncheck();
+    }
+  }
+  await card.getByRole("button", { name: /^(Import|Match) \d+/ }).click();
+  await expect(card.getByRole("status")).toContainText(new RegExp(`(into|in) ${account}`));
 }
 
 test("marking an imported row as a Transfer links the other account's bank row", async ({
@@ -190,7 +202,8 @@ test("pick a different bank row, or a new transaction, as the other side", async
   await expect(items(page)).toHaveCount(3);
 });
 
-test("swap a typed-in side for the bank row that arrives later", async ({ page }) => {
+/** A transfer from Checking typed in on 2030-01-10, its Savings side typed in too. */
+async function typeTransferToSavings(page: Page) {
   await signInWithHousehold(page);
   await addAccount(page, "Checking", "1000");
   await addAccount(page, "Savings", "0");
@@ -204,13 +217,31 @@ test("swap a typed-in side for the bank row that arrives later", async ({ page }
   await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
   await expect(dialog.getByLabel("Other side")).toHaveCount(0); // nothing to choose yet
   await dialog.getByRole("button", { name: "Add transaction" }).click();
+}
 
-  await importCsv(
-    page,
-    "Savings",
-    "savings.csv",
-    "Date,Description,Amount\n01/11/2030,ONLINE TRANSFER,50.00",
+const SAVINGS_ROW = "Date,Description,Amount\n01/11/2030,ONLINE TRANSFER,50.00";
+
+test("importing the bank row matches a typed-in transfer side", async ({ page }) => {
+  await typeTransferToSavings(page);
+  await importCsv(page, "Savings", "savings.csv", SAVINGS_ROW);
+  await expect(page.getByRole("region", { name: "Import transactions" })).toContainText(
+    "Matched 1 transaction you entered in Savings.",
   );
+
+  // Still one transfer, nothing added; its Savings side is now the bank's.
+  await openActivityMonth(page, "2030-01");
+  await expect(items(page)).toHaveCount(1);
+  await expect(activityRow(page, "Typed move").locator(".activity-account")).toHaveText(
+    "Checking → Savings",
+  );
+  await editActivityRow(page, "Typed move");
+  await expect(otherSideChosen(page)).toHaveText(/^Keep 2030-01-10 · Typed move · \$50\.00/);
+});
+
+test("swap a typed-in side for the bank row that arrives later", async ({ page }) => {
+  await typeTransferToSavings(page);
+  // Imported as new instead of matched, the bank row can still be swapped in.
+  await importCsv(page, "Savings", "savings.csv", SAVINGS_ROW, { asNew: true });
   await openActivityMonth(page, "2030-01");
   await editActivityRow(page, "Typed move");
   const form = page.getByRole("form", { name: "Edit transaction" });

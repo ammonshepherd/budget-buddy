@@ -39,7 +39,7 @@ Key model modules: `budgetMath.ts` (all budget math), `money.ts` (parse and
 format cents), `month.ts` (`YYYY-MM` helpers, `formatDay`), `routes.ts`,
 `accounts.ts` (card opening balance sign), `activity.ts` (the Activity page's
 month: rows by day, totals, day nets), `transfers.ts` (linked transfers and
-matching), `transactionImport.ts` + `csv.ts` (bank CSV), `envelopePlan.ts` (plan
+matching), `transactionImport.ts` + `csv.ts` (bank CSV, matching typed transactions), `envelopePlan.ts` (plan
 CSV), `incomeRules.ts`, `dataStore.ts` (the store interface), `supabaseStore.ts`,
 `memoryStore.ts`, `store.ts` (picks one).
 
@@ -120,18 +120,18 @@ a whole household cascades but deleting a used account/envelope/group fails.
 
 SQL functions (all `security invoker` except `create_household`):
 
-| Function                                                         | Does                                                                                                                                                                                                           |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `create_household(name)`                                         | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                                     |
-| `adjust_category_month(envelope, month, Δassigned, Δreleased)`   | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                                      |
-| `move_between_envelopes(from, to, month, amount)`                | Moves Assigned between envelopes in one step.                                                                                                                                                                  |
-| `save_transaction(…, is_transfer=false, is_income, allocations)` | Creates/updates one non-transfer transaction and its allocations (≤ 50 lines of `{category_id, amount}`; empty = Uncategorized); turning a transfer side into an ordinary transaction releases the other side. |
-| `save_transfer(transfer_id, legs)`                               | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                                                  |
-| `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards), saves the account's `import_format`, returns how many were added.                     |
-| `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                      |
-| `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                 |
-| `reorder_category_groups(household, ids)`                        | Saves the order of the household's groups; the list must name every group once.                                                                                                                                |
-| `reorder_categories(group, ids)`                                 | Saves the order of a group's envelopes; the list must name every envelope of the group once.                                                                                                                   |
+| Function                                                         | Does                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create_household(name)`                                         | Creates a household and makes the caller its owner (refuses a second one).                                                                                                                                                                                                                                                 |
+| `adjust_category_month(envelope, month, Δassigned, Δreleased)`   | Adds to (never overwrites) a month's Assigned/Released, creating the row.                                                                                                                                                                                                                                                  |
+| `move_between_envelopes(from, to, month, amount)`                | Moves Assigned between envelopes in one step.                                                                                                                                                                                                                                                                              |
+| `save_transaction(…, is_transfer=false, is_income, allocations)` | Creates/updates one non-transfer transaction and its allocations (≤ 50 lines of `{category_id, amount}`; empty = Uncategorized); turning a transfer side into an ordinary transaction releases the other side.                                                                                                             |
+| `save_transfer(transfer_id, legs)`                               | Saves both sides of a transfer (new rows or existing ones, e.g. an imported row being linked); sides the transfer no longer has are released.                                                                                                                                                                              |
+| `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards); a row with `match_id` gives that typed-in transaction its `import_key` (and `source='csv'`) instead, all or nothing; saves the account's `import_format`, returns how many were added or matched. |
+| `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                                                                                                                                  |
+| `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                                                                                                                             |
+| `reorder_category_groups(household, ids)`                        | Saves the order of the household's groups; the list must name every group once.                                                                                                                                                                                                                                            |
+| `reorder_categories(group, ids)`                                 | Saves the order of a group's envelopes; the list must name every envelope of the group once.                                                                                                                                                                                                                               |
 
 Triggers also: create/rename/protect each card's payment envelope (in the
 group that holds the other cards' payment envelopes, else "Credit card
@@ -377,13 +377,27 @@ fitid, transactionnumber, id`
      when 70%+ of amounts (3 or more) are positive.
 4. **Preview:** "N new transactions from DATE to DATE: $X in, $Y out." plus
    duplicates skipped, rows before the opening date skipped, invalid rows (by
-   line, with the reason), and how many inflows income rules will mark.
-   Description over 200 characters is kept whole in the memo.
+   line, with the reason), how many inflows income rules will mark, and how
+   many rows will be matched to transactions you entered. Description over
+   200 characters is kept whole in the memo. The button says what it does:
+   "Import N transactions", "Match N transactions" or "Import N and match M".
 5. **Duplicates:** key `id:⟨bank ID⟩`, or without one
    `fp:⟨date⟩|⟨cents⟩|⟨description lowercased⟩|⟨n⟩` (n counts identical rows in
    the file). Keys already in the account, or repeated bank IDs, are skipped.
-6. Import adds everything as Uncategorized (to review) except card credits;
-   income-rule matches arrive as Income.
+6. **Matching typed transactions** (`findImportMatches`): a new row matches a
+   transaction typed into the same account (no import key, not voided; transfer
+   sides and splits too) with the same amount, dated within
+   `IMPORT_MATCH_DAYS` (10). Each side matches once; the closest dates pair
+   first, then file order. Matches are listed in the preview ("Matched to
+   transactions you entered": your payee and amount, "You entered DATE · bank:
+   DATE, DESCRIPTION", a Match checkbox, ticked). A matched row adds nothing:
+   the typed transaction takes its import key (so it shows as Cleared and the
+   row is a duplicate next time) and keeps everything entered (date, payee,
+   memo, envelopes, Income, transfer). Unticked, the row is imported as new.
+   If a typed transaction changed before saving, the import fails with "A
+   transaction to match has changed since the preview. Choose the file again."
+7. Import adds everything else as Uncategorized (to review) except card
+   credits; income-rule matches arrive as Income.
 
 ## 7. Envelope plan CSV
 
@@ -412,8 +426,9 @@ Envelopes not in the file are left alone.
 
 ## 9. Not built yet
 
-Decided or wanted, but not in the app: matching
-typed transactions to imported ones (other than transfers); reconciliation;
+Decided or wanted, but not in the app: matching a transaction typed after
+its bank row was imported (import matches typed transactions to new rows,
+and transfers link to bank rows); undoing a match; reconciliation;
 tithing/fast-offering rules; inviting a second household member; editing an
 income rule (delete and re-add instead); an envelope icon next to each envelope
 name on the Budget page and in Settings; on Activity: search and filters (account, envelope,

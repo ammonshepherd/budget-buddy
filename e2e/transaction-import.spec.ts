@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { activityRow, available, goTo, openActivityMonth, signInWithHousehold } from "./helpers";
+import {
+  activityRow,
+  available,
+  goTo,
+  openActivityMonth,
+  openAddTransaction,
+  signInWithHousehold,
+} from "./helpers";
 
 // Made-up rows in the same layout as the bank's checking export.
 const CHECKING = [
@@ -127,4 +134,53 @@ test("a card export with positive purchases and changed columns", async ({ page 
   await expect(
     page.getByRole("region", { name: "Fri Jan 4" }).locator(".activity-payee"),
   ).toHaveText(["GROCERY"]);
+});
+
+test("bank rows match transactions typed in before the import", async ({ page }) => {
+  await signInWithHousehold(page);
+  await addAccount(page, "Checking", "1300.00");
+  for (const [date, amount, payee] of [
+    ["2030-01-10", "18.62", "Hardware"],
+    ["2030-01-02", "300.00", "Visa payment"],
+  ]) {
+    const dialog = await openAddTransaction(page);
+    await dialog.getByLabel("Date").fill(date!);
+    await dialog.getByLabel("Amount").fill(amount!);
+    await dialog.getByLabel("Payee").fill(payee!);
+    await dialog.getByRole("button", { name: "Add transaction" }).click();
+    await expect(dialog).toBeHidden();
+  }
+
+  await goTo(page, "Settings");
+  const card = page.getByRole("region", { name: "Import transactions" });
+  await card.getByLabel("Bank CSV file").setInputFiles(file("CHECKING.csv", CHECKING));
+  const status = card.getByRole("status");
+  await expect(status).toContainText(
+    "1 new transaction from 2030-01-11 to 2030-01-11: $500.00 in, $0.00 out.",
+  );
+  await expect(status).toContainText("2 rows will be matched to transactions you entered.");
+  const matches = card.getByRole("list", { name: "Matched to transactions you entered" });
+  await expect(matches.getByRole("listitem")).toHaveCount(2);
+  await expect(matches.getByRole("listitem").first()).toContainText(
+    "You entered 2030-01-10 · bank: 2030-01-12, Withdrawal Debit Card HARDWARE STORE",
+  );
+
+  // Keep the card payment separate: it is imported as a new row instead.
+  await matches.getByRole("checkbox", { name: /CARD PAYMENT to Visa payment/ }).uncheck();
+  await expect(status).toContainText("2 new transactions");
+  await card.getByRole("button", { name: "Import 2 and match 1" }).click();
+  await expect(status).toContainText(
+    "Imported 2 transactions into Checking and matched 1 you entered.",
+  );
+
+  // The match kept what was typed and is now cleared; nothing was added twice.
+  await openActivityMonth(page, "2030-01");
+  await expect(activityRow(page, "Hardware").getByRole("img", { name: "Cleared" })).toBeVisible();
+  await expect(activityRow(page, "Withdrawal Debit Card HARDWARE STORE")).toHaveCount(0);
+  await expect(
+    activityRow(page, "Visa payment").getByRole("img", { name: "Uncleared" }),
+  ).toBeVisible();
+  await expect(activityRow(page, "Withdrawal ACH CARD PAYMENT")).toHaveCount(1);
+  await goTo(page, "Accounts");
+  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$1,181.38");
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UserFacingError, type TransactionInput } from "./dataStore";
 import { createMemoryStore } from "./memoryStore";
+import type { ImportFormat } from "./transactionImport";
 
 /** A store with a household, checking and a Visa, and envelopes A and B. */
 async function setUp() {
@@ -175,5 +176,54 @@ describe("memory store moving envelopes", () => {
     await expect(store.moveEnvelope(id("B"), "no-such-group", 0)).rejects.toThrow(
       /Group not found/,
     );
+  });
+});
+
+describe("memory store import matching", () => {
+  const format: ImportFormat = {
+    version: 1,
+    hasHeader: true,
+    headers: [],
+    columnCount: 3,
+    date: 0,
+    dateOrder: "MDY",
+    description: 1,
+    memo: -1,
+    amount: { kind: "signed", column: 2, flip: false },
+    bankId: -1,
+  };
+  const row = (importKey: string, amount: number, matchId: string | null) => ({
+    date: "2026-10-07",
+    amount,
+    payee: "BANK SHOP",
+    memo: "",
+    importKey,
+    isIncome: false,
+    matchId,
+  });
+
+  it("gives the typed transaction the import key, keeping what was entered", async () => {
+    const { store, id, save } = await setUp();
+    await save(id("Checking"), -5_000, [[id("A"), -5_000]]);
+    const typed = (await store.load())!.transactions[0]!;
+    const rows = [row("id:1", -5_000, typed.id), row("id:2", -700, null)];
+    expect(await store.importTransactions(id("Checking"), format, rows)).toBe(2);
+    const data = (await store.load())!;
+    expect(data.transactions).toHaveLength(2);
+    expect(data.transactions.find((t) => t.id === typed.id)).toEqual({
+      ...typed,
+      importKey: "id:1",
+    });
+
+    // A match that no longer fits (already matched, or gone) saves nothing.
+    for (const stale of [
+      [row("id:3", -5_000, typed.id)],
+      [row("id:3", -700, null), row("id:4", -5_000, "missing")],
+    ]) {
+      await expect(store.importTransactions(id("Checking"), format, stale)).rejects.toThrow(
+        UserFacingError,
+      );
+    }
+    expect((await store.load())!.transactions).toHaveLength(2);
   });
 });

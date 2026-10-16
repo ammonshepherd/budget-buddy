@@ -9,6 +9,10 @@ import { nameKey } from "./envelopePlan";
 import { MAX_SPLIT_LINES } from "./splits";
 import type { BudgetData, Transaction } from "./types";
 
+/** Same message as the import_transactions SQL function. */
+const MATCH_CHANGED =
+  "A transaction to match has changed since the preview. Choose the file again.";
+
 export function createMemoryStore(): DataStore {
   let session: UserSession | null = null;
   let data: BudgetData | null = null;
@@ -315,9 +319,29 @@ export function createMemoryStore(): DataStore {
       const keys = new Set(
         b.transactions.filter((t) => t.accountId === accountId).map((t) => t.importKey),
       );
-      let added = 0;
+      // Like the SQL function: every match must still fit, or nothing is saved.
+      const matches = rows.flatMap((row) => {
+        if (row.matchId === null) return [];
+        const tx = b.transactions.find((t) => t.id === row.matchId);
+        const fits =
+          tx?.accountId === accountId &&
+          tx.importKey === null &&
+          !tx.voided &&
+          tx.amount === row.amount &&
+          !keys.has(row.importKey);
+        if (!fits) throw new UserFacingError(MATCH_CHANGED);
+        return [{ tx, importKey: row.importKey }];
+      });
+      if (new Set(matches.map((m) => m.tx)).size !== matches.length) {
+        throw new UserFacingError(MATCH_CHANGED);
+      }
+      for (const { tx, importKey } of matches) {
+        tx.importKey = importKey;
+        keys.add(importKey);
+      }
+      let added = matches.length;
       for (const row of rows) {
-        if (keys.has(row.importKey)) continue;
+        if (row.matchId !== null || keys.has(row.importKey)) continue;
         keys.add(row.importKey);
         b.transactions.push({
           id: id(),

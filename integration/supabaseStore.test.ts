@@ -237,31 +237,56 @@ describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
     // The database trigger gave the card its payment envelope.
     expect(data.envelopes.find((e) => e.cardAccountId === account.id)?.name).toBe(`${run} payment`);
 
+    // A transaction typed in before the bank's file arrives.
+    await store.saveTransaction(data.household.id, {
+      accountId: account.id,
+      date: "2030-01-01",
+      amount: -450,
+      payee: "Typed coffee",
+      memo: "",
+      isIncome: false,
+      allocations: [],
+    });
+    data = (await store.load())!;
+    const typed = data.transactions.find((t) => t.payee === "Typed coffee")!;
+
     const table = readTable(
       parseCsv(
         `Transaction ID,Date,Description,Amount\n${run}-1,01/02/30,Coffee,-4.50\n${run}-2,01/03/30,Pay,100`,
       ),
     );
     const format = detectFormat(table);
-    const rows = previewTransactionImport(data, account, table, format).rows.map(
-      ({ date, amount, payee, memo, importKey, isIncome }) => ({
+    const preview = previewTransactionImport(data, account, table, format);
+    expect(preview.matches.map((m) => [m.row.line, m.tx.id])).toEqual([[2, typed.id]]);
+    const rows = [...preview.rows, ...preview.matches.map((m) => m.row)].map(
+      ({ date, amount, payee, memo, importKey, isIncome, matchId }) => ({
         date,
         amount,
         payee,
         memo,
         importKey,
         isIncome,
+        matchId,
       }),
     );
+    // One row added, one matched.
     expect(await store.importTransactions(account.id, format, rows)).toBe(2);
-    // Sending the same rows again adds nothing: the database also refuses duplicates.
-    expect(await store.importTransactions(account.id, format, rows)).toBe(0);
+    // The typed transaction is already matched, so the same match is refused.
+    await expect(store.importTransactions(account.id, format, rows)).rejects.toThrow(
+      "A transaction to match has changed since the preview",
+    );
+    // Sending the rows again as new adds nothing: the database also refuses duplicates.
+    const asNew = rows.map((row) => ({ ...row, matchId: null }));
+    expect(await store.importTransactions(account.id, format, asNew)).toBe(0);
 
     data = (await store.load())!;
     const imported = data.transactions.filter((t) => t.accountId === account.id);
-    expect(imported.map((t) => [t.amount, t.importKey, t.allocations.length]).sort()).toEqual([
-      [-450, `id:${run}-1`, 0],
-      [10_000, `id:${run}-2`, 0],
+    expect(
+      imported.map((t) => [t.amount, t.importKey, t.payee, t.date, t.allocations.length]).sort(),
+    ).toEqual([
+      // The match keeps what was typed and takes the bank's key.
+      [-450, `id:${run}-1`, "Typed coffee", "2030-01-01", 0],
+      [10_000, `id:${run}-2`, "Pay", "2030-01-03", 0],
     ]);
     expect(data.accounts.find((a) => a.id === account.id)?.importFormat).toEqual(format);
 

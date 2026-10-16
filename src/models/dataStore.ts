@@ -114,8 +114,11 @@ export interface DataStore {
   deleteIncomeRule(ruleId: string): Promise<void>;
   /**
    * All or nothing: adds imported rows to an open account as Uncategorized,
-   * skipping any whose import key the account already has, and saves the
-   * column mapping on the account. Resolves to how many rows were added.
+   * skipping any whose import key the account already has, matches rows with
+   * a `matchId` to that typed-in transaction (it takes the import key and
+   * keeps the rest), and saves the column mapping on the account. A match
+   * that no longer fits (edited, deleted or matched meanwhile) fails the
+   * whole import. Resolves to how many rows were added or matched.
    */
   importTransactions(
     accountId: string,

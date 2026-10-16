@@ -5,6 +5,7 @@ import {
   columnLabels,
   detectFormat,
   formatFor,
+  findImportMatches,
   formatProblem,
   parseImportAmount,
   parseImportDate,
@@ -12,7 +13,7 @@ import {
   readTable,
   type ImportFormat,
 } from "./transactionImport";
-import type { Account, BudgetData } from "./types";
+import type { Account, BudgetData, Transaction } from "./types";
 
 // Made-up rows in the layouts of a few common bank exports.
 const CHECKING = [
@@ -66,6 +67,22 @@ function budget(transactions: BudgetData["transactions"] = []): BudgetData {
     envelopes: [],
     envelopeMonths: [],
     transactions,
+  };
+}
+
+/** A transaction typed into Checking (no import key). */
+function typed(partial: Partial<Transaction> & Pick<Transaction, "id" | "date" | "amount">) {
+  return {
+    accountId: "checking",
+    payee: "Typed",
+    memo: "",
+    isTransfer: false,
+    isIncome: false,
+    transferId: null,
+    voided: false,
+    allocations: [],
+    importKey: null,
+    ...partial,
   };
 }
 
@@ -204,6 +221,7 @@ describe("previewTransactionImport", () => {
         memo: "",
         importKey: "id:20261012:1",
         isIncome: false,
+        matchId: null,
       },
       expect.objectContaining({ date: "2026-10-11", amount: 200_000 }),
       expect.objectContaining({ date: "2026-10-02", amount: -30_000 }),
@@ -346,5 +364,81 @@ describe("previewTransactionImport", () => {
     ]);
     expect(preview.rows[0]?.payee).toHaveLength(200);
     expect(preview.rows[0]?.memo).toBe(long);
+  });
+});
+
+describe("matching typed transactions to imported ones", () => {
+  const rows = [
+    { line: 2, date: "2026-10-12", amount: -1_862 },
+    { line: 3, date: "2026-10-11", amount: 200_000 },
+  ];
+
+  it("matches the same amount in the same account within IMPORT_MATCH_DAYS", () => {
+    const data = budget([
+      typed({ id: "near", date: "2026-10-10", amount: -1_862 }),
+      typed({ id: "far", date: "2026-09-30", amount: 200_000 }), // 11 days away
+      typed({ id: "cents", date: "2026-10-11", amount: 199_999 }),
+      typed({ id: "other", date: "2026-10-11", amount: 200_000, accountId: "savings" }),
+      typed({ id: "voided", date: "2026-10-11", amount: 200_000, voided: true }),
+      typed({ id: "bank", date: "2026-10-11", amount: 200_000, importKey: "id:x" }),
+    ]);
+    const matches = findImportMatches(data, "checking", rows);
+    expect([...matches].map(([line, tx]) => [line, tx.id])).toEqual([[2, "near"]]);
+  });
+
+  it("uses each side once, pairing the closest dates first", () => {
+    const data = budget([
+      typed({ id: "a", date: "2026-10-05", amount: -500 }),
+      typed({ id: "b", date: "2026-10-09", amount: -500 }),
+    ]);
+    const matches = findImportMatches(data, "checking", [
+      { line: 2, date: "2026-10-06", amount: -500 },
+      { line: 3, date: "2026-10-09", amount: -500 },
+      { line: 4, date: "2026-10-09", amount: -500 },
+    ]);
+    // Line 3 takes b (same day), line 2 takes a; line 4 has nothing left.
+    expect([...matches].map(([line, tx]) => [line, tx.id]).sort()).toEqual([
+      [2, "a"],
+      [3, "b"],
+    ]);
+  });
+
+  it("previews matches apart from new rows, and imports a kept-separate row as new", () => {
+    const t = table(CHECKING);
+    const withRule = {
+      ...budget([typed({ id: "pay", date: "2026-10-10", amount: 200_000, payee: "Salary" })]),
+      incomeRules: [{ id: "r", pattern: "payroll", accountId: null }],
+    };
+    const preview = previewTransactionImport(withRule, account(), t, detectFormat(t));
+    expect(preview.rows.map((r) => r.line)).toEqual([2, 4]);
+    expect(preview.matches).toEqual([
+      {
+        row: expect.objectContaining({ line: 3, importKey: "id:20261011:2", matchId: "pay" }),
+        tx: expect.objectContaining({ id: "pay" }),
+        separate: false,
+      },
+    ]);
+    // A matched row is not new: no totals, no income rule.
+    expect(preview).toMatchObject({ inflow: 0, outflow: 31_862, markedIncome: 0 });
+
+    const kept = previewTransactionImport(withRule, account(), t, detectFormat(t), new Set([3]));
+    expect(kept.matches[0]?.separate).toBe(true);
+    expect(kept.rows.map((r) => [r.line, r.matchId, r.isIncome])).toEqual([
+      [2, null, false],
+      [3, null, true],
+      [4, null, false],
+    ]);
+    expect(kept.inflow).toBe(200_000);
+  });
+
+  it("never matches a row already imported", () => {
+    const t = table(CHECKING);
+    const data = budget([
+      typed({ id: "pay", date: "2026-10-11", amount: 200_000 }),
+      typed({ id: "old", date: "2026-10-11", amount: 200_000, importKey: "id:20261011:2" }),
+    ]);
+    const preview = previewTransactionImport(data, account(), t, detectFormat(t));
+    expect(preview.matches).toEqual([]);
+    expect(preview.duplicates.map((d) => d.line)).toEqual([3]);
   });
 });

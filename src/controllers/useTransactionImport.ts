@@ -21,6 +21,8 @@ type Loaded = { fileName: string; table: CsvTable };
 type Done = {
   accountName: string;
   added: number;
+  /** Typed-in transactions matched to bank rows. */
+  matched: number;
   alreadyThere: number;
   /** Activity for the month of the newest imported row. */
   activityHref: string;
@@ -30,7 +32,8 @@ type Done = {
  * Settings → Import transactions: choose an account and a bank CSV, check
  * (or fix) which column is which, review the preview, then import. The
  * column choices start from the account's saved format when the file
- * matches it, otherwise from what detectFormat guesses.
+ * matches it, otherwise from what detectFormat guesses. Rows that match a
+ * typed-in transaction are matched to it unless the user keeps them separate.
  */
 export function useTransactionImport(budget: Budget, data: BudgetData) {
   const openAccounts = data.accounts.filter((a) => !a.closedAt);
@@ -39,6 +42,8 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
   const [fileError, setFileError] = useState<string | null>(null);
   /** The user's column changes; null = use the saved or detected format. */
   const [edited, setEdited] = useState<ImportFormat | null>(null);
+  /** Lines of matched rows to import as new transactions instead. */
+  const [separate, setSeparate] = useState<ReadonlySet<number>>(new Set());
   const [done, setDone] = useState<Done | null>(null);
 
   // Falls back to the first open account (e.g. one added after this page opened).
@@ -49,9 +54,9 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
   const preview = useMemo(
     () =>
       account && file && format && !problem
-        ? previewTransactionImport(data, account, file.table, format)
+        ? previewTransactionImport(data, account, file.table, format, separate)
         : null,
-    [data, account, file, format, problem],
+    [data, account, file, format, problem, separate],
   );
 
   return {
@@ -70,12 +75,14 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
     chooseAccount: (id: string) => {
       setAccountId(id);
       setEdited(null);
+      setSeparate(new Set());
       setDone(null);
     },
 
     chooseFile: async (chosen: File | null) => {
       setFile(null);
       setEdited(null);
+      setSeparate(new Set());
       setFileError(null);
       setDone(null);
       if (!chosen) return;
@@ -96,35 +103,51 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
       if (format) setEdited({ ...format, ...change });
     },
 
+    /** Matches a row to its typed-in transaction, or imports it as new. */
+    setMatched: (line: number, matched: boolean) => {
+      const next = new Set(separate);
+      if (matched) next.delete(line);
+      else next.add(line);
+      setSeparate(next);
+    },
+
     clear: () => {
       setFile(null);
       setEdited(null);
+      setSeparate(new Set());
       setFileError(null);
     },
 
     importNow: async () => {
-      if (!account || !format || !preview || preview.rows.length === 0) {
+      const matches = preview?.matches.filter((m) => !m.separate).map((m) => m.row) ?? [];
+      if (!account || !format || !preview || preview.rows.length + matches.length === 0) {
         throw new UserFacingError("There are no new transactions to import.");
       }
-      const rows = preview.rows.map(({ date, amount, payee, memo, importKey, isIncome }) => ({
-        date,
-        amount,
-        payee,
-        memo,
-        importKey,
-        isIncome,
-      }));
-      let added = 0;
+      const rows = [...preview.rows, ...matches].map(
+        ({ date, amount, payee, memo, importKey, isIncome, matchId }) => ({
+          date,
+          amount,
+          payee,
+          memo,
+          importKey,
+          isIncome,
+          matchId,
+        }),
+      );
+      let saved = 0;
       await budget.change(async (store) => {
-        added = await store.importTransactions(account.id, format, rows);
+        saved = await store.importTransactions(account.id, format, rows);
       });
       setFile(null);
       setEdited(null);
+      setSeparate(new Set());
       const newest = rows.reduce((latest, row) => (row.date > latest ? row.date : latest), "");
+      // Every match is saved or the import fails, so the rest were added.
       setDone({
         accountName: account.name,
-        added,
-        alreadyThere: rows.length - added,
+        added: saved - matches.length,
+        matched: matches.length,
+        alreadyThere: rows.length - saved,
         activityHref: activityHref(monthOf(newest)),
       });
     },

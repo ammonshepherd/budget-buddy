@@ -8,13 +8,21 @@
  * Duplicates are recognised by an import key: the bank's transaction ID when
  * the file has one, otherwise date + amount + description (+ how many times
  * that exact row has appeared earlier in the file).
+ *
+ * A bank row that matches a transaction the user typed into the account
+ * (same amount, dated within IMPORT_MATCH_DAYS) is matched to it instead of
+ * being added again: the typed transaction takes the row's import key, so it
+ * counts as imported (cleared), and keeps everything the user entered.
  */
 import { CsvError, type CsvRow } from "./csv";
 import { incomeRuleFor } from "./incomeRules";
 import { parseCents, type Cents } from "./money";
-import type { Account, BudgetData, IsoDate } from "./types";
+import { daysBetween } from "./transfers";
+import type { Account, BudgetData, IsoDate, Transaction } from "./types";
 
 export const MAX_IMPORT_ROWS = 2000;
+/** How far apart a bank row and a typed transaction may be dated to match. */
+export const IMPORT_MATCH_DAYS = 10;
 const MAX_PAYEE = 200;
 const MAX_MEMO = 500;
 const MAX_AMOUNT: Cents = 999_999_999_999;
@@ -51,7 +59,7 @@ export interface CsvTable {
   columnCount: number;
 }
 
-/** One transaction ready to save (always Uncategorized). */
+/** One transaction ready to save (always Uncategorized), or a match. */
 export interface ImportedTransaction {
   date: IsoDate;
   amount: Cents;
@@ -60,6 +68,11 @@ export interface ImportedTransaction {
   importKey: string;
   /** Marked Income by an income rule (inflows only). */
   isIncome: boolean;
+  /**
+   * A typed-in transaction this row matches: it takes the import key and
+   * keeps the rest; nothing is added. Null = a new transaction.
+   */
+  matchId: string | null;
 }
 
 export interface ImportPreviewRow extends ImportedTransaction {
@@ -74,8 +87,19 @@ export interface SkippedImportRow {
   reason: string;
 }
 
+/** A bank row and the typed-in transaction it matches. */
+export interface ImportMatch {
+  row: ImportPreviewRow;
+  tx: Transaction;
+  /** The user chose to import the row as a new transaction instead. */
+  separate: boolean;
+}
+
 export interface TransactionImportPreview {
+  /** Rows added as new transactions (including matches kept separate). */
   rows: ImportPreviewRow[];
+  /** Rows matched to typed-in transactions, in file order. */
+  matches: ImportMatch[];
   duplicates: SkippedImportRow[];
   beforeOpening: SkippedImportRow[];
   invalid: { line: number; message: string }[];
@@ -390,16 +414,58 @@ function readAmount(row: CsvRow, amount: AmountColumns): Cents | string {
 }
 
 /**
+ * Pairs bank rows with transactions typed into the account (no import key,
+ * not voided) of the same amount, dated within IMPORT_MATCH_DAYS. Each side
+ * is used once; the closest dates pair first (then file order, then the
+ * earlier typed transaction). Returns the typed transaction per row line.
+ */
+export function findImportMatches(
+  data: BudgetData,
+  accountId: string,
+  rows: Pick<ImportPreviewRow, "line" | "date" | "amount">[],
+): Map<number, Transaction> {
+  const typed = data.transactions.filter(
+    (t) => t.accountId === accountId && t.importKey === null && !t.voided,
+  );
+  const pairs: { line: number; tx: Transaction; away: number }[] = [];
+  for (const row of rows) {
+    for (const tx of typed) {
+      const away = Math.abs(daysBetween(tx.date, row.date));
+      if (tx.amount === row.amount && away <= IMPORT_MATCH_DAYS) {
+        pairs.push({ line: row.line, tx, away });
+      }
+    }
+  }
+  pairs.sort(
+    (a, b) =>
+      a.away - b.away ||
+      a.line - b.line ||
+      a.tx.date.localeCompare(b.tx.date) ||
+      a.tx.id.localeCompare(b.tx.id),
+  );
+  const matches = new Map<number, Transaction>();
+  const used = new Set<string>();
+  for (const { line, tx } of pairs) {
+    if (matches.has(line) || used.has(tx.id)) continue;
+    matches.set(line, tx);
+    used.add(tx.id);
+  }
+  return matches;
+}
+
+/**
  * Reads every row through the format and sorts it into: new transactions,
- * duplicates (already in the account, or repeated in the file), rows dated
- * before the account's opening date (already part of its opening balance),
- * and invalid rows.
+ * matches with typed-in transactions, duplicates (already in the account, or
+ * repeated in the file), rows dated before the account's opening date
+ * (already part of its opening balance), and invalid rows. `separate` lists
+ * the lines of matches the user wants imported as new transactions instead.
  */
 export function previewTransactionImport(
   data: BudgetData,
   account: Account,
   table: CsvTable,
   format: ImportFormat,
+  separate: ReadonlySet<number> = new Set(),
 ): TransactionImportPreview {
   const existing = new Set(
     data.transactions
@@ -410,6 +476,7 @@ export function previewTransactionImport(
   const fingerprints = new Map<string, number>();
   const preview: TransactionImportPreview = {
     rows: [],
+    matches: [],
     duplicates: [],
     beforeOpening: [],
     invalid: [],
@@ -422,6 +489,7 @@ export function previewTransactionImport(
   };
   let positives = 0;
   let amounts = 0;
+  const fresh: Omit<ImportPreviewRow, "isIncome" | "matchId">[] = [];
 
   for (const row of table.rows) {
     const cell = (i: number) => (i >= 0 ? (row.cells[i] ?? "").trim() : "");
@@ -487,10 +555,26 @@ export function previewTransactionImport(
       continue;
     }
 
+    fresh.push({ line: row.line, date, amount, payee, memo, importKey });
+  }
+
+  const matched = findImportMatches(data, account.id, fresh);
+  for (const row of fresh) {
+    const tx = matched.get(row.line);
+    if (tx) {
+      const isSeparate = separate.has(row.line);
+      preview.matches.push({
+        row: { ...row, isIncome: false, matchId: tx.id },
+        tx,
+        separate: isSeparate,
+      });
+      if (!isSeparate) continue;
+    }
+    const { amount, payee, date } = row;
     const isIncome =
       incomeRuleFor(data.incomeRules, { accountId: account.id, amount, payee }) !== null;
     if (isIncome) preview.markedIncome++;
-    preview.rows.push({ line: row.line, date, amount, payee, memo, importKey, isIncome });
+    preview.rows.push({ ...row, isIncome, matchId: null });
     if (amount > 0) preview.inflow += amount;
     else preview.outflow -= amount;
     if (!preview.firstDate || date < preview.firstDate) preview.firstDate = date;

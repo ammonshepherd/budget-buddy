@@ -5,6 +5,7 @@ import { useTransactionImport } from "../controllers/useTransactionImport";
 import type {
   DateOrder,
   ImportFormat,
+  ImportMatch,
   SkippedImportRow,
   TransactionImportPreview,
 } from "../models/transactionImport";
@@ -19,6 +20,23 @@ const DATE_ORDERS: [DateOrder, string][] = [
 ];
 
 type Import = ReturnType<typeof useTransactionImport>;
+
+const count = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`;
+
+const matchCount = (preview: TransactionImportPreview | null) =>
+  preview?.matches.filter((m) => !m.separate).length ?? 0;
+/** Rows the import button saves: new ones plus matches. */
+const saveCount = (preview: TransactionImportPreview | null) =>
+  (preview?.rows.length ?? 0) + matchCount(preview);
+
+/** "Import 3 transactions", "Match 1 transaction" or "Import 3 and match 1". */
+function importLabel(preview: TransactionImportPreview | null) {
+  const added = preview?.rows.length ?? 0;
+  const matched = matchCount(preview);
+  if (matched === 0) return `Import ${count(added, "transaction")}`;
+  if (added === 0) return `Match ${count(matched, "transaction")}`;
+  return `Import ${added} and match ${matched}`;
+}
 
 /** Settings card: import a bank or card CSV into an account. */
 export function TransactionImport({ budget, data }: { budget: Budget; data: BudgetData }) {
@@ -49,7 +67,8 @@ export function TransactionImport({ budget, data }: { budget: Budget; data: Budg
       <p className="empty-state">
         Download a CSV from your bank or card website and choose it here. Columns are detected
         automatically, and remembered for each account. Imported transactions arrive Uncategorized;
-        give them envelopes on Activity.
+        give them envelopes on Activity. A bank row that matches a transaction you typed in is
+        matched to it instead of being added twice.
       </p>
 
       <div className="form">
@@ -81,8 +100,12 @@ export function TransactionImport({ budget, data }: { budget: Budget; data: Budg
 
       {io.done && (
         <p className="notice" role="status">
-          Imported {io.done.added} {io.done.added === 1 ? "transaction" : "transactions"} into{" "}
-          {io.done.accountName}
+          {io.done.added === 0 && io.done.matched > 0
+            ? `Matched ${count(io.done.matched, "transaction")} you entered in ${io.done.accountName}`
+            : `Imported ${count(io.done.added, "transaction")} into ${io.done.accountName}`}
+          {io.done.added > 0 &&
+            io.done.matched > 0 &&
+            ` and matched ${io.done.matched} you entered`}
           {io.done.alreadyThere > 0 && ` (${io.done.alreadyThere} were already there)`}.{" "}
           <a href={io.done.activityHref}>Give them envelopes on Activity</a>
         </p>
@@ -92,18 +115,17 @@ export function TransactionImport({ budget, data }: { budget: Budget; data: Budg
         <div className="stack">
           <ColumnChoices io={io} format={format} />
           <ErrorMessage error={io.problem} />
-          {preview && <PreviewDetails preview={preview} />}
+          {preview && <PreviewDetails preview={preview} io={io} />}
           <div className="button-row">
             <button
               className="primary-button"
               type="button"
-              disabled={save.pending || !preview || preview.rows.length === 0}
+              disabled={save.pending || saveCount(preview) === 0}
               onClick={async () => {
                 if ((await save.run()).ok) setInputKey((k) => k + 1);
               }}
             >
-              Import {preview?.rows.length ?? 0}{" "}
-              {preview?.rows.length === 1 ? "transaction" : "transactions"}
+              {importLabel(preview)}
             </button>
             <button
               className="secondary-button"
@@ -238,8 +260,8 @@ function ColumnChoices({ io, format }: { io: Import; format: ImportFormat }) {
   );
 }
 
-function PreviewDetails({ preview }: { preview: TransactionImportPreview }) {
-  const count = (n: number, word: string) => `${n} ${n === 1 ? word : `${word}s`}`;
+function PreviewDetails({ preview, io }: { preview: TransactionImportPreview; io: Import }) {
+  const matched = matchCount(preview);
   return (
     <>
       <p role="status">
@@ -253,6 +275,7 @@ function PreviewDetails({ preview }: { preview: TransactionImportPreview }) {
         {preview.invalid.length > 0 && ` ${count(preview.invalid.length, "invalid row")} skipped.`}
         {preview.markedIncome > 0 &&
           ` ${count(preview.markedIncome, "inflow")} will be marked Income by your rules.`}
+        {matched > 0 && ` ${count(matched, "row")} will be matched to transactions you entered.`}
       </p>
 
       {preview.mostlyPositive && (
@@ -290,6 +313,7 @@ function PreviewDetails({ preview }: { preview: TransactionImportPreview }) {
         </ul>
       )}
 
+      <MatchList matches={preview.matches} io={io} />
       <SkippedList label="Duplicates skipped" rows={preview.duplicates} />
       <SkippedList
         label="Before the opening date (already in its balance)"
@@ -314,6 +338,43 @@ function SkippedList({ label, rows }: { label: string; rows: SkippedImportRow[] 
             <span className="item-detail">
               {row.date} · line {row.line} · {row.reason}
             </span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/**
+ * Bank rows that match a typed-in transaction. Matched, the typed transaction
+ * becomes the bank's (cleared) and keeps what was entered; unticked, the row
+ * is imported as a new transaction.
+ */
+function MatchList({ matches, io }: { matches: ImportMatch[]; io: Import }) {
+  if (matches.length === 0) return null;
+  const label = "Matched to transactions you entered";
+  return (
+    <details className="import-skipped" open>
+      <summary>
+        {label} ({matches.length})
+      </summary>
+      <ul className="item-list" aria-label={label}>
+        {matches.map(({ row, tx, separate }) => (
+          <li className="item" key={row.line}>
+            <span className="item-title">{tx.payee || "(no payee)"}</span>
+            <Money cents={tx.amount} />
+            <span className="item-detail">
+              You entered {tx.date} · bank: {row.date}, {row.payee || "(no description)"}
+            </span>
+            <label className="choice">
+              <input
+                type="checkbox"
+                checked={!separate}
+                aria-label={`Match ${row.payee || "line " + row.line} to ${tx.payee || "your transaction"}`}
+                onChange={(e) => io.setMatched(row.line, e.target.checked)}
+              />
+              Match
+            </label>
           </li>
         ))}
       </ul>
