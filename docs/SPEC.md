@@ -437,12 +437,19 @@ Envelopes not in the file are left alone.
 
 ## 9. Not built yet
 
-Decided or wanted, but not in the app: matching a transaction typed after
-its bank row was imported (import matches typed transactions to new rows,
-and transfers link to bank rows); undoing a match; reconciliation;
-tithing/fast-offering rules; inviting a second household member; editing an
-income rule (delete and re-add instead); an envelope icon next to each envelope
-name on the Budget page and in Settings; on Activity: search and filters (account, envelope,
-status), a "Needs review" queue for transfer matches, running balances, swipe
-actions (such as marking cleared), a stored cleared/reconciled status, and a
-memo per split part.
+Decided or wanted, but not in the app:
+
+- Import and matching: matching a transaction typed after its bank row was
+  imported (import already matches typed transactions to new rows, and
+  transfers link to bank rows); undoing a match.
+- Reconciliation, and a stored cleared/reconciled status (Activity's status
+  mark comes from whether a row was imported).
+- Tithing/fast-offering rules.
+- Inviting a second household member.
+- Editing an income rule (delete and re-add instead).
+- Budget page: an icon chosen per envelope (every row shows the same
+  envelope icon, `EnvelopeIcon`; Settings shows none); "Collapse all" /
+  "Expand all" for groups.
+- Activity: search and filters (account, envelope, status), a "Needs review"
+  queue for transfer matches, running balances, swipe actions (such as marking
+  cleared), and a memo per split part.
