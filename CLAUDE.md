@@ -142,8 +142,9 @@ non-card budget balances − all envelope money (P included)`.
 - The Budget page is for envelopes (layout decided in v0.16.0, revised in
   v0.24.0, `docs/mockups/budget-screen.html`): no page title or summary
   totals; the month picker sits in a purple band that scrolls away;
-  Available to Assign is a sticky card pinned to the top, always shown (green
-  when $0.00 or more; red "Over Assigned" with the positive amount when over);
+  Available to Assign is a sticky card pinned to the top, hidden when it is
+  exactly $0.00 (mockups show it only to show its look; green when positive;
+  red "Over Assigned" with the positive amount when over);
   groups are full-width bars whose name is a button that collapses the group
   (chevron; open, the bar shows no numbers; collapsed, it shows "N envelopes"
   and the group's total left, `groupLeft` in `budgetMath.ts`) and a + button
@@ -162,8 +163,8 @@ non-card budget balances − all envelope money (P included)`.
   cells. Planned and Assigned are edited in place (tap; blur or Enter saves,
   Escape cancels; amounts rounded to the cent by `roundMoney`; never
   negative). Raising Assigned is blocked beyond Available to Assign, and
-  lowering it below what is spent is blocked. Spent turns orange and reads
-  "Spent · over" (screen readers hear "over Planned") when above Planned (`overPlan`, a
+  lowering it below what is spent is blocked. Spent turns orange (no extra
+  word, only "Spent"; screen readers hear "over Planned") when above Planned (`overPlan`, a
   hint only: not overspending).
   Refunded (only when above $0.00) and Short (if overspent) sit on a line
   below. Tapping line 1 opens the envelope sheet (`EnvelopeSheet`, a bottom
