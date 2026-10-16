@@ -7,7 +7,9 @@ descriptions and when asked, without being condescending.
 This file holds the decided math, rules and process. `docs/SPEC.md` describes
 everything else (structure, data model summary, screens, CSV import, look and
 feel, what is not built yet), and `supabase/migrations/` is the exact database.
-Keep all three in step when behaviour changes.
+Keep all three in step when behaviour changes. Every version bump also
+updates SPEC.md's "Version described" line to the new version, so the file
+always describes the app as of that version (including §9, not built yet).
 
 ## Stack (decided)
 
