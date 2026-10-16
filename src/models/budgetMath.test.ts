@@ -6,10 +6,13 @@ import {
   computeEnvelopeHistory,
   computeEnvelopeMonth,
   envelopeAsOf,
+  envelopeLeft,
+  groupLeft,
   isMonth,
   overAssigned,
   spentFromAmounts,
   type EnvelopeMonthInput,
+  type EnvelopeRow,
 } from "./budgetMath";
 
 describe("computeEnvelopeMonth", () => {
@@ -233,5 +236,34 @@ describe("isMonth", () => {
     expect(isMonth("2026-10")).toBe(true);
     expect(isMonth("2026-00")).toBe(false);
     expect(isMonth("2026-1")).toBe(false);
+  });
+});
+
+describe("envelopeLeft and groupLeft", () => {
+  const row = (id: string, money: Partial<EnvelopeRow>): EnvelopeRow => ({
+    ...computeEnvelopeMonth({ month: "2026-10", assigned: 0, released: 0, spent: 0 }, 0),
+    id,
+    name: id,
+    planned: 0,
+    overPlan: false,
+    inUse: true,
+    card: null,
+    ...money,
+  });
+  const card = { accountId: "c", open: true, owed: 9_000, uncovered: 1_000 };
+
+  it("shows Remaining, or Saved + Remaining for a card's payment envelope", () => {
+    expect(envelopeLeft(row("food", { remaining: 2_500, envelopeMoney: 4_000 }))).toBe(2_500);
+    expect(envelopeLeft(row("pay", { remaining: 2_500, envelopeMoney: 8_000, card }))).toBe(8_000);
+  });
+
+  it("adds up what each row of a group shows", () => {
+    const envelopes = [
+      row("food", { remaining: 2_500, envelopeMoney: 4_000 }),
+      row("fun", { remaining: 0, envelopeMoney: 1_000 }),
+      row("pay", { remaining: 500, envelopeMoney: 8_000, card }),
+    ];
+    expect(groupLeft({ id: "g", name: "G", envelopes })).toBe(10_500);
+    expect(groupLeft({ id: "e", name: "Empty", envelopes: [] })).toBe(0);
   });
 });

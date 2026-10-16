@@ -503,6 +503,19 @@ export function visibleGroups(view: BudgetMonthView, showAll: boolean): GroupRow
     .filter((group, i) => group.envelopes.length > 0 || view.groups[i]!.envelopes.length === 0);
 }
 
+/**
+ * What an envelope row shows as left on its right side: Remaining, or for a
+ * card's payment envelope what is available to pay (Saved + Remaining).
+ */
+export function envelopeLeft(row: EnvelopeRow): Cents {
+  return row.card ? row.envelopeMoney : row.remaining;
+}
+
+/** A group's total left (shown when the group is collapsed): its rows' `envelopeLeft`. */
+export function groupLeft(group: GroupRows): Cents {
+  return group.envelopes.reduce((sum, row) => sum + envelopeLeft(row), 0);
+}
+
 const byPosition = <T extends { position: number; name: string }>(a: T, b: T) =>
   a.position - b.position || a.name.localeCompare(b.name);
 

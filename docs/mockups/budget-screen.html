@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Budget screen mockup</title>
+<!--
+  Budget Buddy — Budget screen mockup (static reference, design "J").
+  Companion to budget-screen-redesign-spec.md. Visual reference only:
+  amounts are sample data (Saved values and Available to Assign are placeholders).
+  Working here: sticky Available to Assign card; collapsible groups remembered in localStorage.
+  Not wired up: inline editing of Planned/Assigned (see the spec).
+-->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #4B2A68; --purple-tint: #F3EEF8; --purple-line: #E4DCEE; --row-line: #F0EBF5;
+    --ink: #1E1A24; --ink-2: #3A3342; --muted: #6A6175; --muted-zero: #9A90A6;
+    --grey-cell: #EFEEF1; --grey-label: #5E5866;
+    --over: #A3470A; --over-bg: #FCEBDD;
+    --gold: #F3D36B; --lilac: #B48BE0;
+    --green-border: #2E8B57; --green-bg: #EEF8F2; --green-label: #1F5E3B; --green-amt: #1F6B42;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #E9E4EF; font-family: Manrope, system-ui, sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .app { max-width: 430px; margin: 0 auto; background: #fff; min-height: 100vh; position: relative; padding-bottom: 96px; }
+  button { font: inherit; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .month { background: var(--purple); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 0; }
+  .month h1 { margin: 0; font-size: 14px; font-weight: 800; letter-spacing: .12em; }
+  .month button { width: 44px; height: 44px; border: 0; background: transparent; color: #fff; font-size: 22px; cursor: pointer; }
+
+  /* Sticky Available to Assign */
+  .ata-wrap { position: sticky; top: 0; z-index: 10; background: var(--purple); padding: 4px 12px 10px; padding-top: max(4px, env(safe-area-inset-top)); }
+  .ata { border: 6px solid var(--green-border); background: var(--green-bg); border-radius: 12px; padding: 3px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .ata .lbl { font-size: 13px; font-weight: 600; color: var(--green-label); }
+  .ata .amt { font-size: 20px; font-weight: 800; color: var(--green-amt); }
+
+  /* Group header — whole left area is the collapse toggle */
+  .group-head { background: var(--purple-tint); border-top: 1px solid var(--purple-line); border-bottom: 1px solid var(--purple-line); display: flex; align-items: center; gap: 4px; padding: 0 2px 0 4px; }
+  .group-head h2 { margin: 0; flex: 1; min-width: 0; }
+  .toggle { width: 100%; min-height: 44px; border: 0; background: transparent; padding: 0 4px 0 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; text-align: left; }
+  .chev { flex: none; transition: transform .15s; }
+  .gname { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--purple); white-space: nowrap; }
+  .gsum { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gtotal { font-size: 15px; font-weight: 800; color: var(--purple); white-space: nowrap; }
+  .add { width: 44px; height: 44px; border: 0; background: transparent; color: var(--purple); font-size: 20px; font-weight: 700; cursor: pointer; flex: none; }
+  /* Expanded: no summary, no total. Collapsed: rotate chevron, show summary + total, hide rows. */
+  .group:not(.is-collapsed) .gsum, .group:not(.is-collapsed) .gtotal { display: none; }
+  .group.is-collapsed .chev { transform: rotate(-90deg); }
+  .group.is-collapsed .group-body { display: none; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+
+  .env { padding: 8px 16px; border-bottom: 1px solid var(--row-line); display: flex; flex-direction: column; gap: 6px; }
+  .line1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .name-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .env-icon { flex: none; }
+  .name-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+  .name { font-size: 15px; font-weight: 800; line-height: 1.2; }
+  .rem { font-size: 20px; font-weight: 800; line-height: 1.1; white-space: nowrap; color: var(--ink); }
+  .rem--zero { color: var(--muted-zero); }
+
+  .chip { font-size: 11px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+  .chip--saved { position: relative; gap: 5px; margin: 3px 6px 3px 2px; background: var(--purple); color: #fff; font-size: 13px; font-weight: 800; padding: 4px 12px 4px 8px; box-shadow: 0 0 0 2px #E6D8F5, 0 2px 6px rgba(75,42,104,.25); }
+  .chip--saved .sp { position: absolute; }
+  .chip--saved .sp1 { top: -7px; right: -5px; }    /* gold, 12px */
+  .chip--saved .sp2 { top: -6px; right: 12px; }    /* lilac, 7px */
+  .chip--saved .sp3 { bottom: -5px; right: -7px; } /* lilac, 8px */
+  .chip--saved .sp4 { bottom: -5px; left: 4px; }   /* gold, 7px */
+  .chip--saved .sp5 { top: -5px; left: -3px; }     /* lilac, 6px */
+  .chip--saved .sp6 { top: 9px; right: 3px; }      /* white glint, 5px */
+  .chip--empty { background: var(--purple-tint); color: #6E5A85; font-weight: 600; padding: 2px 8px; }
+
+  .line2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .cell { border: 0; text-align: left; border-radius: 7px; padding: 3px 8px; display: flex; flex-direction: column; background: transparent; line-height: 1.3; }
+  button.cell { cursor: pointer; }
+  .cell .lbl { font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+  .cell .amt { font-size: 13px; font-weight: 700; }
+  .cell--planned { background: var(--purple-tint); color: var(--purple); }
+  .cell--planned .amt { font-weight: 800; }
+  .cell--assigned .lbl { color: var(--muted); }
+  .cell--assigned .amt { color: var(--ink-2); }
+  .cell--spent { background: var(--grey-cell); }
+  .cell--spent .lbl { color: var(--grey-label); }
+  .cell--spent .amt { color: var(--ink-2); }
+  .cell--spent.is-over { background: var(--over-bg); }
+  .cell--spent.is-over .lbl, .cell--spent.is-over .amt { color: var(--over); }
+
+  .fab { position: fixed; bottom: 84px; right: max(18px, calc(50% - 215px + 18px)); width: 56px; height: 56px; border-radius: 28px; border: 0; background: var(--purple); color: #fff; font-size: 28px; box-shadow: 0 4px 12px rgba(40,20,70,.3); cursor: pointer; }
+  nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #fff; border-top: 1px solid var(--purple-line); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 8px; }
+  nav a { height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 12px; color: var(--muted); text-decoration: none; border-radius: 14px; }
+  nav a.active { background: #EFE6F8; color: var(--purple); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="month">
+    <button aria-label="Previous month">‹</button>
+    <h1>OCTOBER 2026</h1>
+    <button aria-label="Next month">›</button>
+  </div>
+  <div class="ata-wrap">
+    <div class="ata"><span class="lbl">Available to Assign</span><span class="amt">[$ AMOUNT]</span></div>
+  </div>
+  <main>
+    <section class="group" data-group-id="weekly-basics">
+      <div class="group-head">
+        <h2><button class="toggle" aria-expanded="true" aria-controls="g-weekly-basics">
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B2A68" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="gname">Weekly Basics</span>
+          <span class="gsum">4 envelopes</span>
+        </button></h2>
+        <span class="gtotal">$650.33<span class="sr-only"> remaining</span></span>
+        <button class="add" aria-label="Add envelope to Weekly Basics">+</button>
+      </div>
+      <div class="group-body" id="g-weekly-basics">
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Groceries</span><span class="chip chip--saved"><svg class="" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg>Saved $48.20<svg class="sp sp1" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp2" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp3" width="8" height="8" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp4" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp5" width="6" height="6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp6" width="5" height="5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#FFFFFF"/></svg></span></div></div>
+            <span class="rem">$112.94<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Groceries, currently $300.00"><span class="lbl">PLANNED</span><span class="amt">$300.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Groceries, currently $300.00"><span class="lbl">ASSIGNED</span><span class="amt">$300.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$187.06</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">General</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem">$189.74<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for General, currently $400.00"><span class="lbl">PLANNED</span><span class="amt">$400.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for General, currently $1,424.03"><span class="lbl">ASSIGNED</span><span class="amt">$1,424.03</span></button>
+            <div class="cell cell--spent is-over"><span class="lbl">SPENT · OVER</span><span class="amt">$1,234.29</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Gas</span><span class="chip chip--saved"><svg class="" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg>Saved $25.00<svg class="sp sp1" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp2" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp3" width="8" height="8" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp4" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp5" width="6" height="6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp6" width="5" height="5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#FFFFFF"/></svg></span></div></div>
+            <span class="rem">$347.65<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Gas, currently $450.00"><span class="lbl">PLANNED</span><span class="amt">$450.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Gas, currently $450.00"><span class="lbl">ASSIGNED</span><span class="amt">$450.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$102.35</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Kids</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem rem--zero">$0.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Kids, currently $150.00"><span class="lbl">PLANNED</span><span class="amt">$150.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Kids, currently $289.33"><span class="lbl">ASSIGNED</span><span class="amt">$289.33</span></button>
+            <div class="cell cell--spent is-over"><span class="lbl">SPENT · OVER</span><span class="amt">$289.33</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="group" data-group-id="monthly-autopay">
+      <div class="group-head">
+        <h2><button class="toggle" aria-expanded="true" aria-controls="g-monthly-autopay">
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B2A68" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="gname">Monthly Autopay</span>
+          <span class="gsum">5 envelopes</span>
+        </button></h2>
+        <span class="gtotal">$315.00<span class="sr-only"> remaining</span></span>
+        <button class="add" aria-label="Add envelope to Monthly Autopay">+</button>
+      </div>
+      <div class="group-body" id="g-monthly-autopay">
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Mortgage</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem rem--zero">$0.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Mortgage, currently $1,700.00"><span class="lbl">PLANNED</span><span class="amt">$1,700.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Mortgage, currently $1,700.00"><span class="lbl">ASSIGNED</span><span class="amt">$1,700.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$1,700.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Tithing/Fast Offerings</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem rem--zero">$0.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Tithing/Fast Offerings, currently $1,100.00"><span class="lbl">PLANNED</span><span class="amt">$1,100.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Tithing/Fast Offerings, currently $1,225.00"><span class="lbl">ASSIGNED</span><span class="amt">$1,225.00</span></button>
+            <div class="cell cell--spent is-over"><span class="lbl">SPENT · OVER</span><span class="amt">$1,225.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Ballet</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem">$165.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Ballet, currently $165.00"><span class="lbl">PLANNED</span><span class="amt">$165.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Ballet, currently $165.00"><span class="lbl">ASSIGNED</span><span class="amt">$165.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Water &amp; Sewage</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem rem--zero">$0.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Water &amp; Sewage, currently $121.00"><span class="lbl">PLANNED</span><span class="amt">$121.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Water &amp; Sewage, currently $267.19"><span class="lbl">ASSIGNED</span><span class="amt">$267.19</span></button>
+            <div class="cell cell--spent is-over"><span class="lbl">SPENT · OVER</span><span class="amt">$267.19</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Dominion</span><span class="chip chip--saved"><svg class="" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg>Saved $15.00<svg class="sp sp1" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp2" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp3" width="8" height="8" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp4" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp5" width="6" height="6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp6" width="5" height="5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#FFFFFF"/></svg></span></div></div>
+            <span class="rem">$150.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Dominion, currently $150.00"><span class="lbl">PLANNED</span><span class="amt">$150.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Dominion, currently $150.00"><span class="lbl">ASSIGNED</span><span class="amt">$150.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="group" data-group-id="debts">
+      <div class="group-head">
+        <h2><button class="toggle" aria-expanded="true" aria-controls="g-debts">
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B2A68" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="gname">Debts</span>
+          <span class="gsum">2 envelopes</span>
+        </button></h2>
+        <span class="gtotal">$811.62<span class="sr-only"> remaining</span></span>
+        <button class="add" aria-label="Add envelope to Debts">+</button>
+      </div>
+      <div class="group-body" id="g-debts">
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Discover Card</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem">$731.62<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Discover Card, currently $450.00"><span class="lbl">PLANNED</span><span class="amt">$450.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Discover Card, currently $731.62"><span class="lbl">ASSIGNED</span><span class="amt">$731.62</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Pay back Wades</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem">$80.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Pay back Wades, currently $80.00"><span class="lbl">PLANNED</span><span class="amt">$80.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Pay back Wades, currently $80.00"><span class="lbl">ASSIGNED</span><span class="amt">$80.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="group" data-group-id="often-expenses">
+      <div class="group-head">
+        <h2><button class="toggle" aria-expanded="true" aria-controls="g-often-expenses">
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B2A68" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="gname">Often Expenses</span>
+          <span class="gsum">5 envelopes</span>
+        </button></h2>
+        <span class="gtotal">$1,075.51<span class="sr-only"> remaining</span></span>
+        <button class="add" aria-label="Add envelope to Often Expenses">+</button>
+      </div>
+      <div class="group-body" id="g-often-expenses">
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Date $/Restaurants</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem rem--zero">$0.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Date $/Restaurants, currently $100.00"><span class="lbl">PLANNED</span><span class="amt">$100.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Date $/Restaurants, currently $132.86"><span class="lbl">ASSIGNED</span><span class="amt">$132.86</span></button>
+            <div class="cell cell--spent is-over"><span class="lbl">SPENT · OVER</span><span class="amt">$132.86</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Family Fun/Travel</span><span class="chip chip--saved"><svg class="" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg>Saved $210.00<svg class="sp sp1" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp2" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp3" width="8" height="8" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp4" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp5" width="6" height="6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp6" width="5" height="5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#FFFFFF"/></svg></span></div></div>
+            <span class="rem">$650.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Family Fun/Travel, currently $650.00"><span class="lbl">PLANNED</span><span class="amt">$650.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Family Fun/Travel, currently $650.00"><span class="lbl">ASSIGNED</span><span class="amt">$650.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Auto Maintenance</span><span class="chip chip--saved"><svg class="" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg>Saved $90.00<svg class="sp sp1" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp2" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp3" width="8" height="8" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp4" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp5" width="6" height="6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp6" width="5" height="5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#FFFFFF"/></svg></span></div></div>
+            <span class="rem">$90.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Auto Maintenance, currently $90.00"><span class="lbl">PLANNED</span><span class="amt">$90.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Auto Maintenance, currently $90.00"><span class="lbl">ASSIGNED</span><span class="amt">$90.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Birthdays</span><span class="chip chip--empty">Saved $0.00</span></div></div>
+            <span class="rem">$70.00<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Birthdays, currently $70.00"><span class="lbl">PLANNED</span><span class="amt">$70.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Birthdays, currently $70.00"><span class="lbl">ASSIGNED</span><span class="amt">$70.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$0.00</span></div>
+          </div>
+        </div>
+        <div class="env">
+          <div class="line1">
+            <div class="name-wrap"><svg class="env-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true"><rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)"/><rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)"/><rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68"/><path d="M1.8 6.8 L11 13 L20.2 6.8" fill="none" stroke="#B48BE0" stroke-width="1.4" stroke-linejoin="round"/></svg><div class="name-chip"><span class="name">Christmas/Easter/Holidays</span><span class="chip chip--saved"><svg class="" width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg>Saved $120.00<svg class="sp sp1" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp2" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp3" width="8" height="8" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp4" width="7" height="7" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#F3D36B"/></svg><svg class="sp sp5" width="6" height="6" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#B48BE0"/></svg><svg class="sp sp6" width="5" height="5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z" fill="#FFFFFF"/></svg></span></div></div>
+            <span class="rem">$265.51<span class="sr-only"> remaining</span></span>
+          </div>
+          <div class="line2">
+            <button class="cell cell--planned" aria-label="Edit planned amount for Christmas/Easter/Holidays, currently $300.00"><span class="lbl">PLANNED</span><span class="amt">$300.00</span></button>
+            <button class="cell cell--assigned" aria-label="Edit assigned amount for Christmas/Easter/Holidays, currently $300.00"><span class="lbl">ASSIGNED</span><span class="amt">$300.00</span></button>
+            <div class="cell cell--spent"><span class="lbl">SPENT</span><span class="amt">$34.49</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <button class="fab" aria-label="Add transaction">+</button>
+  <nav aria-label="Main">
+    <a href="#" class="active">Budget</a>
+    <a href="#">Accounts</a>
+    <a href="#">Activity</a>
+    <a href="#">Settings</a>
+  </nav>
+</div>
+<script>
+  // Collapsed groups are remembered per device. The real app should key this by user id too (see spec).
+  var KEY = 'bb.budget.collapsedGroups';
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } }
+  function save(ids) { try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch (e) {} }
+  var collapsed = load();
+  document.querySelectorAll('.group').forEach(function (g) {
+    var id = g.dataset.groupId, btn = g.querySelector('.toggle');
+    function apply(isCollapsed) {
+      g.classList.toggle('is-collapsed', isCollapsed);
+      btn.setAttribute('aria-expanded', String(!isCollapsed));
+    }
+    apply(collapsed.indexOf(id) !== -1);
+    btn.addEventListener('click', function () {
+      var now = !g.classList.contains('is-collapsed');
+      apply(now);
+      collapsed = collapsed.filter(function (x) { return x !== id; });
+      if (now) collapsed.push(id);
+      save(collapsed);
+    });
+  });
+</script>
+</body>
+</html>

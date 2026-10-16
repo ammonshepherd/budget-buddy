@@ -900,10 +900,10 @@ a:focus-visible {
 /* Month picker: a purple band; it scrolls away, Available to Assign does not. */
 .budget-month {
   justify-content: space-between;
-  padding: 0.5rem 0.5rem 0;
+  padding: 6px 12px 0;
   color: #fff;
   background: var(--bb-purple);
-  font-size: 0.94rem;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -922,7 +922,7 @@ a:focus-visible {
   position: sticky;
   inset-block-start: 0;
   z-index: 5;
-  padding: max(0.5rem, env(safe-area-inset-top)) 1rem 0.875rem;
+  padding: max(4px, env(safe-area-inset-top)) 12px 10px;
   background: var(--bb-purple);
 }
 
@@ -931,15 +931,15 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0 0.75rem;
-  padding: 0.375rem 0.875rem;
+  padding: 3px 12px;
   border: 6px solid #2e8b57;
-  border-radius: 0.875rem;
+  border-radius: 12px;
   background: #eef8f2;
 }
 
 .assign-label {
   color: #1f5e3b;
-  font-size: 0.875rem;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -947,7 +947,7 @@ a:focus-visible {
   grid-column: 2;
   grid-row: 1 / span 2;
   color: #1f6b42;
-  font-size: 1.375rem;
+  font-size: 20px;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -973,23 +973,83 @@ a:focus-visible {
   color: #b3261e;
 }
 
-/* Groups: a full-width bar with the name and the + button; no totals. */
+/* Groups: a full-width bar. The name collapses the group (no numbers while
+   open; collapsed it shows how many envelopes and their total left), then +. */
 .group-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 0.375rem 0 1rem;
+  gap: 4px;
+  padding: 0 2px 0 4px;
   border-block: 1px solid var(--bb-purple-line);
   background: var(--bb-purple-tint);
 }
 
 .group-heading h2 {
+  flex: 1;
+  min-inline-size: 0;
   margin: 0;
+  font-size: inherit;
+}
+
+.group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: 0 4px 0 6px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.group-toggle svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  fill: none;
+  stroke: var(--bb-purple);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+  transition: transform 0.15s;
+}
+
+.budget-group.collapsed .group-toggle svg {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group-toggle svg {
+    transition: none;
+  }
+}
+
+.group-name {
   color: var(--bb-purple);
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.group-summary {
+  overflow: hidden;
+  color: var(--bb-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-total {
+  color: var(--bb-purple);
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .add-envelope-button {
@@ -1024,8 +1084,8 @@ a:focus-visible {
 /* Envelope rows. */
 .envelope {
   display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  gap: 6px;
+  padding: 8px 16px;
   border-block-end: 1px solid var(--bb-row-line);
   background: var(--surface);
 }
@@ -1033,8 +1093,7 @@ a:focus-visible {
 .envelope-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.625rem;
+  gap: 8px;
   inline-size: 100%;
   padding: 0;
   border: 0;
@@ -1044,17 +1103,23 @@ a:focus-visible {
   cursor: pointer;
 }
 
+.envelope-icon {
+  flex: none;
+}
+
 .envelope-title {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.375rem 0.5rem;
+  gap: 4px 8px;
   min-inline-size: 0;
 }
 
 .envelope-name {
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 800;
+  line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
@@ -1067,15 +1132,13 @@ a:focus-visible {
 }
 
 .envelope-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  margin-inline-start: 2px;
 }
 
 .envelope-remaining {
-  font-size: 1.375rem;
+  font-size: 20px;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
   white-space: nowrap;
 }
 
@@ -1083,37 +1146,68 @@ a:focus-visible {
   color: var(--bb-muted-zero);
 }
 
-.envelope-caption {
-  color: var(--bb-muted);
-  font-size: 0.6875rem;
-}
-
 /* Saved: a pill next to the name; solid purple with sparkles once above $0.00. */
 .saved-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.1875rem 0.5625rem;
+  gap: 4px;
+  padding: 2px 8px;
   border-radius: 999px;
   color: #6e5a85;
   background: var(--bb-purple-tint);
-  font-size: 0.75rem;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
 }
 
+/* Rows with this chip are a few pixels taller; that is expected. */
 .saved-chip.sparkle {
   position: relative;
-  padding: 0.1875rem 0.625rem 0.1875rem 0.4375rem;
+  gap: 5px;
+  margin: 3px 6px 3px 2px;
+  padding: 4px 12px 4px 8px;
   color: #fff;
   background: var(--bb-purple);
-  font-weight: 700;
+  box-shadow:
+    0 0 0 2px #e6d8f5,
+    0 2px 6px rgba(75, 42, 104, 0.25);
+  font-size: 13px;
+  font-weight: 800;
 }
 
-.saved-chip .star.corner {
+.saved-chip .sp {
   position: absolute;
-  inset-block-start: -4px;
-  inset-inline-end: -3px;
+}
+
+.saved-chip .sp1 {
+  inset-block-start: -7px;
+  inset-inline-end: -5px;
+}
+
+.saved-chip .sp2 {
+  inset-block-start: -6px;
+  inset-inline-end: 12px;
+}
+
+.saved-chip .sp3 {
+  inset-block-end: -5px;
+  inset-inline-end: -7px;
+}
+
+.saved-chip .sp4 {
+  inset-block-end: -5px;
+  inset-inline-start: 4px;
+}
+
+.saved-chip .sp5 {
+  inset-block-start: -5px;
+  inset-inline-start: -3px;
+}
+
+/* A glint inside the pill. */
+.saved-chip .sp6 {
+  inset-block-start: 9px;
+  inset-inline-end: 3px;
 }
 
 /* One twinkle when the row appears. */
@@ -1138,7 +1232,7 @@ a:focus-visible {
 .envelope-cells {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.375rem;
+  gap: 6px;
 }
 
 .envelope-cells.two {
@@ -1149,30 +1243,40 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-block-size: 2.75rem;
-  padding: 0.3125rem 0.5rem;
+  padding: 3px 8px;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 7px;
   color: var(--bb-ink-2);
   background: transparent;
   font: inherit;
+  line-height: 1.3;
   text-align: start;
 }
 
-button.cell {
+/* The cells look slimmer than a 44px tap target; their hit area reaches a
+   little above and below. */
+button.cell,
+.cell.editing {
+  position: relative;
   cursor: pointer;
+}
+
+button.cell::after {
+  position: absolute;
+  inset: -5px 0;
+  content: "";
 }
 
 .cell-label {
   color: var(--bb-muted);
-  font-size: 0.625rem;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .cell .money {
-  font-size: 0.875rem;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -1224,7 +1328,7 @@ button.cell {
   color: inherit;
   background: transparent;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -1234,7 +1338,7 @@ button.cell {
   gap: 0 0.75rem;
   margin: 0;
   color: var(--bb-muted);
-  font-size: 0.75rem;
+  font-size: 11px;
 }
 
 .envelope-extra .money {

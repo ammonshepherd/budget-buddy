@@ -92,7 +92,7 @@ test("Assigned is edited in place and moves Available to Assign", async ({ page 
   await editCell(page, "Groceries", "assigned", "120");
   await expect(available(page)).toContainText("$880.00");
   const left = envelope(page, "Groceries").locator(".envelope-left");
-  await expect(left).toHaveText("$0.00remaining");
+  await expect(left).toHaveText("$0.00 remaining");
   await expect(left).toHaveClass(/zero/);
 });
 
@@ -119,7 +119,7 @@ test("Spent shows whether the month kept to Planned; groups show no totals", asy
 
   // Above Planned it is over plan, which is not overspending: no Short, no warning.
   await editCell(page, "Groceries", "planned", "99.99");
-  await expect(spent).toHaveText("Spent (over Planned) $100.00");
+  await expect(spent).toHaveText("Spent · over Planned $100.00");
   await expect(spent).toHaveClass(/over/);
   await expect(envelope(page, "Groceries")).not.toContainText("Short");
   await expect(available(page)).not.toHaveClass(/over/);
@@ -128,12 +128,12 @@ test("Spent shows whether the month kept to Planned; groups show no totals", asy
   await expect(heading).not.toContainText("$");
   await expect(heading.getByRole("button", { name: "Add envelope to Everyday" })).toBeVisible();
 
-  // Saved: quiet at $0.00, purple with two sparkles once money is saved.
+  // Saved: quiet at $0.00, purple with a star and six sparkles once money is saved.
   await editCell(page, "Fun", "assigned", "40");
   await expect(envelope(page, "Fun").locator(".saved-chip")).toHaveText("Saved $0.00");
   await expect(envelope(page, "Fun").locator(".saved-chip svg")).toHaveCount(0);
   await page.getByRole("link", { name: "Next month" }).click();
   const chip = envelope(page, "Fun").locator(".saved-chip.sparkle");
   await expect(chip).toHaveText("Saved $40.00");
-  await expect(chip.locator('svg[aria-hidden="true"]')).toHaveCount(2);
+  await expect(chip.locator('svg[aria-hidden="true"]')).toHaveCount(7);
 });

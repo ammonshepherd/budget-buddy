@@ -175,7 +175,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version "v0.17.1", and
+- Header: icon + "Budget Buddy" (links to `#budget`), the version (e.g. "v0.24.0"), and
   an Install button when the browser offers installing.
 - Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
   the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
@@ -202,11 +202,13 @@ household yet.
 
 ### Budget
 
+Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
+
 - No page title or totals (the `h1` exists for screen readers only).
 - Month picker (‹ OCTOBER 2026 ›, 44px buttons) in a purple band; changes
   `#budget/YYYY-MM` and scrolls away.
 - Sticky "Available to Assign" card pinned to the top on the purple band
-  (hidden at exactly $0.00): 6px green border, light green background, amount on the
+  (always shown, $0.00 included): 6px green border, light green background, amount on the
   right, "Income this month $X" under the label. Over assigned: red, labelled
   "Over Assigned" with the amount over.
 - Notices: "N transactions to review ($X in, $Y out) are not in Available to
@@ -219,8 +221,17 @@ household yet.
   "Upload a plan CSV" (a bottom sheet with the plan import for this month, no
   month field; it closes after importing). The card goes after a copy or an
   upload, and otherwise stays until the month is opened again.
-- Each group: a full-width tinted bar with the uppercase name and a + that
-  opens "New envelope" (+ becomes ×); no totals.
+- Each group: a full-width tinted bar. Its name (with a chevron) is a button
+  that collapses or expands the group's envelopes (`aria-expanded`,
+  `aria-controls`); open, the bar shows no numbers; collapsed, the chevron
+  points right and the bar shows "N envelopes" and the group's total left
+  ("$650.33", heard as "$650.33 remaining"). Collapsed groups are kept in
+  localStorage under `bb.budget.collapsedGroups.<userId>` (a JSON array of
+  group ids; ids of deleted groups are pruned on the next save; unreadable
+  storage means all open), so they stay collapsed across reloads, pages,
+  months and renames; new groups start open. Collapsing saves an open
+  Planned/Assigned field first. The + opens "New envelope" (+ becomes ×) and
+  opens a collapsed group.
 - Envelope rows as in CLAUDE.md. Planned and Assigned cells are buttons ("Edit
   planned amount for Groceries, currently $300.00") that turn into a text field
   in place; errors show under the row ("Only $X available to assign.", "Some is

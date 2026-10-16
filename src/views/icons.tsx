@@ -29,3 +29,23 @@ export const GripIcon = () => (
     {[6, 12, 18].map((y) => [9, 15].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.6" />))}
   </svg>
 );
+
+/**
+ * The app icon in miniature (a purple envelope with two green bills), shown
+ * on every Budget row. Decorative; one component so per-envelope icons can
+ * replace it later.
+ */
+export const EnvelopeIcon = () => (
+  <svg className="envelope-icon" width="22" height="18" viewBox="0 0 22 18" aria-hidden="true">
+    <rect x="6" y="0.5" width="11" height="9" rx="1.2" fill="#3E9A62" transform="rotate(-8 11 5)" />
+    <rect x="9" y="1.5" width="10" height="8" rx="1.2" fill="#5DB97E" transform="rotate(6 14 5)" />
+    <rect x="1" y="6" width="20" height="11.5" rx="2" fill="#4B2A68" />
+    <path
+      d="M1.8 6.8 L11 13 L20.2 6.8"
+      fill="none"
+      stroke="#B48BE0"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+    />
+  </svg>
+);

@@ -71,7 +71,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   // Nothing was planned, so Spent is over plan. No refund beyond this month's
   // spending, so no Refunded line.
   await expect(groceries.locator(".envelope-cells")).toHaveText(
-    "Planned $0.00Assigned $180.00Spent (over Planned) $170.00",
+    "Planned $0.00Assigned $180.00Spent · over Planned $170.00",
   );
   await expect(groceries.locator(".envelope-extra")).toHaveCount(0);
 });
