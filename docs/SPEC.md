@@ -285,6 +285,14 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
 
 - Visually hidden "Activity" heading; the month band as on Budget ("OCTOBER
   2026", ‹ › links to `#activity/YYYY-MM`). No search yet.
+- Account picker (a tinted strip under the month band, shown with two or
+  more budget accounts): "All accounts", then open accounts by name, then
+  closed ones ("Old Checking (closed)"). Choosing one narrows the rows, the
+  totals ("Totals for ⟨month⟩ in ⟨account⟩") and the To review card (its
+  totals, rows and buttons) to that account; a transfer shows (as its
+  money-out row) when either side is in it. The choice lasts across months and
+  pages until the app reloads; an account no longer offered means all.
+  Empty: "No transactions in ⟨account⟩ in ⟨Month YYYY⟩."
 - Totals strip (purple tint, three columns): IN (green, "+$X": non-transfer
   inflows, i.e. income, refunds, card credits), OUT ("−$X": non-transfer
   outflows, card purchases included), TRANSFERS (grey, each transfer once).
@@ -450,6 +458,6 @@ Decided or wanted, but not in the app:
 - Budget page: an icon chosen per envelope (every row shows the same
   envelope icon, `EnvelopeIcon`; Settings shows none); "Collapse all" /
   "Expand all" for groups.
-- Activity: search and filters (account, envelope, status), a "Needs review"
+- Activity: search and filters by envelope or status, a "Needs review"
   queue for transfer matches, running balances, swipe actions (such as marking
   cleared), and a memo per split part.

@@ -29,12 +29,17 @@ export function ActivityPage({
   budget,
   data,
   month,
+  accountId,
+  onAccountChange,
 }: {
   budget: Budget;
   data: BudgetData;
   month: Month;
+  /** The account to show only (null: all), kept by the app between months. */
+  accountId: string | null;
+  onAccountChange: (accountId: string | null) => void;
 }) {
-  const page = useActivityPage(budget, data, month);
+  const page = useActivityPage(budget, data, month, accountId);
   const mark = useAsyncAction(page.markIncome);
   const incomeable = page.toReview.filter((r) => r.canBeIncome);
   /** The transaction open in the edit dialog. */
@@ -65,7 +70,32 @@ export function ActivityPage({
         </a>
       </div>
 
-      <dl className="activity-totals" aria-label={`Totals for ${page.monthLabel}`}>
+      {page.accounts.length > 1 && (
+        <div className="activity-account-filter">
+          <label htmlFor="activity-account">Account</label>
+          <span className="move-picker">
+            <select
+              id="activity-account"
+              value={page.accountId ?? ""}
+              onChange={(event) => onAccountChange(event.target.value || null)}
+            >
+              <option value="">All accounts</option>
+              {page.accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                  {account.closed ? " (closed)" : ""}
+                </option>
+              ))}
+            </select>
+            <span aria-hidden="true">▾</span>
+          </span>
+        </div>
+      )}
+
+      <dl
+        className="activity-totals"
+        aria-label={`Totals for ${page.monthLabel}${page.accountName ? ` in ${page.accountName}` : ""}`}
+      >
         <div>
           <dt>In</dt>
           <dd className="activity-in">{formatSignedCents(page.totals.moneyIn)}</dd>
@@ -161,7 +191,9 @@ export function ActivityPage({
 
       <section className="activity-list" aria-label="Transactions">
         {page.days.length === 0 ? (
-          <p className="activity-empty">No transactions in {page.monthLabel}.</p>
+          <p className="activity-empty">
+            No transactions {page.accountName ? `in ${page.accountName} ` : ""}in {page.monthLabel}.
+          </p>
         ) : (
           page.days.map((day) => (
             <section key={day.date} aria-labelledby={`day-${day.date}`}>

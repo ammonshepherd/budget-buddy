@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { activityMonth } from "../models/activity";
+import { activityAccounts, activityMonth } from "../models/activity";
 import { isToReview, transactionsToReview } from "../models/budgetMath";
 import { inflowsMatchingRules } from "../models/incomeRules";
 import { addMonths, formatMonth, type Month } from "../models/month";
@@ -10,9 +10,18 @@ import type { Budget } from "./useBudget";
 /**
  * The Activity page for one month: its transactions by day with the month's
  * totals, the transactions still to review (from any month), plus delete and
- * "Mark as Income". Adding and editing go through useTransactionEntry.
+ * "Mark as Income". With `selectedAccountId`, all of it is narrowed to that
+ * account. Adding and editing go through useTransactionEntry.
  */
-export function useActivityPage(budget: Budget, data: BudgetData, month: Month) {
+export function useActivityPage(
+  budget: Budget,
+  data: BudgetData,
+  month: Month,
+  selectedAccountId: string | null,
+) {
+  const accounts = useMemo(() => activityAccounts(data), [data]);
+  // An account no longer offered (say, taken off budget) means all accounts.
+  const accountId = accounts.some((a) => a.id === selectedAccountId) ? selectedAccountId : null;
   const accountNames = useMemo(() => new Map(data.accounts.map((a) => [a.id, a.name])), [data]);
   const cards = new Set(data.accounts.filter((a) => a.type === "credit_card").map((a) => a.id));
   const reviewRow = (tx: Transaction) => ({
@@ -21,11 +30,15 @@ export function useActivityPage(budget: Budget, data: BudgetData, month: Month) 
     /** An inflow outside a credit card: one tap can mark it Income. */
     canBeIncome: tx.amount > 0 && !cards.has(tx.accountId) && isToReview(tx, false),
   });
-  const activity = useMemo(() => activityMonth(data, month), [data, month]);
-  const review = transactionsToReview(data);
+  const activity = useMemo(() => activityMonth(data, month, accountId), [data, month, accountId]);
+  const review = transactionsToReview(data, accountId);
 
   return {
     monthLabel: formatMonth(month),
+    /** Budget accounts to narrow the page to, and the one chosen (null: all). */
+    accounts,
+    accountId,
+    accountName: accounts.find((a) => a.id === accountId)?.name ?? null,
     previousHref: activityHref(addMonths(month, -1)),
     nextHref: activityHref(addMonths(month, 1)),
     /** Money in, out and transferred this month (display only). */
@@ -37,7 +50,9 @@ export function useActivityPage(budget: Budget, data: BudgetData, month: Month) 
     toReviewIn: review.inflow,
     toReviewOut: review.outflow,
     /** Inflows to review that an income rule matches (see Settings → Income rules). */
-    ruleMatches: inflowsMatchingRules(data).map((tx) => tx.id),
+    ruleMatches: inflowsMatchingRules(data)
+      .filter((tx) => accountId === null || tx.accountId === accountId)
+      .map((tx) => tx.id),
     hasOpenAccounts: data.accounts.some((a) => !a.closedAt),
 
     deleteTransaction: async (id: string) => {

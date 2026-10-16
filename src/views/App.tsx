@@ -80,6 +80,8 @@ function SignedInApp({ session }: { session: UserSession }) {
   // it. (Updating state while rendering is React's way to follow a prop.)
   const [lastMonth, setLastMonth] = useState<Month | null>(null);
   if (location.month && location.month !== lastMonth) setLastMonth(location.month);
+  // The account Activity is narrowed to (null: all); kept between months and pages.
+  const [activityAccount, setActivityAccount] = useState<string | null>(null);
 
   if (state.status === "loading") return <Message text="Loading your budget..." />;
   if (state.status === "error") return <Message error={state.error} />;
@@ -100,7 +102,16 @@ function SignedInApp({ session }: { session: UserSession }) {
     ),
     accounts: <AccountsPage budget={budget} data={data} />,
     // key: each month starts with every split open.
-    activity: <ActivityPage key={month} budget={budget} data={data} month={month} />,
+    activity: (
+      <ActivityPage
+        key={month}
+        budget={budget}
+        data={data}
+        month={month}
+        accountId={activityAccount}
+        onAccountChange={setActivityAccount}
+      />
+    ),
     settings: (
       <SettingsPage budget={budget} data={data} email={session.email} onSignOut={store.signOut} />
     ),

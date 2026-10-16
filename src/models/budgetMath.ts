@@ -326,9 +326,12 @@ export function isCardCredit(tx: Transaction, onCard: boolean): boolean {
 }
 
 /** Transactions to review, with the money in and out they hold back. */
-export function transactionsToReview(data: BudgetData) {
+export function transactionsToReview(data: BudgetData, accountId: string | null = null) {
   const cards = new Set(data.accounts.filter((a) => a.type === "credit_card").map((a) => a.id));
-  const list = budgetTransactions(data).filter((tx) => isToReview(tx, cards.has(tx.accountId)));
+  const list = budgetTransactions(data).filter(
+    (tx) =>
+      (accountId === null || tx.accountId === accountId) && isToReview(tx, cards.has(tx.accountId)),
+  );
   return {
     list,
     count: list.length,
