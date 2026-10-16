@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   buildBudgetMonth,
+  groupLeft,
   visibleGroups,
   withEnvelopeMonth,
   type EnvelopeRow,
@@ -55,8 +56,11 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
 
   return {
     view,
-    /** Groups and envelopes to show: only those in use this month, unless toggled. */
-    groups: visibleGroups(view, showUnused),
+    /**
+     * Groups and envelopes to show: only those in use this month, unless
+     * toggled. `left` is the group's total left (shown when collapsed).
+     */
+    groups: visibleGroups(view, showUnused).map((group) => ({ ...group, left: groupLeft(group) })),
     showUnused,
     toggleUnused: () => setShowUnused((show) => !show),
     monthLabel: formatMonth(month),

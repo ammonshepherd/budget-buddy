@@ -3,28 +3,37 @@ import { messageOf } from "../../controllers/errors";
 import type { Budget } from "../../controllers/useBudget";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
+import { useCollapsedGroups } from "../../controllers/useCollapsedGroups";
 import { formFromTransaction } from "../../controllers/useTransactionEntry";
-import type { EnvelopeRow, GroupRows } from "../../models/budgetMath";
+import { envelopeLeft, type EnvelopeRow } from "../../models/budgetMath";
 import { centsToInput, formatCents } from "../../models/money";
 import type { Month } from "../../models/month";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
+import { ChevronDownIcon, EnvelopeIcon } from "../icons";
 import { TransactionDialog } from "../TransactionEntry";
 
 type Page = ReturnType<typeof useBudgetPage>;
+type Group = Page["groups"][number];
 
 export function BudgetPage({
   budget,
   data,
   month,
+  userId,
 }: {
   budget: Budget;
   data: BudgetData;
   month: Month;
+  userId: string;
 }) {
   const page = useBudgetPage(budget, data, month);
+  const collapse = useCollapsedGroups(
+    userId,
+    data.groups.map((g) => g.id),
+  );
   const { view } = page;
   // The envelope whose sheet is open; it closes by itself if the envelope goes.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -96,7 +105,15 @@ export function BudgetPage({
       {page.planStart && <PlanStart page={page} onUpload={() => setUploading(true)} />}
 
       {page.groups.map((group) => (
-        <GroupSection key={group.id} group={group} page={page} onOpen={setOpenId} />
+        <GroupSection
+          key={group.id}
+          group={group}
+          page={page}
+          collapsed={collapse.isCollapsed(group.id)}
+          onToggle={() => collapse.toggle(group.id)}
+          onExpand={() => collapse.expand(group.id)}
+          onOpen={setOpenId}
+        />
       ))}
 
       {view.unusedCount > 0 && (
@@ -216,26 +233,76 @@ function PlanStart({ page, onUpload }: { page: Page; onUpload: () => void }) {
   );
 }
 
+/**
+ * A group: a bar whose name collapses or expands its envelopes (collapsed, it
+ * shows how many and their total left) and a + to add an envelope.
+ */
 function GroupSection({
   group,
   page,
+  collapsed,
+  onToggle,
+  onExpand,
   onOpen,
 }: {
-  group: GroupRows;
+  group: Group;
   page: Page;
+  collapsed: boolean;
+  onToggle: () => void;
+  onExpand: () => void;
   onOpen: (envelopeId: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
+  const rows = useRef<HTMLDivElement>(null);
+  const rowsId = `group-rows-${group.id}`;
+  const count = group.envelopes.length;
+
+  const toggle = () => {
+    // A Planned or Assigned field open in this group saves before it is hidden.
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && rows.current?.contains(active)) active.blur();
+    onToggle();
+  };
+
   return (
-    <section className="budget-group" aria-label={group.name}>
+    <section
+      className={collapsed ? "budget-group collapsed" : "budget-group"}
+      aria-label={group.name}
+    >
       <div className="group-heading">
-        <h2>{group.name}</h2>
+        <h2>
+          <button
+            className="group-toggle"
+            type="button"
+            aria-expanded={!collapsed}
+            aria-controls={rowsId}
+            onClick={toggle}
+          >
+            <ChevronDownIcon />
+            <span className="group-name">{group.name}</span>
+            {collapsed && (
+              <span className="group-summary">
+                {count} {count === 1 ? "envelope" : "envelopes"}
+              </span>
+            )}
+          </button>
+        </h2>
+        {collapsed && (
+          <span className="group-total">
+            <Money cents={group.left} />
+            <span className="visually-hidden"> remaining</span>
+          </span>
+        )}
         <button
           className="add-envelope-button"
           type="button"
           aria-label={adding ? `Stop adding to ${group.name}` : `Add envelope to ${group.name}`}
           aria-expanded={adding}
-          onClick={() => setAdding((open) => !open)}
+          onClick={() => {
+            // Opens the group too, so the new envelope shows up.
+            if (!adding) onExpand();
+            setAdding((open) => !open);
+          }}
         >
           {adding ? "×" : "+"}
         </button>
@@ -250,17 +317,19 @@ function GroupSection({
           />
         </div>
       )}
-      {group.envelopes.length > 0 ? (
-        <ul className="envelope-list">
-          {group.envelopes.map((envelope) => (
-            <li key={envelope.id}>
-              <EnvelopeItem envelope={envelope} page={page} onOpen={() => onOpen(envelope.id)} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        !adding && <p className="empty-state group-empty">No envelopes yet. Tap + to add one.</p>
-      )}
+      <div id={rowsId} ref={rows} hidden={collapsed}>
+        {count > 0 ? (
+          <ul className="envelope-list">
+            {group.envelopes.map((envelope) => (
+              <li key={envelope.id}>
+                <EnvelopeItem envelope={envelope} page={page} onOpen={() => onOpen(envelope.id)} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          !adding && <p className="empty-state group-empty">No envelopes yet. Tap + to add one.</p>
+        )}
+      </div>
     </section>
   );
 }
@@ -280,7 +349,7 @@ function EnvelopeItem({
 }) {
   const [error, setError] = useState<string | null>(null);
   const card = envelope.card;
-  const left = card ? envelope.envelopeMoney : envelope.remaining;
+  const left = envelopeLeft(envelope);
 
   const save = (action: (id: string, text: string) => Promise<void>) => async (text: string) => {
     setError(null);
@@ -294,6 +363,7 @@ function EnvelopeItem({
   return (
     <div className={envelope.inUse ? "envelope" : "envelope unused"}>
       <button className="envelope-top" type="button" aria-haspopup="dialog" onClick={onOpen}>
+        <EnvelopeIcon />
         <span className="envelope-title">
           <span className="envelope-name">
             {envelope.name}
@@ -305,7 +375,7 @@ function EnvelopeItem({
           <span className="envelope-remaining">
             <Money cents={left} />
           </span>
-          <span className="envelope-caption">{card ? "available to pay" : "remaining"}</span>
+          <span className="visually-hidden">{card ? " available to pay" : " remaining"}</span>
         </span>
       </button>
 
@@ -445,9 +515,29 @@ function EditableCell({
 
 const STAR = "M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z";
 
+const Star = ({ size, fill, className }: { size: number; fill: string; className?: string }) => (
+  <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
+    <path d={STAR} fill={fill} />
+  </svg>
+);
+
+const GOLD = "#F3D36B";
+const LILAC = "#B48BE0";
+
+/** The six sparkles around a Saved chip, each placed by its class (sp1–sp6). */
+const SPARKLES = [
+  { size: 12, fill: GOLD },
+  { size: 7, fill: LILAC },
+  { size: 8, fill: LILAC },
+  { size: 7, fill: GOLD },
+  { size: 6, fill: LILAC },
+  { size: 5, fill: "#FFFFFF" },
+];
+
 /**
- * Saved as a pill on the name line. Once money is saved it is solid purple
- * with sparkles, to encourage saving; at $0.00 it is quiet.
+ * Saved as a pill on the name line. Once money is saved it is the row's most
+ * eye-catching part (solid purple, a star and sparkles), to encourage
+ * saving; at $0.00 it is quiet.
  */
 function SavedChip({ cents }: { cents: number }) {
   if (cents <= 0) {
@@ -459,13 +549,11 @@ function SavedChip({ cents }: { cents: number }) {
   }
   return (
     <span className="saved-chip sparkle">
-      <svg className="star" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
-        <path d={STAR} fill="#F3D36B" />
-      </svg>
+      <Star size={15} fill={GOLD} className="star" />
       Saved <Money cents={cents} />
-      <svg className="star corner" width="9" height="9" viewBox="0 0 24 24" aria-hidden="true">
-        <path d={STAR} fill="#B48BE0" />
-      </svg>
+      {SPARKLES.map((star, i) => (
+        <Star key={i} {...star} className={`star sp sp${i + 1}`} />
+      ))}
     </span>
   );
 }
