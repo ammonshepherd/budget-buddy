@@ -5,8 +5,7 @@ This is a brief for making mockups. Nothing here changes the app until the
 layout is built.
 
 Mockups so far: `docs/mockups/budget-desktop.html` (Budget). The owner made
-the seven layout decisions on 2026-10-17 (see "Decisions"); two small
-questions remain ("Still to decide").
+the layout decisions on 2026-10-17 (see "Decisions").
 
 ## The request
 
@@ -79,10 +78,10 @@ Making the mockups:
   button that opens it again. Selecting an envelope or transaction opens a
   collapsed right panel. Each panel's state is remembered per device in
   localStorage (like collapsed groups), never in Supabase.
-- **Add transaction**: the floating round + becomes a "+ Add transaction"
-  button at the top of the left sidebar (a + icon when collapsed). Adding keeps
-  the centred dialog unless the owner decides otherwise (see "Still to
-  decide").
+- **Add transaction** (decision 8): a "+ Add transaction" button at the top
+  of the left sidebar (a + icon when collapsed). On Budget and Accounts it
+  opens the centred dialog; on Activity it opens a new transaction row at the
+  top of the list.
 - Content is capped at **1600px** wide, centred (decision 7).
 
 ## Budget
@@ -136,7 +135,8 @@ The screen that gains the most. Mockup: `docs/mockups/budget-desktop.html`.
   selected account's edit form docked on the right (Close account at the
   bottom, same rules). "Add an account" as its own card or panel. Closed
   accounts in a separate section below.
-- Optional: the selected account's recent transactions under its details.
+- Later: the selected account's recent transactions under its details, each
+  editing in the panel (decision 9).
 
 ## Settings
 
@@ -170,12 +170,11 @@ The screen that gains the most. Mockup: `docs/mockups/budget-desktop.html`.
    icons.
 7. **Max content width:** 1600px, centred.
 
-## Still to decide
-
-- **Adding a transaction on desktop:** keep the dialog (assumed above), or
-  open the add form in the right panel too, like editing?
-- **Accounts:** does a transaction shown under an account edit in a panel too,
-  or open the dialog?
+8. **Adding a transaction:** on Budget, the dialog (as on the phone). On
+   Activity, a new transaction row opens at the top of the list with its
+   fields to fill in.
+9. **Accounts:** account details don't list transactions yet; when they do,
+   a transaction edits in the panel.
 
 ## Next mockups
 
