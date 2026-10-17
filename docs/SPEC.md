@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.26.0.
+Version described: 0.26.1.
 
 ## 1. Purpose
 
@@ -194,7 +194,8 @@ These are implemented in `budgetMath.ts` and the controllers:
 Proposal and decisions: `docs/proposals/desktop-layout.md`. Signed in on a
 window at least 1000px wide (`DESKTOP_QUERY` in `layoutPrefs.ts`, followed
 live by `useDesktop`), App adds `.desktop` to the shell; below that, or
-signed out, everything is as above. Built so far: the shell and Budget.
+signed out, everything is as above. Built so far: the shell, Budget and
+Activity.
 
 - No header or bottom bar. A sidebar on the left (`aside` "Sidebar",
   13rem): the logo, "Budget Buddy" and the version; "+ Add transaction"
@@ -206,6 +207,8 @@ signed out, everything is as above. Built so far: the shell and Budget.
 - Collapsed sidebars are remembered per device and user in localStorage
   (`bb.layout.navCollapsed.<userId>`, `bb.layout.panelCollapsed.<userId>`,
   "1" or "0"; unreadable means expanded), never in Supabase.
+- "+ Add transaction" opens the dialog on Budget and Accounts; on Activity
+  it opens the new transaction row instead.
 - Budget and Activity use the width up to 1600px; Accounts and Settings keep
   their phone column for now.
 - A right-hand panel (`SidePanel`, an `aside` named for what it shows) sits
@@ -364,6 +367,22 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
   top border, "↳ ⟨envelope⟩", envelope, signed amount). Every split starts
   open; closing is kept only until the month changes.
 - Empty month: "No transactions in ⟨Month YYYY⟩." with $0.00 totals.
+- **Desktop** (see Desktop layout):
+  - One purple band, pinned to the top: the month picker, then the account
+    picker (white label) and the totals in a white box on the right.
+  - The rows sit in a card: status | payee over account | envelope | memo
+    (muted, cut short with …) | amount; a split's parts line up below.
+  - The panel shows the To review card (same content and buttons; "Nothing
+    to review…" when empty) until a transaction is chosen, in the list or in
+    To review. Then it holds that transaction's edit form (the row is
+    highlighted); "‹ Back to To review", Save, Cancel and Delete return to To
+    review.
+  - Add transaction opens "New transaction" at the top of the list: the
+    transaction form with its fields side by side in their usual order
+    (wrapping as needed; splits, transfer notes and errors on lines of their
+    own), starting in the account the page is narrowed to, with Payee
+    focused. Add transaction (after any cover prompt, shown in the row),
+    Cancel or Escape closes it.
 
 ### Transaction dialog (add and edit)
 
@@ -496,9 +515,8 @@ Envelopes not in the file are left alone.
 
 Decided or wanted, but not in the app:
 
-- Desktop layout for Activity (rows with more columns, To review or the
-  edit form in the panel, adding through a new row), Accounts (edit form in
-  the panel) and Settings (two columns); keyboard shortcuts.
+- Desktop layout for Accounts (edit form in the panel) and Settings (two
+  columns); keyboard shortcuts.
 
 - Import and matching: matching a transaction typed after its bank row was
   imported (import already matches typed transactions to new rows, and
