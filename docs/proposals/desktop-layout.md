@@ -1,6 +1,8 @@
 # Proposal: a landscape layout for desktop browsers
 
-Status: **decided; being built** (shell and Budget in v0.26.0, Activity in v0.26.1). Written 2026-10-17 against v0.25.0.
+Status: **decided and built** (shell and Budget in v0.26.0, Activity in v0.26.1,
+Accounts and Settings in v0.26.2). `docs/SPEC.md` now describes the layout;
+what is left is listed in its §9. Written 2026-10-17 against v0.25.0.
 This is a brief for making mockups. Nothing here changes the app until the
 layout is built.
 
@@ -176,13 +178,11 @@ The screen that gains the most. Mockup: `docs/mockups/budget-desktop.html`.
 9. **Accounts:** account details don't list transactions yet; when they do,
    a transaction edits in the panel.
 
-## Next mockups
+## Mockups
 
-- Update `budget-desktop.html`: breakpoint 1000px (it sets `min-width: 1024px`
-  today), 1600px cap, collapsible left and right sidebars, and editing a
-  transaction from the envelope panel. Its variant switcher can go.
-- Make `activity-desktop.html` (To review / edit form panel), then Accounts
-  and Settings.
+Built straight from these decisions, so only the Budget mockup exists
+(`docs/mockups/budget-desktop.html`, from before decisions 1 and 4–9; the
+app, not the mockup, is now the reference).
 
 ## Out of scope here
 

@@ -22,7 +22,8 @@ export function SettingsPage({
 }) {
   const signOut = useAsyncAction(onSignOut);
   return (
-    <section className="page-view stack" aria-labelledby="settings-title">
+    // On a desktop the sections sit in two columns (see .settings-page).
+    <section className="page-view stack settings-page" aria-labelledby="settings-title">
       <header className="page-heading">
         <p className="eyebrow">Your preferences</p>
         <h1 id="settings-title">Settings</h1>
@@ -60,7 +61,10 @@ export function SettingsPage({
       </section>
 
       <EnvelopeGroups budget={budget} data={data} />
-      <TransactionImport budget={budget} data={data} />
+      {/* Its preview table gets both columns on a desktop. */}
+      <div className="settings-wide">
+        <TransactionImport budget={budget} data={data} />
+      </div>
       <IncomeRules budget={budget} data={data} />
       <EnvelopePlanImport budget={budget} data={data} />
     </section>

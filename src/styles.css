@@ -2237,14 +2237,14 @@ body:has(.app-shell.desktop) {
   padding: 0 1.5rem 3rem;
 }
 
-/* Budget and Activity use the width, up to 1600px. */
+/* Every page uses the width, up to 1600px. */
 .desktop .budget-page,
 .desktop .activity-page {
   max-inline-size: 100rem;
   margin: 0 auto;
 }
 
-/* Accounts and Settings keep their column, with room above. */
+/* Accounts and Settings: room above their heading. */
 .desktop .page-view.stack {
   padding-block-start: 2rem;
 }
@@ -3021,6 +3021,56 @@ body:has(.app-shell.desktop) {
 
 .activity-new-row .cover-card {
   max-inline-size: 36rem;
+}
+
+/* ---- Accounts and Settings, desktop ---- */
+
+.desktop .accounts-page,
+.desktop .settings-page {
+  max-inline-size: 100rem;
+  margin-inline: auto;
+}
+
+/* Accounts: the list on the left, the panel (add, or edit the chosen one)
+   on the right. */
+.accounts-work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.accounts-work .side-panel {
+  inset-block-start: var(--desktop-gap);
+  max-block-size: calc(100dvh - 2 * var(--desktop-gap));
+}
+
+.accounts-work .side-panel .form > .section-heading {
+  padding-inline-end: 2.5rem;
+}
+
+/* Rows reach the card's edges, so the selected one's bar has room. */
+.accounts-work .item-button {
+  inline-size: calc(100% + 1.7rem);
+  margin-inline: -0.85rem;
+  padding-inline: 0.85rem;
+}
+
+.desktop .item-button.selected {
+  background: #f6f1fb;
+  box-shadow: inset 4px 0 0 var(--bb-purple);
+}
+
+/* Settings: two columns of sections; the bank import gets both. */
+.desktop .settings-page {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.desktop .settings-page > .page-heading,
+.desktop .settings-page > .settings-wide {
+  grid-column: 1 / -1;
 }
 
 /* 1000–1199px: the sidebar shows icons only (its toggle is hidden) and the
