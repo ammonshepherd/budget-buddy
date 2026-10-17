@@ -9,6 +9,7 @@ import {
   goTo,
   openAddTransaction,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 test("giving envelopes, covering and refunds move Available to Assign as expected", async ({
@@ -35,7 +36,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await goTo(page, "Activity");
   await editActivityRow(page, "Market");
   const edit = page.getByRole("dialog", { name: "Edit transaction" });
-  await edit.getByLabel("Envelope").selectOption({ label: "Groceries" });
+  await chooseEnvelope(edit.getByLabel("Envelope"), "Groceries");
   await edit.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$400.00");
@@ -46,7 +47,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").fill("150");
   await dialog.getByLabel("Payee").fill("Big shop");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Groceries" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Groceries");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $80.00 short");
@@ -62,7 +63,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await dialog.getByRole("radio", { name: "Inflow" }).check();
   await dialog.getByLabel("Amount").fill("10");
   await dialog.getByLabel("Payee").fill("Refund");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Groceries" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Groceries");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
   await expect(groceries.locator(".envelope-remaining")).toHaveText("$10.00");

@@ -6,12 +6,13 @@ import {
   INCOME,
   SPLIT,
   TRANSFER,
+  useEnvelopeRemaining,
   useTransactionEntry,
   type CoverChoice,
   type CoverPlan,
   type TransactionForm,
 } from "../controllers/useTransactionEntry";
-import { formatCents } from "../models/money";
+import { formatCents, type Cents } from "../models/money";
 import { formatMonth } from "../models/month";
 import { MAX_SPLIT_LINES, type SplitLine } from "../models/splits";
 import type { BudgetData } from "../models/types";
@@ -45,6 +46,7 @@ export function TransactionEntry({
   const entry = useTransactionEntry(budget, data);
   const [form, setForm] = useState(initial);
   const [plan, setPlan] = useState<CoverPlan | null>(null);
+  const remaining = useEnvelopeRemaining(data, form.date);
 
   if (entry.openAccounts.length === 0) {
     return (
@@ -72,6 +74,7 @@ export function TransactionEntry({
       heading={heading}
       form={form}
       setForm={setForm}
+      remaining={remaining}
       onSaved={onDone}
       onNeedsCover={setPlan}
       onCancel={onCancel}
@@ -159,6 +162,7 @@ function TransactionEditor({
   heading,
   form,
   setForm,
+  remaining,
   onSaved,
   onNeedsCover,
   onCancel,
@@ -168,6 +172,8 @@ function TransactionEditor({
   heading: string;
   form: TransactionForm;
   setForm: (form: TransactionForm) => void;
+  /** Each envelope's Remaining in the form's month (null while the date is not valid). */
+  remaining: Map<string, Cents> | null;
   onSaved: () => void;
   onNeedsCover: (plan: CoverPlan) => void;
   onCancel: () => void;
@@ -244,7 +250,7 @@ function TransactionEditor({
               <option value={INCOME} disabled={form.direction === "outflow"}>
                 Income (to Available to Assign)
               </option>
-              <EnvelopeOptions entry={entry} />
+              <EnvelopeOptions entry={entry} remaining={remaining} />
               <option value={SPLIT}>Split across envelopes</option>
             </>
           )}
@@ -264,7 +270,7 @@ function TransactionEditor({
                 onChange={(e) => updateLine(index, { envelopeId: e.target.value })}
               >
                 <option value="">Choose an envelope</option>
-                <EnvelopeOptions entry={entry} />
+                <EnvelopeOptions entry={entry} remaining={remaining} />
               </select>
               <input
                 aria-label={`Amount ${index + 1}`}
@@ -401,15 +407,27 @@ function TransactionEditor({
   );
 }
 
-/** The envelopes a transaction can go in, under their groups. */
-function EnvelopeOptions({ entry }: { entry: Entry }) {
+/**
+ * The envelopes a transaction can go in, under their groups, each with what
+ * it has Remaining in the transaction's month.
+ */
+function EnvelopeOptions({
+  entry,
+  remaining,
+}: {
+  entry: Entry;
+  remaining: Map<string, Cents> | null;
+}) {
   return entry.groups.map((group) => (
     <optgroup key={group.id} label={group.name}>
-      {group.envelopes.map((envelope) => (
-        <option key={envelope.id} value={envelope.id}>
-          {envelope.name}
-        </option>
-      ))}
+      {group.envelopes.map((envelope) => {
+        const left = remaining?.get(envelope.id);
+        return (
+          <option key={envelope.id} value={envelope.id}>
+            {left === undefined ? envelope.name : `${envelope.name} (has ${formatCents(left)})`}
+          </option>
+        );
+      })}
     </optgroup>
   ));
 }

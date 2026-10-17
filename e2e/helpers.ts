@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /** Signs in (the in-memory store accepts any password) and creates a household. */
 export async function signInWithHousehold(page: Page) {
@@ -47,8 +47,21 @@ export async function addTransaction(
   await form.getByRole("radio", { name: tx.direction ?? "Outflow" }).check();
   await form.getByLabel("Amount").fill(tx.amount);
   await form.getByLabel("Payee").fill(tx.payee);
-  await form.getByLabel("Envelope").selectOption({ label: tx.envelope ?? "Uncategorized" });
+  await chooseEnvelope(form.getByLabel("Envelope"), tx.envelope ?? "Uncategorized");
   await form.getByRole("button", { name: "Add transaction" }).click();
+}
+
+/**
+ * Picks an option in an Envelope dropdown by envelope name, ignoring the
+ * "(has $X)" Remaining after it. Fixed choices ("Uncategorized") work too.
+ */
+export async function chooseEnvelope(select: Locator, name: string) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const option = select
+    .locator("option")
+    .filter({ hasText: new RegExp(`^${escaped}( \\(has .+\\))?$`) });
+  const value = await option.getAttribute("value");
+  await select.selectOption(value ?? "");
 }
 
 /** Clicks the floating + button and returns the dialog it opens. */

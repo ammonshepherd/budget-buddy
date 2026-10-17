@@ -7,6 +7,7 @@ import {
   openActivityMonth,
   openAddTransaction,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 async function addAccount(page: Page, name: string, opening: string) {
@@ -27,7 +28,7 @@ async function add(
   await dialog.getByLabel("Amount").first().fill(tx.amount);
   await dialog.getByLabel("Payee").fill(tx.payee);
   await dialog.getByLabel("Date").fill(tx.date);
-  if (tx.envelope) await dialog.getByLabel("Envelope").first().selectOption({ label: tx.envelope });
+  if (tx.envelope) await chooseEnvelope(dialog.getByLabel("Envelope").first(), tx.envelope);
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
 }
@@ -38,10 +39,10 @@ async function addSplit(page: Page, payee: string, date: string, first: string, 
   await dialog.getByLabel("Amount").first().fill("30");
   await dialog.getByLabel("Payee").fill(payee);
   await dialog.getByLabel("Date").fill(date);
-  await dialog.getByLabel("Envelope").first().selectOption({ label: first });
+  await chooseEnvelope(dialog.getByLabel("Envelope").first(), first);
   await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
   await dialog.getByLabel("Amount 1").fill("10");
-  await dialog.getByLabel("Envelope 2").selectOption({ label: second });
+  await chooseEnvelope(dialog.getByLabel("Envelope 2"), second);
   await dialog.getByRole("button", { name: "Put the rest in the last line" }).click();
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();

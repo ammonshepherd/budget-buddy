@@ -9,6 +9,7 @@ import {
   goTo,
   openAddTransaction,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -36,14 +37,14 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   const dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").first().fill("75");
   await dialog.getByLabel("Payee").fill("Superstore");
-  await dialog.getByLabel("Envelope").first().selectOption({ label: "Groceries" });
+  await chooseEnvelope(dialog.getByLabel("Envelope").first(), "Groceries");
   await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
   // The envelope already chosen starts the first line.
   await expect(dialog.getByLabel("Envelope 1")).toHaveValue(/.+/);
   await dialog.getByLabel("Amount 1").fill("50");
   await expect(dialog.getByRole("status")).toHaveText("$25.00 left to split");
   // Saving before the lines add up explains what is missing.
-  await dialog.getByLabel("Envelope 2").selectOption({ label: "Household" });
+  await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Household");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog.getByRole("alert")).toContainText("$25.00 is not in an envelope yet");
   await dialog.getByRole("button", { name: "Put the rest in the last line" }).click();
@@ -85,7 +86,7 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
 
   // Choosing one envelope again undoes the split.
   await editActivityRow(page, "Superstore");
-  await form.getByLabel("Envelope").first().selectOption({ label: "Household" });
+  await chooseEnvelope(form.getByLabel("Envelope").first(), "Household");
   await expect(form.getByLabel("Envelope 1")).toHaveCount(0);
   await form.getByRole("button", { name: "Save changes" }).click();
   await expect(row.locator(".activity-category")).toHaveText("Household");
@@ -108,9 +109,9 @@ test("a split that overdraws two envelopes covers them one at a time", async ({ 
   await dialog.getByLabel("Amount").first().fill("260");
   await dialog.getByLabel("Payee").fill("Party");
   await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
-  await dialog.getByLabel("Envelope 1").selectOption({ label: "Groceries" });
+  await chooseEnvelope(dialog.getByLabel("Envelope 1"), "Groceries");
   await dialog.getByLabel("Amount 1").fill("130");
-  await dialog.getByLabel("Envelope 2").selectOption({ label: "Fun" });
+  await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Fun");
   await dialog.getByLabel("Amount 2").fill("130");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
 
@@ -150,9 +151,9 @@ test("a card purchase can be split; money into a card cannot", async ({ page }) 
   await dialog.getByLabel("Amount").first().fill("70");
   await dialog.getByLabel("Payee").fill("Card shop");
   await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
-  await dialog.getByLabel("Envelope 1").selectOption({ label: "Groceries" });
+  await chooseEnvelope(dialog.getByLabel("Envelope 1"), "Groceries");
   await dialog.getByLabel("Amount 1").fill("50");
-  await dialog.getByLabel("Envelope 2").selectOption({ label: "Fun" });
+  await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Fun");
   await dialog.getByLabel("Amount 2").fill("20");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();

@@ -8,6 +8,7 @@ import {
   goTo,
   openEnvelope,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -112,7 +113,7 @@ test("tapping a transaction in the sheet opens it to edit, over the sheet", asyn
 
   // Moving it to another envelope takes it off this list.
   await activity.getByRole("button", { name: /^Edit Market/ }).click();
-  await edit.getByLabel("Envelope").selectOption({ label: "Fun" });
+  await chooseEnvelope(edit.getByLabel("Envelope"), "Fun");
   // Fun has only $100: exactly enough, so no cover prompt.
   await edit.getByRole("button", { name: "Save changes" }).click();
   await expect(edit).toBeHidden();

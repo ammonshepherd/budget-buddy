@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.25.0.
+Version described: 0.25.1.
 
 ## 1. Purpose
 
@@ -326,8 +326,11 @@ today), Memo; then Add transaction / Save changes, Cancel, and (editing)
 Delete transaction / Delete transfer.
 
 Envelope choices: Uncategorized; Income (to Available to Assign) — disabled for
-outflows; each group's envelopes (payment envelopes excluded); Split across
-envelopes; Transfer — needs two open accounts. On a credit card with Inflow,
+outflows; each group's envelopes (payment envelopes excluded), each shown as
+"⟨Envelope⟩ (has $X)" with its Remaining in the month of the form's Date as the
+Budget page shows it now (before this save; `useEnvelopeRemaining`); Split
+across envelopes; Transfer — needs two open accounts. The split lines' envelope
+choices show the same amounts. On a credit card with Inflow,
 only "Card credit (lowers what you owe)" and Transfer are offered (so card
 purchases can be split, card credits cannot).
 

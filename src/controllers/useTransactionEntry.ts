@@ -9,7 +9,7 @@ import {
   type TransactionShortfall,
 } from "../models/budgetMath";
 import { UserFacingError, type DataStore, type TransactionInput } from "../models/dataStore";
-import { type Month, todayIso } from "../models/month";
+import { isMonth, monthOf, type Month, todayIso } from "../models/month";
 import { formatCents, parseCents, type Cents } from "../models/money";
 import {
   fillRest,
@@ -149,6 +149,20 @@ function coverChanges(covers: readonly Cover[]): EnvelopeMonthChange[] {
     changes.push({ envelopeId, month, assigned: stillShort });
     return changes;
   });
+}
+
+/**
+ * Each envelope's Remaining in the month of `date`, as the Budget page shows
+ * it now (before this save), or null while the date is not valid. Shown next
+ * to the envelope names in the form's envelope pickers.
+ */
+export function useEnvelopeRemaining(data: BudgetData, date: string): Map<string, Cents> | null {
+  const month = monthOf(date);
+  return useMemo(() => {
+    if (!isMonth(month)) return null;
+    const rows = buildBudgetMonth(data, month).groups.flatMap((g) => g.envelopes);
+    return new Map(rows.map((e) => [e.id, e.remaining]));
+  }, [data, month]);
 }
 
 /**
