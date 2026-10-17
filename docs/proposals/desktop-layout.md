@@ -1,11 +1,12 @@
 # Proposal: a landscape layout for desktop browsers
 
-Status: **not decided, not built.** Written 2026-10-17 against v0.25.0.
+Status: **partly decided, not built.** Written 2026-10-17 against v0.25.0.
 This is a brief for making mockups. Nothing here changes the app until the
-owner picks a direction.
+owner has picked a direction and the layout is built.
 
-Mockups so far: `docs/mockups/budget-desktop.html` (Budget, with A/B variants
-for open decisions 2 and 3).
+Mockups so far: `docs/mockups/budget-desktop.html` (Budget). Decided on
+2026-10-17 from it: decisions 2 and 3 below (variant A for both). Its
+variant switcher stays only so the choice can be revisited.
 
 ## The request
 
@@ -141,11 +142,12 @@ The screen that gains the most.
 
 1. **Breakpoint.** Switch at 1024px, or also have a middle (tablet landscape,
    ~768–1023px) layout with the sidebar but no second pane?
-2. **Budget, nothing selected:** empty panel with a hint, a month summary
-   (income, assigned, spent, saved this month), or no panel until an envelope
-   is clicked (table full width)?
-3. **Budget row:** one line with all five columns (variant A), or keep the
-   phone's two-line row and just make it wider (variant B)?
+2. **Budget, nothing selected:** _Decided: a month summary in the right
+   panel_ (income, assigned, spent, saved this month; variant A in
+   `budget-desktop.html`). Not chosen: an empty panel with a hint, or no panel
+   until an envelope is clicked.
+3. **Budget row:** _Decided: one line with all five columns_ (variant A).
+   Not chosen: the phone's two-line row made wider.
 4. **Activity right column:** To review always shown, the selected
    transaction's edit form, or both stacked?
 5. **Editing transactions on desktop:** keep the modal dialog everywhere
