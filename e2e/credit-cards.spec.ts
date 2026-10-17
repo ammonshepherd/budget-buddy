@@ -7,6 +7,7 @@ import {
   goTo,
   openAddTransaction,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 test("a credit card account owes money and gets a payment envelope", async ({ page }) => {
@@ -99,7 +100,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await dialog.getByLabel("Account").selectOption({ label: "Visa" });
   await dialog.getByLabel("Amount").fill("40");
   await dialog.getByLabel("Payee").fill("Market");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Groceries" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Groceries");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
   const payment = envelope(page, "Visa payment");

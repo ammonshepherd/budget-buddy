@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { envelope, editCell, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
+import {
+  envelope,
+  editCell,
+  goTo,
+  openAddTransaction,
+  signInWithHousehold,
+  chooseEnvelope,
+} from "./helpers";
 
 const planStart = (page: Page) => page.getByRole("region", { name: /^No plan for/ });
 
@@ -66,7 +73,7 @@ test("a new month copies last month's Spent", async ({ page }) => {
   await form.getByLabel("Date").fill("2030-01-15");
   await form.getByLabel("Amount").fill("123.45");
   await form.getByLabel("Payee").fill("Market");
-  await form.getByLabel("Envelope").selectOption({ label: "Food" });
+  await chooseEnvelope(form.getByLabel("Envelope"), "Food");
   await form.getByRole("button", { name: "Add transaction" }).click();
   await expect(form).toBeHidden();
 

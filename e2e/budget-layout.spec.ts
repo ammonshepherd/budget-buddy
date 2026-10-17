@@ -7,6 +7,7 @@ import {
   goTo,
   openAddTransaction,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 test("the Budget page is envelopes under a sticky Available to Assign", async ({ page }) => {
@@ -110,7 +111,7 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
   await dialog.getByRole("radio", { name: "Inflow" }).check();
   await dialog.getByLabel("Amount").fill("85.37");
   await dialog.getByLabel("Payee").fill("Insurance refund");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Car insurance" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Car insurance");
   await dialog.getByRole("button", { name: "Add transaction" }).click();
   await expect(dialog).toBeHidden();
 

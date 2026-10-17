@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { activityRow, available, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
+import {
+  activityRow,
+  addGroupWithEnvelopes,
+  available,
+  editCell,
+  goTo,
+  openAddTransaction,
+  signInWithHousehold,
+} from "./helpers";
 
 const plus = (page: import("@playwright/test").Page) =>
   page.getByRole("button", { name: "Add transaction", exact: true });
@@ -51,4 +59,38 @@ test("add a transaction from the Budget page without leaving it", async ({ page 
 
   await goTo(page, "Activity");
   await expect(activityRow(page, "Paycheck")).toContainText("Income");
+});
+
+test("envelope pickers show each envelope's Remaining in the transaction's month", async ({
+  page,
+}) => {
+  await signInWithHousehold(page);
+  await goTo(page, "Accounts");
+  await page.getByLabel("Account name").fill("Checking");
+  await page.getByLabel("Opening balance").fill("500");
+  await page.getByRole("button", { name: "Add account" }).click();
+  await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
+  await editCell(page, "Groceries", "assigned", "120");
+
+  const dialog = await openAddTransaction(page);
+  const picker = dialog.getByLabel("Envelope");
+  await expect(picker.locator("option", { hasText: "Groceries" })).toHaveText(
+    "Groceries (has $120.00)",
+  );
+  await expect(picker.locator("option", { hasText: "Fun" })).toHaveText("Fun (has $0.00)");
+  // Fixed choices keep their plain names.
+  await expect(picker.locator("option").first()).toHaveText("Uncategorized");
+
+  // Split lines show the same amounts.
+  await dialog.getByLabel("Amount").fill("30");
+  await picker.selectOption({ label: "Split across envelopes" });
+  await expect(
+    dialog.getByLabel("Envelope 1").locator("option", { hasText: "Groceries" }),
+  ).toHaveText("Groceries (has $120.00)");
+
+  // Another month shows that month's Remaining (this month's moves to Saved).
+  await dialog.getByLabel("Date").fill("2099-06-15");
+  await expect(
+    dialog.getByLabel("Envelope 1").locator("option", { hasText: "Groceries" }),
+  ).toHaveText("Groceries (has $0.00)");
 });
