@@ -129,21 +129,31 @@ export function TransactionDialog({
 
 /**
  * The round + button in the bottom-right corner (Budget, Accounts and
- * Activity). It opens the transaction form in a modal dialog.
+ * Activity), or on a desktop "+ Add transaction" at the top of the sidebar.
+ * It opens the transaction form in a modal dialog.
  */
-export function AddTransactionButton({ budget, data }: { budget: Budget; data: BudgetData }) {
+export function AddTransactionButton({
+  budget,
+  data,
+  desktop = false,
+}: {
+  budget: Budget;
+  data: BudgetData;
+  desktop?: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
-        className="fab"
+        className={desktop ? "sidebar-add" : "fab"}
         type="button"
         aria-label="Add transaction"
         title="Add transaction"
         onClick={() => setOpen(true)}
       >
         <PlusIcon />
+        {desktop && <span className="nav-label">Add transaction</span>}
       </button>
       <TransactionDialog
         budget={budget}

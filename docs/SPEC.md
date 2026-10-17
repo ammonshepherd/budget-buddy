@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.25.1.
+Version described: 0.26.0.
 
 ## 1. Purpose
 
@@ -41,7 +41,8 @@ format cents), `month.ts` (`YYYY-MM` helpers, `formatDay`), `routes.ts`,
 month: rows by day, totals, day nets), `transfers.ts` (linked transfers and
 matching), `transactionImport.ts` + `csv.ts` (bank CSV, matching typed transactions), `envelopePlan.ts` (plan
 CSV), `incomeRules.ts`, `dataStore.ts` (the store interface), `supabaseStore.ts`,
-`memoryStore.ts`, `store.ts` (picks one).
+`memoryStore.ts`, `store.ts` (picks one), `layoutPrefs.ts` (desktop
+breakpoint and collapsed sidebars).
 
 ### Data stores
 
@@ -80,7 +81,8 @@ always show what the store holds.
 `npm run dev | build | preview | typecheck | lint | format | format:check |
 test (= test:unit) | test:ui | test:integration | test:ui:db | db:seed:test`.
 UI tests build with the memory store into `dist-e2e/` and run against
-`vite preview` on port 4173 (Pixel 7 viewport); `test:ui:db` builds with
+`vite preview` on port 4173: every spec at phone width (Pixel 7), and
+`*.desktop.spec.ts` at 1280×800 (the desktop layout); `test:ui:db` builds with
 `--mode test` into `dist-e2e-db/` (port 4174) and signs in as test user A.
 
 GitHub Actions: `deploy.yml` runs on pushes to `main` and on pull requests:
@@ -187,6 +189,30 @@ These are implemented in `budgetMath.ts` and the controllers:
   Activity opens the transaction dialog.
 - States: "Loading Budget Buddy…", sign-in, create household, or the app.
 
+### Desktop layout (1000px and up)
+
+Proposal and decisions: `docs/proposals/desktop-layout.md`. Signed in on a
+window at least 1000px wide (`DESKTOP_QUERY` in `layoutPrefs.ts`, followed
+live by `useDesktop`), App adds `.desktop` to the shell; below that, or
+signed out, everything is as above. Built so far: the shell and Budget.
+
+- No header or bottom bar. A sidebar on the left (`aside` "Sidebar",
+  13rem): the logo, "Budget Buddy" and the version; "+ Add transaction"
+  (not on Settings; opens the same dialog); the pages ("Primary
+  navigation"); Install (when offered); the household name and email; and
+  "Collapse" (`Collapse sidebar` / `Expand sidebar`), which shrinks it to
+  icons (names kept for screen readers). From 1000 to 1199px it always shows
+  icons only and has no Collapse button.
+- Collapsed sidebars are remembered per device and user in localStorage
+  (`bb.layout.navCollapsed.<userId>`, `bb.layout.panelCollapsed.<userId>`,
+  "1" or "0"; unreadable means expanded), never in Supabase.
+- Budget and Activity use the width up to 1600px; Accounts and Settings keep
+  their phone column for now.
+- A right-hand panel (`SidePanel`, an `aside` named for what it shows) sits
+  beside a page's list, sticky under its band. Its top-right button ("Hide
+  panel" / "Show panel") collapses it to a thin rail; choosing something
+  opens it again.
+
 ### Sign in
 
 Email and password, and Sign in. There is no create-account form or link:
@@ -266,6 +292,26 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
     debt $Y", "Assign (negative to take back)", the Saved panel and how it fills,
     and no Delete.
 - "Show N envelopes not used this month" toggle when some are hidden.
+- **Desktop** (see Desktop layout):
+  - One purple band, pinned to the top, holds the month picker (left) and
+    Available to Assign (right; same rules).
+  - Envelopes are a table with a sticky column head (Envelope, Planned,
+    Assigned, Spent, Remaining): one line per envelope (name and Saved pill,
+    then the cells without their labels, then what is left). A card's payment
+    envelope shows Available to pay and Remaining debt, labelled, across the
+    three cell columns. Group bars show their total under Remaining when
+    collapsed and the + in the last column. Refunded and Short sit on a line
+    below, under the cells.
+  - Clicking an envelope's name shows it in the panel instead of a sheet
+    (highlighted row, `aria-expanded`): the sheet's content without its
+    handle; × goes back to the summary. Tapping one of its transactions
+    puts the edit form in the panel ("‹ Back to ⟨envelope⟩", Save, Cancel,
+    Delete and cover prompts all return to the envelope).
+  - With no envelope chosen the panel shows the month at a glance (display
+    only): Income, Assigned, Spent and In Saved (`totals` of the month), then
+    lists of envelopes "Spent over Planned" ("$X over"), "Short" and "Card
+    debt not covered" (`monthWatchList` in `envelopeDetail.ts`; each opens
+    its envelope), and "Choose an envelope to see its details here."
 
 ### Accounts
 
@@ -449,6 +495,10 @@ Envelopes not in the file are left alone.
 ## 9. Not built yet
 
 Decided or wanted, but not in the app:
+
+- Desktop layout for Activity (rows with more columns, To review or the
+  edit form in the panel, adding through a new row), Accounts (edit form in
+  the panel) and Settings (two columns); keyboard shortcuts.
 
 - Import and matching: matching a transaction typed after its bank row was
   imported (import already matches typed transactions to new rows, and
