@@ -177,7 +177,9 @@ function SignedInApp({
         desktop={desktop}
       />
     ),
-    accounts: <AccountsPage budget={budget} data={data} />,
+    accounts: (
+      <AccountsPage budget={budget} data={data} userId={session.userId} desktop={desktop} />
+    ),
     // key: each month starts with every split open.
     activity: (
       <ActivityPage

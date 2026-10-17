@@ -190,8 +190,9 @@ non-card budget balances − all envelope money (P included)`.
   under a band with the month and Available to Assign; the panel shows the
   month summary, the chosen envelope, or a transaction being edited.
   Activity edits in the panel too and adds through a new row at the top of
-  its list; Budget and Accounts add through the dialog. Below 1000px nothing
-  changes.
+  its list; Budget and Accounts add through the dialog. Accounts adds and
+  edits accounts in the panel; Settings shows its sections in two columns.
+  Below 1000px nothing changes.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
   in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in
