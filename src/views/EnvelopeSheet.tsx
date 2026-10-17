@@ -23,12 +23,15 @@ export function EnvelopeSheet({
   page,
   onClose,
   onEditTransaction,
+  docked = false,
 }: {
   detail: Detail;
   page: Page;
   onClose: () => void;
-  /** Opens a transaction in the edit dialog, over this sheet. */
+  /** Opens a transaction in the edit dialog, over this sheet (or, docked, in the panel). */
   onEditTransaction: (id: string) => void;
+  /** In the desktop panel rather than a bottom sheet: no drag handle. */
+  docked?: boolean;
 }) {
   const { row } = detail;
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +57,7 @@ export function EnvelopeSheet({
 
   return (
     <div className="envelope-sheet">
-      <div className="sheet-handle" aria-hidden="true" />
+      {!docked && <div className="sheet-handle" aria-hidden="true" />}
       <header className="sheet-header">
         <div>
           {row.card ? (

@@ -2202,3 +2202,686 @@ div.sheet-field .sheet-field-value {
   text-align: end;
   white-space: nowrap;
 }
+
+/* ---- v0.26.0: desktop layout (docs/proposals/desktop-layout.md) ---------- */
+
+/* From 1000px wide, once signed in, App adds .desktop: a sidebar on the
+   left, the page beside it (at most 1600px wide), and on Budget a table of
+   envelopes with a panel on the right. Everything here is scoped to it, so
+   the phone layout is untouched. */
+:root {
+  --desktop-band: 4.25rem;
+  --desktop-gap: 0.875rem;
+  /* Budget table: envelope | Planned | Assigned | Spent | Remaining | + */
+  --env-cols: minmax(9rem, 1fr) repeat(3, 5.75rem) 7rem 2.5rem;
+  --panel-width: clamp(18rem, 27vw, 27rem);
+}
+
+body:has(.app-shell.desktop) {
+  padding: 0;
+}
+
+.app-shell.desktop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  max-inline-size: none;
+  min-block-size: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-shell.desktop > .page-content {
+  min-inline-size: 0;
+  padding: 0 1.5rem 3rem;
+}
+
+/* Budget and Activity use the width, up to 1600px. */
+.desktop .budget-page,
+.desktop .activity-page {
+  max-inline-size: 100rem;
+  margin: 0 auto;
+}
+
+/* Accounts and Settings keep their column, with room above. */
+.desktop .page-view.stack {
+  padding-block-start: 2rem;
+}
+
+/* The sidebar: brand, Add transaction, pages, then who is signed in and the
+   collapse button at the bottom. Collapsed, only the icons show. */
+.sidebar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  inline-size: 13rem;
+  block-size: 100dvh;
+  padding: 1rem 0.75rem;
+  border-inline-end: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sidebar.collapsed {
+  align-items: center;
+  inline-size: 4.5rem;
+  padding-inline: 0.625rem;
+}
+
+.sidebar-brand {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0 0.375rem;
+}
+
+.sidebar-brand .app-version {
+  padding-inline-start: 2.6rem;
+}
+
+.sidebar-add {
+  order: 1;
+}
+
+.sidebar-nav {
+  order: 2;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.sidebar-foot {
+  order: 3;
+  display: grid;
+  gap: 0.5rem;
+  margin-block-start: auto;
+}
+
+.sidebar-toggle {
+  order: 4;
+}
+
+.sidebar-nav a,
+.sidebar-install,
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-block-size: 2.625rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 0.625rem;
+  color: var(--text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.sidebar-nav a:hover,
+.sidebar-install:hover,
+.sidebar-toggle:hover {
+  color: var(--brand);
+  background: var(--bb-purple-tint);
+}
+
+.sidebar-nav a.active {
+  color: var(--brand);
+  background: var(--brand-light);
+  font-weight: 800;
+}
+
+.sidebar-install {
+  border: 1px solid var(--border);
+  color: var(--brand);
+}
+
+.sidebar svg {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.sidebar-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-block-size: 2.625rem;
+  border: 0;
+  border-radius: 0.75rem;
+  color: #fff;
+  background: var(--brand);
+  box-shadow: 0 3px 10px rgba(40, 20, 70, 0.22);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sidebar-add:hover {
+  background: var(--accent);
+}
+
+.sidebar-household {
+  display: grid;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+  color: var(--text-muted);
+  background: var(--app-background);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-household strong {
+  color: var(--bb-ink-2);
+  font-size: 0.8125rem;
+}
+
+.sidebar.collapsed .sidebar-toggle svg {
+  transform: rotate(180deg);
+}
+
+/* Collapsed: icons only. Labels stay for screen readers. */
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .brand span,
+.sidebar.collapsed .app-version {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .sidebar-brand {
+  padding: 0;
+}
+
+.sidebar.collapsed .sidebar-nav a,
+.sidebar.collapsed .sidebar-install,
+.sidebar.collapsed .sidebar-toggle {
+  justify-content: center;
+  inline-size: 3rem;
+  padding: 0;
+}
+
+.sidebar.collapsed .sidebar-add {
+  inline-size: 3rem;
+  block-size: 3rem;
+  border-radius: 50%;
+}
+
+.sidebar.collapsed .sidebar-household {
+  display: none;
+}
+
+/* The right-hand panel (Budget, and later Activity and Accounts). */
+.side-panel {
+  position: sticky;
+  inset-block-start: calc(var(--desktop-band) + var(--desktop-gap));
+  inline-size: var(--panel-width);
+  max-block-size: calc(100dvh - var(--desktop-band) - 2 * var(--desktop-gap));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(75, 42, 104, 0.08);
+}
+
+.side-panel.collapsed {
+  inline-size: 3rem;
+  overflow: visible;
+}
+
+.side-panel-toggle {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: grid;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  margin: 0.25rem 0.25rem -2.75rem auto;
+  place-items: center;
+  border: 0;
+  border-radius: 0.625rem;
+  color: var(--brand);
+  background: transparent;
+  cursor: pointer;
+}
+
+.side-panel.collapsed .side-panel-toggle {
+  margin: 0.25rem auto;
+}
+
+.side-panel-toggle:hover {
+  background: var(--bb-purple-tint);
+}
+
+.side-panel-toggle svg {
+  inline-size: 1.2rem;
+  block-size: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.side-panel-body {
+  padding: 1rem 1.125rem 1.25rem;
+}
+
+/* The envelope details' header leaves room for the panel's toggle. */
+.side-panel .sheet-header {
+  padding-inline-end: 2.5rem;
+}
+
+/* ---- Budget, desktop ---- */
+
+.desktop .budget-page > .notice,
+.desktop .budget-page > .plan-start {
+  margin: var(--desktop-gap) 0 0;
+}
+
+.desktop .budget-page > .plan-start {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.desktop .budget-page > .plan-start .plan-start-actions {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* The month and Available to Assign share one purple band, pinned to the top. */
+.budget-band {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-block-size: var(--desktop-band);
+  padding: 0 1rem;
+  border-radius: 0 0 0.875rem 0.875rem;
+  background: var(--bb-purple);
+}
+
+.budget-band .budget-month {
+  gap: 0.25rem;
+  padding: 0;
+  background: transparent;
+}
+
+.budget-band .budget-month span {
+  min-inline-size: 11.5em;
+  text-align: center;
+}
+
+.budget-band .budget-month a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.budget-band .assign-card {
+  gap: 0 1.5rem;
+  min-inline-size: 18rem;
+}
+
+.budget-work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: start;
+  padding-block: var(--desktop-gap) 2.5rem;
+}
+
+.envelope-table {
+  overflow: clip;
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(75, 42, 104, 0.06);
+}
+
+.envelope-colhead {
+  position: sticky;
+  inset-block-start: var(--desktop-band);
+  z-index: 4;
+  display: grid;
+  grid-template-columns: var(--env-cols);
+  column-gap: 0.5rem;
+  align-items: center;
+  block-size: 2.125rem;
+  padding-inline-start: 1rem;
+  border-block-end: 1px solid var(--bb-purple-line);
+  color: var(--bb-muted);
+  background: var(--surface);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.envelope-colhead span:not(:first-child) {
+  padding-inline-end: 8px;
+  text-align: end;
+}
+
+.envelope-colhead span:nth-child(5) {
+  padding-inline-end: 0;
+}
+
+/* Group bars line up with the columns: the total under Remaining, + last. */
+.desktop .group-heading {
+  display: grid;
+  grid-template-columns: var(--env-cols);
+  column-gap: 0.5rem;
+  padding: 0 0 0 4px;
+  border-block-start: 0;
+}
+
+.desktop .group-heading h2 {
+  grid-column: 1 / 5;
+}
+
+.desktop .group-total {
+  grid-column: 5;
+  text-align: end;
+}
+
+.desktop .add-envelope-button {
+  grid-column: 6;
+  border-radius: 0.5rem;
+}
+
+.desktop .add-envelope-button:hover {
+  background: #e6daf3;
+}
+
+/* One line per envelope. */
+.desktop .envelope {
+  grid-template-columns: var(--env-cols);
+  column-gap: 0.5rem;
+  align-items: center;
+  min-block-size: 3.25rem;
+  padding: 6px 0 6px 1rem;
+}
+
+.desktop .envelope:hover {
+  background: #fbf9fd;
+}
+
+.desktop .envelope.selected {
+  background: #f6f1fb;
+  box-shadow: inset 4px 0 0 var(--bb-purple);
+}
+
+.desktop .envelope-top:hover .envelope-name {
+  text-decoration: underline;
+  text-decoration-color: #cdb8e6;
+  text-underline-offset: 3px;
+}
+
+.desktop .envelope-cells {
+  display: contents;
+}
+
+.desktop .envelope-cells .cell {
+  align-items: flex-end;
+  padding: 5px 8px;
+  text-align: end;
+}
+
+/* The column head names the cells; screen readers still hear each label. */
+.desktop .envelope-cells:not(.two) .cell-label {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.desktop .envelope-cells .cell .money,
+.desktop .envelope-cells .cell.editing input {
+  font-size: 13.5px;
+  text-align: end;
+}
+
+.desktop button.cell:hover {
+  box-shadow: inset 0 0 0 1px #cdb8e6;
+}
+
+/* A card's payment envelope: Available to pay and Remaining debt across the
+   Planned, Assigned and Spent columns, with their labels. */
+.desktop .envelope-cells.two {
+  display: grid;
+  grid-column: 2 / 5;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.desktop .envelope-cells.two .cell {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.375rem;
+}
+
+.desktop .envelope-left {
+  grid-column: 5;
+  margin: 0;
+  text-align: end;
+}
+
+.desktop .envelope-remaining {
+  font-size: 18px;
+}
+
+.desktop .envelope-extra {
+  grid-column: 2 / 6;
+  justify-content: flex-end;
+}
+
+.desktop .envelope > .error-message {
+  grid-column: 1 / -1;
+}
+
+.desktop .envelope-table > .unused-toggle {
+  margin: 0;
+  padding: 0.625rem 1rem;
+  border-block-start: 1px solid var(--bb-purple-line);
+}
+
+/* The panel's month summary (no envelope chosen). */
+.month-summary {
+  display: grid;
+  gap: 1rem;
+}
+
+.month-summary h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.summary-stat {
+  display: grid;
+  gap: 2px;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #f6f3fa;
+}
+
+.summary-stat dt {
+  color: var(--bb-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summary-stat dd {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 800;
+}
+
+.summary-stat.income dd {
+  color: var(--bb-income, #1f6b42);
+}
+
+.summary-stat.saved {
+  color: #fff;
+  background: var(--bb-purple);
+}
+
+.summary-stat.saved dt {
+  color: #e3d6f2;
+}
+
+.watch-list h3 {
+  margin: 0 0 0.25rem;
+  color: var(--bb-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.watch-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.watch-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  inline-size: 100%;
+  min-block-size: 2.375rem;
+  padding: 0.25rem 0.375rem;
+  border: 0;
+  border-block-end: 1px solid var(--bb-row-line);
+  border-radius: 0.375rem;
+  color: inherit;
+  background: none;
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.watch-list button:hover {
+  background: var(--bb-purple-tint);
+}
+
+.watch-list strong {
+  color: var(--bb-over);
+  white-space: nowrap;
+}
+
+.panel-hint {
+  margin: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px dashed #cdb8e6;
+  border-radius: 0.75rem;
+  color: var(--bb-muted);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+/* Editing a transaction in the panel. */
+.panel-edit {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.panel-back {
+  justify-self: start;
+}
+
+/* 1000–1199px: the sidebar shows icons only (its toggle is hidden) and the
+   columns tighten, so the envelope names keep their room beside the panel. */
+@media (max-width: 74.99rem) {
+  :root {
+    --env-cols: minmax(8rem, 1fr) repeat(3, 5.25rem) 6.25rem 2.25rem;
+  }
+
+  .app-shell.desktop > .page-content {
+    padding-inline: 1rem;
+  }
+
+  .budget-work {
+    gap: 1rem;
+  }
+
+  .sidebar {
+    align-items: center;
+    inline-size: 4.5rem;
+    padding-inline: 0.625rem;
+  }
+
+  .sidebar .nav-label,
+  .sidebar .brand span,
+  .sidebar .app-version {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sidebar .sidebar-brand {
+    padding: 0;
+  }
+
+  .sidebar .sidebar-nav a,
+  .sidebar .sidebar-install {
+    justify-content: center;
+    inline-size: 3rem;
+    padding: 0;
+  }
+
+  .sidebar .sidebar-add {
+    inline-size: 3rem;
+    block-size: 3rem;
+    border-radius: 50%;
+  }
+
+  .sidebar .sidebar-household,
+  .sidebar .sidebar-toggle {
+    display: none;
+  }
+
+  .budget-band .assign-card {
+    min-inline-size: 0;
+  }
+}
+
+/* A long name wraps between words, not inside them. */
+.desktop .envelope-name {
+  overflow-wrap: break-word;
+}
