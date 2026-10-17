@@ -33,6 +33,7 @@ export function TransactionEntry({
   onDone,
   onCancel,
   onDelete,
+  layout = "stack",
 }: {
   budget: Budget;
   data: BudgetData;
@@ -42,6 +43,8 @@ export function TransactionEntry({
   onCancel: () => void;
   /** Set when editing: shows a Delete button. */
   onDelete?: () => Promise<void>;
+  /** "row": the fields side by side, as Activity's new transaction row on a desktop. */
+  layout?: "stack" | "row";
 }) {
   const entry = useTransactionEntry(budget, data);
   const [form, setForm] = useState(initial);
@@ -79,6 +82,7 @@ export function TransactionEntry({
       onNeedsCover={setPlan}
       onCancel={onCancel}
       onDelete={onDelete}
+      layout={layout}
     />
   );
 }
@@ -130,16 +134,19 @@ export function TransactionDialog({
 /**
  * The round + button in the bottom-right corner (Budget, Accounts and
  * Activity), or on a desktop "+ Add transaction" at the top of the sidebar.
- * It opens the transaction form in a modal dialog.
+ * It opens the transaction form in a modal dialog, unless `onAdd` takes over
+ * (Activity on a desktop opens a new row instead).
  */
 export function AddTransactionButton({
   budget,
   data,
   desktop = false,
+  onAdd,
 }: {
   budget: Budget;
   data: BudgetData;
   desktop?: boolean;
+  onAdd?: () => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -150,7 +157,7 @@ export function AddTransactionButton({
         type="button"
         aria-label="Add transaction"
         title="Add transaction"
-        onClick={() => setOpen(true)}
+        onClick={() => (onAdd ? onAdd() : setOpen(true))}
       >
         <PlusIcon />
         {desktop && <span className="nav-label">Add transaction</span>}
@@ -177,6 +184,7 @@ function TransactionEditor({
   onNeedsCover,
   onCancel,
   onDelete,
+  layout,
 }: {
   entry: Entry;
   heading: string;
@@ -188,6 +196,7 @@ function TransactionEditor({
   onNeedsCover: (plan: CoverPlan) => void;
   onCancel: () => void;
   onDelete?: () => Promise<void>;
+  layout: "stack" | "row";
 }) {
   const save = useAsyncAction(entry.prepare);
   const remove = useAsyncAction(async () => onDelete?.());
@@ -218,11 +227,15 @@ function TransactionEditor({
   };
 
   return (
-    <form className="form" onSubmit={submit} aria-label={heading}>
+    <form
+      className={layout === "row" ? "form transaction-form row-layout" : "form transaction-form"}
+      onSubmit={submit}
+      aria-label={heading}
+    >
       <div className="section-heading">
         <h2>{heading}</h2>
       </div>
-      <div className="segmented" role="radiogroup" aria-label="Direction">
+      <div className="segmented field-direction" role="radiogroup" aria-label="Direction">
         {(["outflow", "inflow"] as const).map((direction) => (
           <label key={direction}>
             <input
@@ -235,7 +248,7 @@ function TransactionEditor({
           </label>
         ))}
       </div>
-      <label className="field">
+      <label className="field field-amount">
         Amount
         <input
           value={form.amount}
@@ -244,11 +257,11 @@ function TransactionEditor({
           onChange={(e) => update({ amount: e.target.value })}
         />
       </label>
-      <label className="field">
+      <label className="field field-payee">
         Payee
         <input value={form.payee} onChange={(e) => update({ payee: e.target.value })} />
       </label>
-      <label className="field">
+      <label className="field field-envelope">
         Envelope
         <select value={form.category} onChange={(e) => update({ category: e.target.value })}>
           {cardCredit ? (
@@ -335,7 +348,7 @@ function TransactionEditor({
           )}
         </fieldset>
       )}
-      <label className="field">
+      <label className="field field-account">
         Account
         <select value={form.accountId} onChange={(e) => update({ accountId: e.target.value })}>
           {entry.openAccounts.map((account) => (
@@ -347,7 +360,7 @@ function TransactionEditor({
       </label>
       {transfer && (
         <>
-          <label className="field">
+          <label className="field field-transfer">
             {form.direction === "outflow" ? "To account" : "From account"}
             <select
               value={entry.transferAccountOf(form)}
@@ -361,7 +374,7 @@ function TransactionEditor({
             </select>
           </label>
           {transferOptions && (
-            <label className="field">
+            <label className="field field-transfer">
               Other side
               <select
                 value={transferOptions.selected}
@@ -376,26 +389,29 @@ function TransactionEditor({
             </label>
           )}
           {transferNote && (
-            <p className="empty-state" role="note">
+            <p className="empty-state field-note" role="note">
               {transferNote}
             </p>
           )}
         </>
       )}
-      <label className="field">
+      <label className="field field-date">
         Date
         <input type="date" value={form.date} onChange={(e) => update({ date: e.target.value })} />
       </label>
-      <label className="field">
+      <label className="field field-memo">
         Memo
         <input value={form.memo} onChange={(e) => update({ memo: e.target.value })} />
       </label>
-      <button className="primary-button" type="submit" disabled={save.pending}>
-        {form.id ? "Save changes" : "Add transaction"}
-      </button>
-      <button className="secondary-button" type="button" onClick={onCancel}>
-        Cancel
-      </button>
+      {/* A box only in the row layout; otherwise the buttons stack like fields. */}
+      <div className="form-actions">
+        <button className="primary-button" type="submit" disabled={save.pending}>
+          {form.id ? "Save changes" : "Add transaction"}
+        </button>
+        <button className="secondary-button" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
       {onDelete && (
         <button
           className="text-button danger sheet-delete"
