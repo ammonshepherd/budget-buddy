@@ -2822,6 +2822,207 @@ body:has(.app-shell.desktop) {
   justify-self: start;
 }
 
+/* ---- Activity, desktop ---- */
+
+/* The month, the account picker and the totals share one band. */
+.activity-band {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-block-size: var(--desktop-band);
+  padding: 0 1rem;
+  border-radius: 0 0 0.875rem 0.875rem;
+  background: var(--bb-purple);
+}
+
+.activity-band .budget-month {
+  gap: 0.25rem;
+  padding: 0;
+  background: transparent;
+}
+
+.activity-band .budget-month span {
+  min-inline-size: 11.5em;
+  text-align: center;
+}
+
+.activity-band .budget-month a:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.activity-band .activity-account-filter {
+  min-block-size: 0;
+  margin-inline-start: auto;
+  padding: 0;
+  background: transparent;
+}
+
+.activity-band .activity-account-filter label {
+  color: #e3d6f2;
+}
+
+.activity-band .activity-totals {
+  grid-template-columns: repeat(3, auto);
+  gap: 1.25rem;
+  padding: 0.375rem 0.875rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.activity-band .activity-totals dd {
+  font-size: 13px;
+}
+
+.desktop .activity-page > .activity-notice {
+  margin: var(--desktop-gap) 0 0;
+}
+
+.activity-work {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: start;
+  padding-block: var(--desktop-gap) 2.5rem;
+}
+
+.activity-table {
+  overflow: clip;
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(75, 42, 104, 0.06);
+}
+
+/* Rows: status | payee over account | envelope | memo | amount. */
+.desktop .activity-grid {
+  grid-template-columns: 14px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 7rem;
+  column-gap: 0.75rem;
+}
+
+.desktop .activity-item:hover {
+  background: #fbf9fd;
+}
+
+.desktop .activity-item.selected {
+  background: #f6f1fb;
+  box-shadow: inset 4px 0 0 var(--bb-purple);
+}
+
+.desktop .activity-who:hover .activity-payee {
+  text-decoration: underline;
+  text-decoration-color: #cdb8e6;
+  text-underline-offset: 3px;
+}
+
+.activity-memo {
+  overflow: hidden;
+  color: var(--bb-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* In the panel, To review needs no card of its own. */
+.side-panel .activity-review {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.side-panel .activity-review .section-heading {
+  padding-inline-end: 2.5rem;
+}
+
+.side-panel .activity-review .secondary-button {
+  margin-block-start: 0.5rem;
+  inline-size: 100%;
+}
+
+/* The new transaction row at the top of the list: the form's fields side
+   by side, in their usual (and tab) order, wrapping when they run out of
+   room; a split's lines and the transfer note take a line of their own. */
+.activity-new-row {
+  padding: 0.75rem 1rem 1rem;
+  border-block-end: 2px solid var(--bb-purple);
+  background: #fcfafe;
+}
+
+.transaction-form .form-actions {
+  display: contents;
+}
+
+.row-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.625rem 0.75rem;
+}
+
+.row-layout > * {
+  flex: 1 1 9rem;
+  min-inline-size: 0;
+}
+
+.row-layout .section-heading {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.row-layout .section-heading h2 {
+  font-size: 0.9375rem;
+}
+
+.row-layout .field-direction {
+  flex: 0 0 11rem;
+}
+
+.row-layout .field-amount {
+  flex: 0 0 7rem;
+}
+
+.row-layout .field-payee,
+.row-layout .field-envelope {
+  flex: 1.5 1 11rem;
+}
+
+.row-layout .field-date {
+  flex: 0 0 9.5rem;
+}
+
+.row-layout .split,
+.row-layout .field-note,
+.row-layout .error-message {
+  flex-basis: 100%;
+}
+
+.row-layout .field input,
+.row-layout .field select {
+  min-block-size: 2.375rem;
+  padding-block: 0.375rem;
+  font-size: 0.9375rem;
+}
+
+.row-layout .form-actions {
+  display: flex;
+  flex-basis: 100%;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.row-layout .form-actions button {
+  inline-size: auto;
+  margin: 0;
+  padding: 0.55rem 1.25rem;
+}
+
+.activity-new-row .cover-card {
+  max-inline-size: 36rem;
+}
+
 /* 1000–1199px: the sidebar shows icons only (its toggle is hidden) and the
    columns tighten, so the envelope names keep their room beside the panel. */
 @media (max-width: 74.99rem) {

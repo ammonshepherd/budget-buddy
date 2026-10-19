@@ -117,6 +117,8 @@ function SignedInApp({
   if (location.month && location.month !== lastMonth) setLastMonth(location.month);
   // The account Activity is narrowed to (null: all); kept between months and pages.
   const [activityAccount, setActivityAccount] = useState<string | null>(null);
+  // Counts Add transaction clicks on Activity on a desktop: each opens its new row.
+  const [activityAdds, setActivityAdds] = useState(0);
   const month = location.month ?? lastMonth ?? currentMonth();
   const data = state.status === "ready" ? state.data : null;
 
@@ -124,7 +126,14 @@ function SignedInApp({
   // the sidebar on a desktop. Not on Settings.
   const add =
     data && QUICK_ADD.includes(location.route) ? (
-      <AddTransactionButton budget={budget} data={data} desktop={desktop} />
+      <AddTransactionButton
+        budget={budget}
+        data={data}
+        desktop={desktop}
+        onAdd={
+          desktop && location.route === "activity" ? () => setActivityAdds((n) => n + 1) : undefined
+        }
+      />
     ) : null;
   const nav = (
     <Navigation route={location.route} month={month} desktop={desktop} userId={session.userId}>
@@ -178,6 +187,9 @@ function SignedInApp({
         month={month}
         accountId={activityAccount}
         onAccountChange={setActivityAccount}
+        userId={session.userId}
+        desktop={desktop}
+        addRequest={activityAdds}
       />
     ),
     settings: (

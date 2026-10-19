@@ -1,6 +1,6 @@
 # Proposal: a landscape layout for desktop browsers
 
-Status: **decided; being built** (shell and Budget in v0.26.0). Written 2026-10-17 against v0.25.0.
+Status: **decided; being built** (shell and Budget in v0.26.0, Activity in v0.26.1). Written 2026-10-17 against v0.25.0.
 This is a brief for making mockups. Nothing here changes the app until the
 layout is built.
 

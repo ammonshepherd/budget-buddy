@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   addGroupWithEnvelopes,
-  addTransaction,
   available,
+  chooseEnvelope,
   editCell,
   envelope,
   goTo,
@@ -12,6 +12,18 @@ import {
 // The desktop layout (1000px and up; this project runs at 1280×800).
 
 const panel = (page: Page) => page.locator("aside.side-panel");
+
+/** Adds an outflow through the sidebar's Add transaction (the dialog, on Budget). */
+async function addTransaction(page: Page, tx: { amount: string; payee: string; envelope: string }) {
+  await goTo(page, "Budget");
+  await page.getByRole("button", { name: "Add transaction", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add a transaction" });
+  await dialog.getByLabel("Amount").fill(tx.amount);
+  await dialog.getByLabel("Payee").fill(tx.payee);
+  await chooseEnvelope(dialog.getByLabel("Envelope"), tx.envelope);
+  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await expect(dialog).toBeHidden();
+}
 
 async function setUp(page: Page) {
   await signInWithHousehold(page);
