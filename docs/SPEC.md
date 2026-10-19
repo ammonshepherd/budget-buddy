@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.26.1.
+Version described: 0.26.2.
 
 ## 1. Purpose
 
@@ -194,8 +194,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 Proposal and decisions: `docs/proposals/desktop-layout.md`. Signed in on a
 window at least 1000px wide (`DESKTOP_QUERY` in `layoutPrefs.ts`, followed
 live by `useDesktop`), App adds `.desktop` to the shell; below that, or
-signed out, everything is as above. Built so far: the shell, Budget and
-Activity.
+signed out, everything is as above.
 
 - No header or bottom bar. A sidebar on the left (`aside` "Sidebar",
   13rem): the logo, "Budget Buddy" and the version; "+ Add transaction"
@@ -209,8 +208,7 @@ Activity.
   "1" or "0"; unreadable means expanded), never in Supabase.
 - "+ Add transaction" opens the dialog on Budget and Accounts; on Activity
   it opens the new transaction row instead.
-- Budget and Activity use the width up to 1600px; Accounts and Settings keep
-  their phone column for now.
+- Every page uses the width up to 1600px, centred.
 - A right-hand panel (`SidePanel`, an `aside` named for what it shows) sits
   beside a page's list, sticky under its band. Its top-right button ("Hide
   panel" / "Show panel") collapses it to a thin rail; choosing something
@@ -327,6 +325,11 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   (default today). A card shows a short explanation of its payment envelope.
 - Edit keeps the type; the opening date cannot move past the first transaction.
 - Closed accounts listed separately with their balance.
+- **Desktop:** the lists (open, then closed) on the left; the panel on the
+  right holds "Add an account" ("No accounts yet. Add your checking account
+  on the right.") until an open account is chosen (highlighted,
+  `aria-expanded`), then "Edit ⟨name⟩" with "‹ Back to Add an account", Save
+  changes, Cancel and Close account, each returning to Add an account.
 
 ### Activity
 
@@ -435,6 +438,8 @@ Envelope groups; Import transactions; Income rules; Import envelope plan.
   "N inflows waiting for review match your rules. Mark them as Income".
 - **Import envelope plan:** month (default current), CSV file, preview with
   new groups/envelopes and Planned changes, invalid rows by line, then Import.
+- **Desktop:** the sections in two columns under the heading; Import
+  transactions (and its preview) spans both. Group sheets stay sheets.
 
 ## 6. Bank CSV import
 
@@ -515,8 +520,9 @@ Envelopes not in the file are left alone.
 
 Decided or wanted, but not in the app:
 
-- Desktop layout for Accounts (edit form in the panel) and Settings (two
-  columns); keyboard shortcuts.
+- Desktop: keyboard shortcuts; a group's envelopes beside the group list in
+  Settings instead of a sheet; an account's transactions under its details
+  (editing in the panel).
 
 - Import and matching: matching a transaction typed after its bank row was
   imported (import already matches typed transactions to new rows, and
