@@ -1,10 +1,10 @@
 /**
  * The Activity page's month: every transaction dated in it, across budget
- * accounts, grouped by day, plus the month's money in, out and transferred.
- * These are display figures for this page only; they are not Available to
- * Assign or account balances.
+ * accounts, grouped by day, plus the month's money in and out, today's
+ * balance, and the total of the rows ticked for reconciling. These are
+ * display figures for this page only; they are not Available to Assign.
  */
-import { isCardCredit, isToReview } from "./budgetMath";
+import { accountBalance, isCardCredit, isToReview } from "./budgetMath";
 import type { Cents } from "./money";
 import { monthOf, type Month } from "./month";
 import { transferPartner } from "./transfers";
@@ -12,13 +12,6 @@ import type { BudgetData, IsoDate, Transaction } from "./types";
 
 /** How a row's amount is shown: outflows with −, inflows green with +, transfers grey. */
 export type ActivityKind = "out" | "in" | "transfer";
-
-/**
- * Whether the bank has seen it. There is no stored status yet: imported rows
- * came from the bank (cleared), typed ones have not (uncleared). Reconciled
- * waits for reconciliation.
- */
-export type ClearedStatus = "uncleared" | "cleared" | "reconciled";
 
 /** One envelope's part of a split. */
 export interface ActivityPortion {
@@ -41,23 +34,35 @@ export interface ActivityRow {
   toReview: boolean;
   /** A split's parts (two or more); empty otherwise. */
   portions: ActivityPortion[];
-  status: ClearedStatus;
+  /**
+   * The transactions the row stands for when it is ticked: the transaction
+   * itself, or for a transfer the side in the account shown (both sides on
+   * "All accounts").
+   */
+  sideIds: string[];
+  /** Those sides' amounts added up, signed (a transfer on "All accounts": $0.00). */
+  sideAmount: Cents;
+  /** Every side is marked reconciled with the bank. */
+  reconciled: boolean;
 }
 
 export interface ActivityDay {
   date: IsoDate;
-  /** The day's non-transfer amounts added up, signed. */
+  /** The day's amounts added up, signed; transfers only count in one account's view. */
   net: Cents;
   rows: ActivityRow[];
 }
 
+/**
+ * Money in and out (both positive). On "All accounts" transfers are left out
+ * (their sides cancel); in one account's view they count like the bank
+ * statement shows them, so In − Out is the change in that account's balance.
+ */
 export interface ActivityTotals {
-  /** Non-transfer inflows: income, refunds and card credits (positive). */
+  /** Inflows: income, refunds, card credits (and transfers in, for one account). */
   moneyIn: Cents;
-  /** Non-transfer outflows: spending and card purchases (positive). */
+  /** Outflows: spending, card purchases (and transfers out, for one account). */
   moneyOut: Cents;
-  /** Transfers (card payments included), each counted once (positive). */
-  transfers: Cents;
 }
 
 export interface ActivityMonth {
@@ -102,14 +107,35 @@ function inAccount(data: BudgetData, tx: Transaction, accountId: string): boolea
   return tx.isTransfer && transferPartner(data, tx)?.accountId === accountId;
 }
 
-function activityRow(data: BudgetData, tx: Transaction): ActivityRow {
+/**
+ * What ticking a row means: the transaction, or a transfer's side in the
+ * account shown (both shown sides on "All accounts").
+ */
+function rowSides(data: BudgetData, tx: Transaction, accountId: string | null) {
+  const partner = tx.isTransfer ? transferPartner(data, tx) : undefined;
+  const onBudget = (t: Transaction) =>
+    !t.voided && data.accounts.some((a) => a.id === t.accountId && a.onBudget);
+  const all = partner && onBudget(partner) ? [tx, partner] : [tx];
+  const sides = accountId === null ? all : all.filter((t) => t.accountId === accountId);
+  return {
+    sideIds: sides.map((t) => t.id),
+    sideAmount: sides.reduce((sum, t) => sum + t.amount, 0),
+    reconciled: sides.every((t) => t.reconciled),
+  };
+}
+
+function activityRow(data: BudgetData, tx: Transaction, accountId: string | null): ActivityRow {
   const account = (id: string) => data.accounts.find((a) => a.id === id);
   const accountName = account(tx.accountId)?.name ?? "Unknown account";
   const envelopeName = (id: string) =>
     data.envelopes.find((e) => e.id === id)?.name ?? "Unknown envelope";
   const onCard = account(tx.accountId)?.type === "credit_card";
-  const status: ClearedStatus = tx.importKey ? "cleared" : "uncleared";
-  const base = { tx, status, toReview: false, portions: [] as ActivityPortion[] };
+  const base = {
+    tx,
+    toReview: false,
+    portions: [] as ActivityPortion[],
+    ...rowSides(data, tx, accountId),
+  };
 
   if (tx.isTransfer) {
     const partner = transferPartner(data, tx);
@@ -155,21 +181,21 @@ function activityRow(data: BudgetData, tx: Transaction): ActivityRow {
 /**
  * Activity for month M: rows by day (by transaction date) and the month's
  * totals; with `accountId`, only that account's transactions (and transfers
- * to or from it), totals included.
+ * to or from it, which then count in the totals and day nets).
  */
 export function activityMonth(
   data: BudgetData,
   month: Month,
   accountId: string | null = null,
 ): ActivityMonth {
-  const totals: ActivityTotals = { moneyIn: 0, moneyOut: 0, transfers: 0 };
+  const totals: ActivityTotals = { moneyIn: 0, moneyOut: 0 };
   const days: ActivityDay[] = [];
   const byDate = new Map<IsoDate, ActivityDay>();
 
   for (const tx of shownTransactions(data)) {
     if (monthOf(tx.date) !== month) continue;
     if (accountId !== null && !inAccount(data, tx, accountId)) continue;
-    const row = activityRow(data, tx);
+    const row = activityRow(data, tx, accountId);
     let day = byDate.get(tx.date);
     if (!day) {
       day = { date: tx.date, net: 0, rows: [] };
@@ -177,14 +203,63 @@ export function activityMonth(
       days.push(day);
     }
     day.rows.push(row);
-    if (row.kind === "transfer") totals.transfers += row.amount;
-    else {
-      day.net += row.amount;
-      if (row.amount > 0) totals.moneyIn += row.amount;
-      else totals.moneyOut -= row.amount;
-    }
+    // On "All accounts" a transfer's sides cancel: sideAmount is 0.
+    const amount = row.kind === "transfer" ? row.sideAmount : row.amount;
+    day.net += amount;
+    if (amount > 0) totals.moneyIn += amount;
+    else totals.moneyOut -= amount;
   }
 
   days.sort((a, b) => b.date.localeCompare(a.date));
   return { totals, days };
+}
+
+/** The total of the ticked rows (by transaction id), signed. */
+export function selectionTotal(rows: ActivityRow[], selected: ReadonlySet<string>): Cents {
+  return rows.reduce((sum, row) => (selected.has(row.tx.id) ? sum + row.sideAmount : sum), 0);
+}
+
+export interface ActivityBalance {
+  /** Opening balances plus every transaction dated today or earlier. */
+  today: Cents;
+  /** Opening balances plus reconciled transactions only: what the bank should show. */
+  reconciled: Cents;
+  /** Today's balance of the accounts that are not credit cards. */
+  cash: Cents;
+  /** What the credit cards owe today (positive when owed). */
+  cardsOwe: Cents;
+  /** A credit card is among the accounts counted. */
+  hasCards: boolean;
+}
+
+/**
+ * Today's balance of one budget account, or of all of them (cards included,
+ * so it is cash minus card debt and can be negative). Not tied to the month
+ * shown: it is for checking the app against the bank.
+ */
+export function activityBalance(
+  data: BudgetData,
+  accountId: string | null,
+  today: IsoDate,
+): ActivityBalance {
+  const accounts = data.accounts.filter(
+    (a) => a.onBudget && (accountId === null || a.id === accountId),
+  );
+  const balance: ActivityBalance = {
+    today: 0,
+    reconciled: 0,
+    cash: 0,
+    cardsOwe: 0,
+    hasCards: false,
+  };
+  for (const account of accounts) {
+    const now = accountBalance(account.id, data, { through: today });
+    balance.today += now;
+    balance.reconciled += accountBalance(account.id, data, { reconciled: true });
+    if (account.type === "credit_card") {
+      balance.cardsOwe -= now;
+      balance.hasCards = true;
+    } else balance.cash += now;
+  }
+  return balance;
 }

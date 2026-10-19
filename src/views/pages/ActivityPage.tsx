@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ActivityRow, ClearedStatus } from "../../models/activity";
+import type { ActivityRow } from "../../models/activity";
 import { useActivityPage } from "../../controllers/useActivityPage";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import type { Budget } from "../../controllers/useBudget";
@@ -9,15 +9,9 @@ import { formatCents, formatSignedCents } from "../../models/money";
 import { formatDay, type Month } from "../../models/month";
 import type { BudgetData, Transaction } from "../../models/types";
 import { ErrorMessage, Money } from "../components";
-import { ChevronDownIcon } from "../icons";
+import { BankIcon, ChevronDownIcon } from "../icons";
 import { SidePanel } from "../SidePanel";
 import { TransactionDialog, TransactionEntry } from "../TransactionEntry";
-
-const STATUS_LABELS: Record<ClearedStatus, string> = {
-  uncleared: "Uncleared",
-  cleared: "Cleared",
-  reconciled: "Reconciled",
-};
 
 /** A row's amount: signed for money in and out, unsigned for a transfer. */
 const amountText = (row: ActivityRow) =>
@@ -25,7 +19,8 @@ const amountText = (row: ActivityRow) =>
 
 /**
  * One month's transactions under day headings, newest first, with the month's
- * totals; tap a payee to edit or delete. Splits show their parts until closed.
+ * totals and today's balance; tap a payee to edit or delete. Splits show their
+ * parts until closed. Tick rows to see their total and mark them reconciled.
  * On a desktop the month, account and totals share one band, the rows show
  * the memo too, and a panel on the right holds To review or the transaction
  * being edited; Add transaction opens a new row at the top of the list.
@@ -53,6 +48,7 @@ export function ActivityPage({
 }) {
   const page = useActivityPage(budget, data, month, accountId);
   const mark = useAsyncAction(page.markIncome);
+  const reconcile = useAsyncAction(page.setReconciled);
   const incomeable = page.toReview.filter((r) => r.canBeIncome);
   /** The transaction open in the edit dialog (in the panel on a desktop). */
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -179,6 +175,7 @@ export function ActivityPage({
       </span>
     </div>
   );
+  const { balance } = page;
   const totals = (
     <dl
       className="activity-totals"
@@ -190,13 +187,73 @@ export function ActivityPage({
       </div>
       <div>
         <dt>Out</dt>
-        <dd>{formatSignedCents(-page.totals.moneyOut)}</dd>
+        <dd className="activity-out">{formatSignedCents(-page.totals.moneyOut)}</dd>
       </div>
-      <div>
-        <dt>Transfers</dt>
-        <dd className="activity-transfer">{formatCents(page.totals.transfers)}</dd>
+      <div className="activity-balance">
+        <dt>Balance today</dt>
+        <dd>{formatCents(balance.today)}</dd>
+        {/* All accounts with a card: the balance is cash minus card debt, so show both. */}
+        {page.accountId === null && balance.hasCards ? (
+          <dd className="activity-balance-detail">
+            Cash {formatCents(balance.cash)} · Cards owe {formatCents(balance.cardsOwe)}
+          </dd>
+        ) : (
+          <dd className="activity-balance-detail">Reconciled {formatCents(balance.reconciled)}</dd>
+        )}
       </div>
     </dl>
+  );
+  const selectionText =
+    page.selectedCount > 0
+      ? `${page.selectedCount} selected, ${formatSignedCents(page.selectedTotal)}`
+      : "";
+  const selectionBar = (
+    <>
+      {/* Always in the page, so screen readers hear the count change. */}
+      <p className="visually-hidden" aria-live="polite">
+        {selectionText}
+      </p>
+      {page.selectedCount > 0 && (
+        <div className="selection-bar" role="toolbar" aria-label="Selected transactions">
+          <p className="selection-summary">
+            <span>{page.selectedCount} selected</span>
+            <strong>{formatSignedCents(page.selectedTotal)}</strong>
+          </p>
+          {page.canReconcile && (
+            <button
+              className="selection-action"
+              type="button"
+              disabled={reconcile.pending}
+              onClick={() => void reconcile.run(true)}
+            >
+              Mark reconciled
+            </button>
+          )}
+          {page.canUnreconcile && (
+            <button
+              className="selection-action quiet"
+              type="button"
+              disabled={reconcile.pending}
+              onClick={() => void reconcile.run(false)}
+            >
+              Mark unreconciled
+            </button>
+          )}
+          <button
+            className="selection-clear"
+            type="button"
+            aria-label="Clear selection"
+            onClick={() => {
+              reconcile.clearError();
+              page.clearSelection();
+            }}
+          >
+            ×
+          </button>
+          <ErrorMessage error={reconcile.error} />
+        </div>
+      )}
+    </>
   );
   const list = (
     <section className="activity-list" aria-label="Transactions">
@@ -216,6 +273,8 @@ export function ActivityPage({
                 <ActivityItem
                   key={row.tx.id}
                   row={row}
+                  checked={page.selected.has(row.tx.id)}
+                  onCheck={() => page.toggleSelected(row.tx.id)}
                   open={!closedSplits.has(row.tx.id)}
                   onEdit={() => edit(row.tx)}
                   onToggleSplit={() => toggleSplit(row.tx.id)}
@@ -249,6 +308,7 @@ export function ActivityPage({
           {monthNav}
           {accountFilter}
           {totals}
+          {selectionBar}
         </>
       )}
 
@@ -261,6 +321,7 @@ export function ActivityPage({
       {desktop ? (
         <div className="activity-work">
           <div className="activity-table">
+            {selectionBar}
             {adding && page.hasOpenAccounts && (
               <NewTransactionRow
                 budget={budget}
@@ -387,9 +448,14 @@ function NewTransactionRow({
   );
 }
 
-/** One transaction: status, payee and account (tap to edit), envelope, amount; a split's parts below. */
+/**
+ * One transaction: a checkbox, the bank icon (colored once reconciled), payee
+ * and account (tap to edit), envelope, amount; a split's parts below.
+ */
 function ActivityItem({
   row,
+  checked,
+  onCheck,
   open,
   onEdit,
   onToggleSplit,
@@ -397,6 +463,9 @@ function ActivityItem({
   selected,
 }: {
   row: ActivityRow;
+  /** Ticked: highlighted, and counted in the selection total. */
+  checked: boolean;
+  onCheck: () => void;
   open: boolean;
   onEdit: () => void;
   onToggleSplit: () => void;
@@ -411,13 +480,27 @@ function ActivityItem({
   const isSplit = row.portions.length > 0;
 
   return (
-    <li className={selected ? "activity-item selected" : "activity-item"}>
+    <li
+      className={["activity-item", selected && "selected", checked && "checked"]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="activity-grid activity-row">
+        <label className="activity-check">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={onCheck}
+            aria-label={`Select ${payee}, ${amount}`}
+          />
+        </label>
         <span
-          className={`status-mark ${row.status}`}
+          className={row.reconciled ? "bank-mark reconciled" : "bank-mark"}
           role="img"
-          aria-label={STATUS_LABELS[row.status]}
-        />
+          aria-label={row.reconciled ? "Reconciled" : "Not reconciled"}
+        >
+          <BankIcon />
+        </span>
         <button
           className="activity-who"
           type="button"
@@ -456,10 +539,13 @@ function ActivityItem({
           {row.portions.map((portion) => (
             <div className="activity-grid activity-portion" key={portion.envelopeId}>
               <span />
+              <span />
               <span className="portion-memo">↳ {portion.envelopeName}</span>
               <span className="portion-envelope">{portion.envelopeName}</span>
               {desktop && <span />}
-              <span className="portion-amount">{formatSignedCents(portion.amount)}</span>
+              <span className={`portion-amount ${portion.amount < 0 ? "out" : "in"}`}>
+                {formatSignedCents(portion.amount)}
+              </span>
             </div>
           ))}
         </div>

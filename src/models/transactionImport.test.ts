@@ -82,6 +82,7 @@ function typed(partial: Partial<Transaction> & Pick<Transaction, "id" | "date" |
     voided: false,
     allocations: [],
     importKey: null,
+    reconciled: false,
     ...partial,
   };
 }
@@ -282,6 +283,7 @@ describe("previewTransactionImport", () => {
         voided: false,
         allocations: [],
         importKey: "id:20261011:2",
+        reconciled: false,
       },
     ]);
     const preview = previewTransactionImport(data, account(), t, detectFormat(t));
@@ -322,6 +324,7 @@ describe("previewTransactionImport", () => {
       voided: false,
       allocations: [],
       importKey: r.importKey,
+      reconciled: false,
     }));
     const t2 = table(`${text}\n10/05/2026,Coffee,-4.50`);
     const again = previewTransactionImport(budget(imported), account(), t2, detectFormat(t2));

@@ -136,6 +136,7 @@ describe("copying a month's plan", () => {
     voided: false,
     allocations: [{ envelopeId, amount }],
     importKey: null,
+    reconciled: false,
   });
 
   function twoMonths(): BudgetData {

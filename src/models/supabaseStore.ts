@@ -175,6 +175,7 @@ export function createSupabaseStore(
             amount: a.amount,
           })),
           importKey: t.import_key,
+          reconciled: t.reconciled,
         })),
       };
     },
@@ -374,6 +375,15 @@ export function createSupabaseStore(
 
     async markIncome(transactionIds) {
       const { data, error } = await db().rpc("mark_income", { p_ids: transactionIds });
+      check(error);
+      return data ?? 0;
+    },
+
+    async setReconciled(transactionIds, reconciled) {
+      const { data, error } = await db().rpc("set_reconciled", {
+        p_ids: transactionIds,
+        p_reconciled: reconciled,
+      });
       check(error);
       return data ?? 0;
     },

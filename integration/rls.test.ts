@@ -152,6 +152,12 @@ describe.skipIf(!!skipReason)("Row Level Security between test households", () =
           .select("id");
         expect(deleted.error).toBeNull();
         expect(deleted.data).toEqual([]);
+        const reconciled = await me.db.rpc("set_reconciled", {
+          p_ids: [them.transactionId],
+          p_reconciled: true,
+        });
+        expect(reconciled.error).toBeNull();
+        expect(reconciled.data).toBe(0);
         const household = await me.db
           .from("households")
           .update({ name: "Hacked" })
@@ -162,8 +168,11 @@ describe.skipIf(!!skipReason)("Row Level Security between test households", () =
         // Their owner still sees everything unchanged.
         const account = await them.db.from("accounts").select("name").eq("id", them.accountId);
         expect(account.data![0]!.name).not.toBe("Hacked");
-        const tx = await them.db.from("transactions").select("id").eq("id", them.transactionId);
-        expect(tx.data).toHaveLength(1);
+        const tx = await them.db
+          .from("transactions")
+          .select("id, reconciled")
+          .eq("id", them.transactionId);
+        expect(tx.data).toEqual([{ id: them.transactionId, reconciled: false }]);
         const own = await them.db.from("households").select("name").single();
         expect(own.data!.name).toBe(meName === "A" ? HOUSEHOLD_B : HOUSEHOLD_A);
       });

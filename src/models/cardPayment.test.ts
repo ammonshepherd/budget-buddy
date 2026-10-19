@@ -22,6 +22,7 @@ function tx(partial: Partial<Transaction> & Pick<Transaction, "id" | "amount">):
     voided: false,
     allocations: [],
     importKey: null,
+    reconciled: false,
     ...partial,
   };
 }

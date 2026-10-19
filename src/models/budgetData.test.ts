@@ -25,6 +25,7 @@ function tx(
     voided: false,
     allocations: [],
     importKey: null,
+    reconciled: false,
     ...partial,
   };
 }

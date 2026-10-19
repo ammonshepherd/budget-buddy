@@ -51,6 +51,7 @@ describe("inflowsMatchingRules", () => {
     voided: false,
     allocations: [],
     importKey: null,
+    reconciled: false,
     ...partial,
   });
 
