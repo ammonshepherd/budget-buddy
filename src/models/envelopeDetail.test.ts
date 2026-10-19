@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildBudgetMonth, type EnvelopeRow } from "./budgetMath";
-import { envelopeActivity, planCheck, remainingParts } from "./envelopeDetail";
+import { buildBudgetMonth, type BudgetMonthView, type EnvelopeRow } from "./budgetMath";
+import { envelopeActivity, monthWatchList, planCheck, remainingParts } from "./envelopeDetail";
 import type { BudgetData, Transaction } from "./types";
 
 const row = (partial: Partial<EnvelopeRow>): EnvelopeRow =>
@@ -123,5 +123,46 @@ describe("envelopeActivity", () => {
         splitTotal: null,
       },
     ]);
+  });
+});
+
+describe("monthWatchList", () => {
+  const view = (envelopes: Partial<EnvelopeRow>[]) =>
+    ({
+      groups: [
+        {
+          id: "g",
+          name: "G",
+          envelopes: envelopes.map((e, i) =>
+            row({ id: `e${i}`, name: `E${i}`, shortfall: 0, card: null, ...e }),
+          ),
+        },
+      ],
+    }) as unknown as BudgetMonthView;
+
+  it("lists envelopes over Planned, Short, and cards with debt not covered", () => {
+    const list = monthWatchList(
+      view([
+        { outflow: 12_000, planned: 10_000 },
+        { outflow: 9_000, planned: 10_000 },
+        { outflow: 500, shortfall: 500 },
+        {
+          outflow: 40_000,
+          planned: 0,
+          card: { accountId: "c", open: true, owed: 50_000, uncovered: 10_000 },
+        },
+      ]),
+    );
+    expect(list.overPlan).toEqual([{ id: "e0", name: "E0", amount: 2_000 }]);
+    expect(list.short).toEqual([{ id: "e2", name: "E2", amount: 500 }]);
+    expect(list.uncoveredDebt).toEqual([{ id: "e3", name: "E3", amount: 10_000 }]);
+  });
+
+  it("is empty when everything is on track", () => {
+    expect(monthWatchList(view([{ outflow: 0, planned: 100 }]))).toEqual({
+      overPlan: [],
+      short: [],
+      uncoveredDebt: [],
+    });
   });
 });

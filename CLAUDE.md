@@ -182,6 +182,16 @@ non-card budget balances − all envelope money (P included)`.
   to pay (Saved + Remaining) and Remaining debt (Uncovered), no Saved pill;
   its sheet shows Available to pay, what is owed, an Assign form (negative to
   take back) and the Saved panel, and no Delete.
+- Desktop layout (decided in v0.26.0, `docs/proposals/desktop-layout.md`):
+  from 1000px wide, signed in, a collapsible left sidebar replaces the header
+  and bottom bar, content is capped at 1600px, and lists get a collapsible
+  right panel instead of sheets (sidebars remembered per device and user in
+  localStorage, `src/models/layoutPrefs.ts`). Budget: one-line envelope rows
+  under a band with the month and Available to Assign; the panel shows the
+  month summary, the chosen envelope, or a transaction being edited.
+  Activity edits in the panel too and adds through a new row at the top of
+  its list; Budget and Accounts add through the dialog. Below 1000px nothing
+  changes.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
   in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in

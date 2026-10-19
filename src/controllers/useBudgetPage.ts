@@ -7,7 +7,12 @@ import {
   type EnvelopeRow,
 } from "../models/budgetMath";
 import { UserFacingError } from "../models/dataStore";
-import { envelopeActivity, planCheck, remainingParts } from "../models/envelopeDetail";
+import {
+  envelopeActivity,
+  monthWatchList,
+  planCheck,
+  remainingParts,
+} from "../models/envelopeDetail";
 import { monthHasPlan, planToCopy, type PlanSource } from "../models/envelopePlan";
 import { formatCents, roundMoney } from "../models/money";
 import { addMonths, formatMonth, type Month } from "../models/month";
@@ -61,6 +66,8 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
      * toggled. `left` is the group's total left (shown when collapsed).
      */
     groups: visibleGroups(view, showUnused).map((group) => ({ ...group, left: groupLeft(group) })),
+    /** The desktop month summary's lists: over Planned, Short, card debt not covered. */
+    watch: monthWatchList(view),
     showUnused,
     toggleUnused: () => setShowUnused((show) => !show),
     monthLabel: formatMonth(month),

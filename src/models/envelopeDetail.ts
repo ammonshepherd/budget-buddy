@@ -1,4 +1,4 @@
-import type { EnvelopeRow } from "./budgetMath";
+import type { BudgetMonthView, EnvelopeRow } from "./budgetMath";
 import type { Cents } from "./money";
 import { monthOf, type Month } from "./month";
 import type { BudgetData, IsoDate } from "./types";
@@ -77,4 +77,39 @@ export function envelopeActivity(
     });
   }
   return rows.sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+}
+
+/** An envelope worth a look in the desktop month summary, with the amount to show. */
+export interface WatchItem {
+  id: string;
+  name: string;
+  amount: Cents;
+}
+
+/**
+ * What the desktop Budget panel lists when no envelope is chosen (display
+ * only): envelopes spent over Planned (by how much), envelopes Short, and
+ * card payment envelopes with debt not covered yet. Every envelope counts,
+ * shown or not.
+ */
+export function monthWatchList(view: BudgetMonthView): {
+  overPlan: WatchItem[];
+  short: WatchItem[];
+  uncoveredDebt: WatchItem[];
+} {
+  const rows = view.groups.flatMap((group) => group.envelopes);
+  const item = (row: EnvelopeRow, amount: Cents): WatchItem => ({
+    id: row.id,
+    name: row.name,
+    amount,
+  });
+  return {
+    overPlan: rows
+      .filter((row) => !row.card && planCheck(row).status === "over")
+      .map((row) => item(row, planCheck(row).difference)),
+    short: rows.filter((row) => row.shortfall > 0).map((row) => item(row, row.shortfall)),
+    uncoveredDebt: rows
+      .filter((row) => row.card && row.card.uncovered > 0)
+      .map((row) => item(row, row.card!.uncovered)),
+  };
 }

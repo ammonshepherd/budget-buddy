@@ -4,16 +4,19 @@ import type { Budget } from "../../controllers/useBudget";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
 import { useCollapsedGroups } from "../../controllers/useCollapsedGroups";
+import { useSidebar } from "../../controllers/useLayout";
 import { formFromTransaction } from "../../controllers/useTransactionEntry";
 import { envelopeLeft, type EnvelopeRow } from "../../models/budgetMath";
 import { centsToInput, formatCents } from "../../models/money";
 import type { Month } from "../../models/month";
+import type { WatchItem } from "../../models/envelopeDetail";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
 import { ChevronDownIcon, EnvelopeIcon } from "../icons";
-import { TransactionDialog } from "../TransactionEntry";
+import { SidePanel } from "../SidePanel";
+import { TransactionDialog, TransactionEntry } from "../TransactionEntry";
 
 type Page = ReturnType<typeof useBudgetPage>;
 type Group = Page["groups"][number];
@@ -23,11 +26,18 @@ export function BudgetPage({
   data,
   month,
   userId,
+  desktop = false,
 }: {
   budget: Budget;
   data: BudgetData;
   month: Month;
   userId: string;
+  /**
+   * The desktop layout: the month and Available to Assign share one band,
+   * envelopes are one-line table rows, and the envelope (or a transaction
+   * being edited) shows in a panel on the right instead of a sheet.
+   */
+  desktop?: boolean;
 }) {
   const page = useBudgetPage(budget, data, month);
   const collapse = useCollapsedGroups(
@@ -43,6 +53,64 @@ export function BudgetPage({
   // A transaction tapped in the envelope sheet; the dialog closes if it goes.
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId ? page.transaction(editingId) : undefined;
+  const panel = useSidebar("panel", userId);
+  const openEnvelope = (id: string) => {
+    setOpenId(id);
+    setEditingId(null);
+    if (desktop) panel.expand();
+  };
+  const closeEnvelope = () => {
+    setOpenId(null);
+    setEditingId(null);
+  };
+
+  const monthNav = (
+    <div className="budget-month month-nav">
+      <a href={page.previousHref} aria-label="Previous month">
+        ‹
+      </a>
+      <span>{page.monthLabel}</span>
+      <a href={page.nextHref} aria-label="Next month">
+        ›
+      </a>
+    </div>
+  );
+  // Hidden when there is nothing left to assign (but shown when over assigned).
+  const assignCard = view.availableToAssign !== 0 && (
+    <section className={over ? "assign-card over" : "assign-card"} aria-label="Available to Assign">
+      <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
+      <strong className="assign-amount">
+        <Money cents={over ? view.overAssigned : view.availableToAssign} />
+      </strong>
+      <span className="assign-helper">
+        Income this month <Money cents={view.income} />
+      </span>
+    </section>
+  );
+  const groups = page.groups.map((group) => (
+    <GroupSection
+      key={group.id}
+      group={group}
+      page={page}
+      collapsed={collapse.isCollapsed(group.id)}
+      onToggle={() => collapse.toggle(group.id)}
+      onExpand={() => collapse.expand(group.id)}
+      onOpen={openEnvelope}
+      desktop={desktop}
+      selectedId={desktop ? openId : null}
+    />
+  ));
+  const unusedToggle = view.unusedCount > 0 && (
+    <p className="unused-toggle">
+      <button className="text-button" type="button" onClick={page.toggleUnused}>
+        {page.showUnused
+          ? "Hide envelopes not used this month"
+          : `Show ${view.unusedCount} ${view.unusedCount === 1 ? "envelope" : "envelopes"} not used this month`}
+      </button>
+    </p>
+  );
+  /** Desktop: back from editing a transaction to its envelope. */
+  const stopEditing = () => setEditingId(null);
 
   return (
     <section className="page-view budget-page" aria-labelledby="budget-title">
@@ -51,33 +119,18 @@ export function BudgetPage({
         Budget
       </h1>
 
-      <div className="budget-month month-nav">
-        <a href={page.previousHref} aria-label="Previous month">
-          ‹
-        </a>
-        <span>{page.monthLabel}</span>
-        <a href={page.nextHref} aria-label="Next month">
-          ›
-        </a>
-      </div>
-
-      {/* Stays at the top while the envelopes scroll under it; hidden when
-          there is nothing left to assign (but shown when over assigned). */}
-      {view.availableToAssign !== 0 && (
-        <div className="assign-wrap">
-          <section
-            className={over ? "assign-card over" : "assign-card"}
-            aria-label="Available to Assign"
-          >
-            <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
-            <strong className="assign-amount">
-              <Money cents={over ? view.overAssigned : view.availableToAssign} />
-            </strong>
-            <span className="assign-helper">
-              Income this month <Money cents={view.income} />
-            </span>
-          </section>
+      {desktop ? (
+        // One band for both, pinned to the top while the envelopes scroll.
+        <div className="budget-band">
+          {monthNav}
+          {assignCard}
         </div>
+      ) : (
+        <>
+          {monthNav}
+          {/* Stays at the top while the envelopes scroll under it. */}
+          {assignCard && <div className="assign-wrap">{assignCard}</div>}
+        </>
       )}
 
       {view.toReview.count > 0 && (
@@ -104,33 +157,71 @@ export function BudgetPage({
 
       {page.planStart && <PlanStart page={page} onUpload={() => setUploading(true)} />}
 
-      {page.groups.map((group) => (
-        <GroupSection
-          key={group.id}
-          group={group}
-          page={page}
-          collapsed={collapse.isCollapsed(group.id)}
-          onToggle={() => collapse.toggle(group.id)}
-          onExpand={() => collapse.expand(group.id)}
-          onOpen={setOpenId}
-        />
-      ))}
-
-      {view.unusedCount > 0 && (
-        <p className="unused-toggle">
-          <button className="text-button" type="button" onClick={page.toggleUnused}>
-            {page.showUnused
-              ? "Hide envelopes not used this month"
-              : `Show ${view.unusedCount} ${view.unusedCount === 1 ? "envelope" : "envelopes"} not used this month`}
-          </button>
-        </p>
+      {desktop ? (
+        <div className="budget-work">
+          <div className="envelope-table">
+            {page.groups.length > 0 && (
+              <div className="envelope-colhead" aria-hidden="true">
+                <span>Envelope</span>
+                <span>Planned</span>
+                <span>Assigned</span>
+                <span>Spent</span>
+                <span>Remaining</span>
+              </div>
+            )}
+            {groups}
+            {unusedToggle}
+          </div>
+          <SidePanel
+            label={detail ? `${detail.row.name} envelope` : `${page.monthLabel} summary`}
+            collapsed={panel.collapsed}
+            onToggle={panel.toggle}
+          >
+            {editing ? (
+              <div className="panel-edit">
+                <button className="text-button panel-back" type="button" onClick={stopEditing}>
+                  ‹ Back to {detail ? detail.row.name : "the summary"}
+                </button>
+                <TransactionEntry
+                  key={editing.id}
+                  budget={budget}
+                  data={data}
+                  initial={formFromTransaction(editing, data)}
+                  heading="Edit transaction"
+                  onDone={stopEditing}
+                  onCancel={stopEditing}
+                  onDelete={async () => {
+                    await page.deleteTransaction(editing.id);
+                    stopEditing();
+                  }}
+                />
+              </div>
+            ) : detail ? (
+              <EnvelopeSheet
+                key={detail.row.id}
+                detail={detail}
+                page={page}
+                docked
+                onClose={closeEnvelope}
+                onEditTransaction={setEditingId}
+              />
+            ) : (
+              <MonthSummary page={page} onOpen={openEnvelope} />
+            )}
+          </SidePanel>
+        </div>
+      ) : (
+        <>
+          {groups}
+          {unusedToggle}
+        </>
       )}
 
       <Sheet
-        open={detail !== null}
+        open={!desktop && detail !== null}
         label={`${detail?.row.name ?? "Envelope"} envelope`}
         className="sheet bottom"
-        onClose={() => setOpenId(null)}
+        onClose={closeEnvelope}
       >
         {() => (
           <EnvelopeSheet
@@ -146,7 +237,7 @@ export function BudgetPage({
       <TransactionDialog
         budget={budget}
         data={data}
-        open={editing !== undefined}
+        open={!desktop && editing !== undefined}
         heading="Edit transaction"
         initial={() => formFromTransaction(editing!, data)}
         onClose={() => setEditingId(null)}
@@ -244,6 +335,8 @@ function GroupSection({
   onToggle,
   onExpand,
   onOpen,
+  desktop,
+  selectedId,
 }: {
   group: Group;
   page: Page;
@@ -251,6 +344,9 @@ function GroupSection({
   onToggle: () => void;
   onExpand: () => void;
   onOpen: (envelopeId: string) => void;
+  desktop: boolean;
+  /** The envelope shown in the desktop panel. */
+  selectedId: string | null;
 }) {
   const [adding, setAdding] = useState(false);
   const rows = useRef<HTMLDivElement>(null);
@@ -322,7 +418,13 @@ function GroupSection({
           <ul className="envelope-list">
             {group.envelopes.map((envelope) => (
               <li key={envelope.id}>
-                <EnvelopeItem envelope={envelope} page={page} onOpen={() => onOpen(envelope.id)} />
+                <EnvelopeItem
+                  envelope={envelope}
+                  page={page}
+                  onOpen={() => onOpen(envelope.id)}
+                  desktop={desktop}
+                  selected={envelope.id === selectedId}
+                />
               </li>
             ))}
           </ul>
@@ -337,15 +439,21 @@ function GroupSection({
 /**
  * One envelope: name, Saved and what is left; then Planned and Assigned (tap
  * to edit in place) and Spent. Tapping the top line opens its sheet.
+ * On a desktop it is one table row (name and Saved, Planned, Assigned,
+ * Spent, Remaining) and the name shows the envelope in the panel.
  */
 function EnvelopeItem({
   envelope,
   page,
   onOpen,
+  desktop,
+  selected,
 }: {
   envelope: EnvelopeRow;
   page: Page;
   onOpen: () => void;
+  desktop: boolean;
+  selected: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const card = envelope.card;
@@ -360,9 +468,25 @@ function EnvelopeItem({
     }
   };
 
+  const leftAmount = (
+    <span className={left === 0 ? "envelope-left zero" : "envelope-left"}>
+      <span className="envelope-remaining">
+        <Money cents={left} />
+      </span>
+      <span className="visually-hidden">{card ? " available to pay" : " remaining"}</span>
+    </span>
+  );
+  const classes = ["envelope", envelope.inUse ? "" : "unused", selected ? "selected" : ""];
+
   return (
-    <div className={envelope.inUse ? "envelope" : "envelope unused"}>
-      <button className="envelope-top" type="button" aria-haspopup="dialog" onClick={onOpen}>
+    <div className={classes.join(" ").trim()}>
+      <button
+        className="envelope-top"
+        type="button"
+        aria-haspopup={desktop ? undefined : "dialog"}
+        aria-expanded={desktop ? selected : undefined}
+        onClick={onOpen}
+      >
         <EnvelopeIcon />
         <span className="envelope-title">
           <span className="envelope-name">
@@ -371,12 +495,8 @@ function EnvelopeItem({
           </span>
           {!card && <SavedChip cents={envelope.saved} />}
         </span>
-        <span className={left === 0 ? "envelope-left zero" : "envelope-left"}>
-          <span className="envelope-remaining">
-            <Money cents={left} />
-          </span>
-          <span className="visually-hidden">{card ? " available to pay" : " remaining"}</span>
-        </span>
+        {/* On a desktop, what is left is the row's last column instead. */}
+        {!desktop && leftAmount}
       </button>
 
       {card ? (
@@ -416,6 +536,7 @@ function EnvelopeItem({
           </span>
         </div>
       )}
+      {desktop && leftAmount}
 
       {(envelope.refunded > 0 || envelope.shortfall > 0) && (
         <p className="envelope-extra">
@@ -555,5 +676,84 @@ function SavedChip({ cents }: { cents: number }) {
         <Star key={i} {...star} className={`star sp sp${i + 1}`} />
       ))}
     </span>
+  );
+}
+
+/**
+ * The desktop panel when no envelope is chosen: this month's income,
+ * assigned, spent and saved, then envelopes worth a look (each opens in the
+ * panel). Display only.
+ */
+function MonthSummary({ page, onOpen }: { page: Page; onOpen: (envelopeId: string) => void }) {
+  const { view, watch } = page;
+  return (
+    <div className="month-summary">
+      <header>
+        <h2>{page.monthLabel}</h2>
+        <p className="empty-state">This month at a glance</p>
+      </header>
+      <dl className="summary-stats">
+        <div className="summary-stat income">
+          <dt>Income</dt>
+          <dd>
+            <Money cents={view.income} />
+          </dd>
+        </div>
+        <div className="summary-stat">
+          <dt>Assigned</dt>
+          <dd>
+            <Money cents={view.totals.assigned} />
+          </dd>
+        </div>
+        <div className="summary-stat">
+          <dt>Spent</dt>
+          <dd>
+            <Money cents={view.totals.spent} />
+          </dd>
+        </div>
+        <div className="summary-stat saved">
+          <dt>In Saved</dt>
+          <dd>
+            <Money cents={view.totals.saved} />
+          </dd>
+        </div>
+      </dl>
+      <WatchList title="Spent over Planned" items={watch.overPlan} suffix=" over" onOpen={onOpen} />
+      <WatchList title="Short" items={watch.short} onOpen={onOpen} />
+      <WatchList title="Card debt not covered" items={watch.uncoveredDebt} onOpen={onOpen} />
+      <p className="panel-hint">Choose an envelope to see its details here.</p>
+    </div>
+  );
+}
+
+function WatchList({
+  title,
+  items,
+  suffix = "",
+  onOpen,
+}: {
+  title: string;
+  items: WatchItem[];
+  suffix?: string;
+  onOpen: (envelopeId: string) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <section className="watch-list" aria-label={title}>
+      <h3>{title}</h3>
+      <ul>
+        {items.map((item) => (
+          <li key={item.id}>
+            <button type="button" onClick={() => onOpen(item.id)}>
+              <span>{item.name}</span>
+              <strong>
+                <Money cents={item.amount} />
+                {suffix}
+              </strong>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
