@@ -320,6 +320,7 @@ export type Database = {
           is_transfer: boolean
           memo: string
           payee: string
+          reconciled: boolean
           source: string
           transfer_id: string | null
           voided: boolean
@@ -336,6 +337,7 @@ export type Database = {
           is_transfer?: boolean
           memo?: string
           payee?: string
+          reconciled?: boolean
           source?: string
           transfer_id?: string | null
           voided?: boolean
@@ -352,6 +354,7 @@ export type Database = {
           is_transfer?: boolean
           memo?: string
           payee?: string
+          reconciled?: boolean
           source?: string
           transfer_id?: string | null
           voided?: boolean
@@ -431,6 +434,10 @@ export type Database = {
       save_transfer: {
         Args: { p_legs: Json; p_transfer_id: string }
         Returns: string
+      }
+      set_reconciled: {
+        Args: { p_ids: string[]; p_reconciled: boolean }
+        Returns: number
       }
     }
     Enums: {

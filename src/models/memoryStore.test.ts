@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UserFacingError, type TransactionInput } from "./dataStore";
 import { createMemoryStore } from "./memoryStore";
 import type { ImportFormat } from "./transactionImport";
+import type { TransferInput } from "./transfers";
 
 /** A store with a household, checking and a Visa, and envelopes A and B. */
 async function setUp() {
@@ -225,5 +226,65 @@ describe("memory store import matching", () => {
       );
     }
     expect((await store.load())!.transactions).toHaveLength(2);
+  });
+});
+
+describe("memory store reconciling", () => {
+  it("marks and unmarks in one step, counting only what changed", async () => {
+    const { store, id, save } = await setUp();
+    await save(id("Checking"), -1_000, []);
+    await save(id("Checking"), -2_000, []);
+    const [a, b] = (await store.load())!.transactions.map((t) => t.id);
+
+    expect(await store.setReconciled([a!], true)).toBe(1);
+    expect(await store.setReconciled([a!, b!], true)).toBe(1);
+    expect(await store.setReconciled([b!], false)).toBe(1);
+    const data = (await store.load())!;
+    expect(data.transactions.map((t) => [t.id, t.reconciled])).toEqual([
+      [a, true],
+      [b, false],
+    ]);
+  });
+
+  it("keeps the mark when a transaction or transfer is edited", async () => {
+    const { store, id, save } = await setUp();
+    await save(id("Checking"), -1_000, []);
+    let tx = (await store.load())!.transactions[0]!;
+    await store.setReconciled([tx.id], true);
+    await store.saveTransaction((await store.load())!.household.id, {
+      id: tx.id,
+      accountId: tx.accountId,
+      date: tx.date,
+      amount: -1_500,
+      payee: "Edited",
+      memo: "",
+      isIncome: false,
+      allocations: [],
+    });
+    tx = (await store.load())!.transactions[0]!;
+    expect(tx).toMatchObject({ amount: -1_500, reconciled: true });
+
+    const side = { date: "2026-10-06", payee: "Pay Visa", memo: "" };
+    await store.saveTransfer({
+      transferId: null,
+      sides: [
+        { ...side, accountId: id("Checking"), amount: -500 },
+        { ...side, accountId: id("Visa"), amount: 500 },
+      ],
+    });
+    const sides = (await store.load())!.transactions.filter((t) => t.isTransfer);
+    await store.setReconciled([sides[0]!.id], true);
+    await store.saveTransfer({
+      transferId: sides[0]!.transferId!,
+      sides: [sides[0]!, sides[1]!].map((t) => ({
+        ...side,
+        id: t.id,
+        accountId: t.accountId,
+        amount: t.amount,
+      })) as TransferInput["sides"],
+    });
+    const after = (await store.load())!.transactions.filter((t) => t.isTransfer);
+    expect(after.find((t) => t.id === sides[0]!.id)!.reconciled).toBe(true);
+    expect(after.find((t) => t.id === sides[1]!.id)!.reconciled).toBe(false);
   });
 });

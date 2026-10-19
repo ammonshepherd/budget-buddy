@@ -64,8 +64,8 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
   await expect(page).toHaveURL(/#activity\/2030-01$/);
   const hardware = activityRow(page, "Withdrawal Debit Card HARDWARE STORE");
   await expect(hardware).toContainText("Uncategorized");
-  // Imported rows came from the bank: cleared.
-  await expect(hardware.getByRole("img", { name: "Cleared" })).toBeVisible();
+  // Importing does not reconcile: that is ticking rows off against the bank.
+  await expect(hardware.getByRole("img", { name: "Not reconciled" })).toBeVisible();
   await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,300.00");
   await expect(
@@ -173,13 +173,11 @@ test("bank rows match transactions typed in before the import", async ({ page })
     "Imported 2 transactions into Checking and matched 1 you entered.",
   );
 
-  // The match kept what was typed and is now cleared; nothing was added twice.
+  // The match kept what was typed; nothing was added twice.
   await openActivityMonth(page, "2030-01");
-  await expect(activityRow(page, "Hardware").getByRole("img", { name: "Cleared" })).toBeVisible();
+  await expect(activityRow(page, "Hardware")).toHaveCount(1);
   await expect(activityRow(page, "Withdrawal Debit Card HARDWARE STORE")).toHaveCount(0);
-  await expect(
-    activityRow(page, "Visa payment").getByRole("img", { name: "Uncleared" }),
-  ).toBeVisible();
+  await expect(activityRow(page, "Visa payment")).toHaveCount(1);
   await expect(activityRow(page, "Withdrawal ACH CARD PAYMENT")).toHaveCount(1);
   await goTo(page, "Accounts");
   await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$1,181.38");

@@ -2,6 +2,10 @@
 
 Status: **not decided, not built.** Written 2026-10-15 against v0.25.0.
 Nothing here changes the app until the owner answers the open decisions below.
+Update (v0.27.0): Activity now has always-visible checkboxes, a pinned bar
+with the ticked rows' total, and Mark reconciled / Mark unreconciled (a
+stored `reconciled` mark, no statement check, no lock). Other bulk actions
+could reuse that selection and bar.
 
 ## The request
 

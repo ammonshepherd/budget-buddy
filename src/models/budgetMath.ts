@@ -8,7 +8,7 @@
  */
 import { assertCents, type Cents } from "./money";
 import { addMonths, isMonth, monthOf, type Month } from "./month";
-import type { Allocation, BudgetData, Envelope, Transaction } from "./types";
+import type { Allocation, BudgetData, Envelope, IsoDate, Transaction } from "./types";
 
 export { isMonth, type Month };
 
@@ -213,16 +213,25 @@ export function checkSpend(current: EnvelopeMonth, additionalSpent: Cents): Spen
 // Household-level math: turns loaded BudgetData into the numbers pages show.
 // ---------------------------------------------------------------------------
 
-/** Account balance = opening balance + every non-voided transaction. Never stored. */
+/**
+ * Account balance = opening balance + every non-voided transaction. Never stored.
+ * `only` narrows the transactions counted: those dated through a day (today's
+ * balance leaves out future-dated ones), or only those marked reconciled
+ * (what the bank should show once everything it has is ticked off).
+ */
 export function accountBalance(
   accountId: string,
   data: Pick<BudgetData, "accounts" | "transactions">,
+  only: { through?: IsoDate; reconciled?: boolean } = {},
 ): Cents {
   const account = data.accounts.find((a) => a.id === accountId);
   if (!account) throw new RangeError(`Unknown account ${accountId}`);
   let balance = account.openingBalance;
   for (const tx of data.transactions) {
-    if (tx.accountId === accountId && !tx.voided) balance += tx.amount;
+    if (tx.accountId !== accountId || tx.voided) continue;
+    if (only.through !== undefined && tx.date > only.through) continue;
+    if (only.reconciled && !tx.reconciled) continue;
+    balance += tx.amount;
   }
   return balance;
 }
@@ -688,6 +697,7 @@ export function budgetWith(
     voided: false,
     allocations: [...p.allocations],
     importKey: null,
+    reconciled: false,
   }));
   return {
     ...data,

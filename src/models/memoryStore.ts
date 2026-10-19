@@ -305,6 +305,7 @@ export function createMemoryStore(): DataStore {
         voided: false,
         allocations: lines.map((a) => ({ ...a })),
         importKey: previous?.importKey ?? null,
+        reconciled: previous?.reconciled ?? false,
       };
       const index = b.transactions.findIndex((t) => t.id === tx.id);
       if (index >= 0) b.transactions[index] = tx;
@@ -356,6 +357,7 @@ export function createMemoryStore(): DataStore {
           voided: false,
           allocations: [],
           importKey: row.importKey,
+          reconciled: false,
         });
         added++;
       }
@@ -392,6 +394,19 @@ export function createMemoryStore(): DataStore {
         }
       }
       return marked;
+    },
+    async setReconciled(transactionIds, reconciled) {
+      if (transactionIds.length > 2000) {
+        throw new UserFacingError("Reconcile at most 2000 transactions at once");
+      }
+      let changed = 0;
+      for (const tx of budget().transactions) {
+        if (transactionIds.includes(tx.id) && tx.reconciled !== reconciled) {
+          tx.reconciled = reconciled;
+          changed++;
+        }
+      }
+      return changed;
     },
     async saveTransfer(input) {
       const b = budget();
@@ -436,6 +451,7 @@ export function createMemoryStore(): DataStore {
           voided: false,
           allocations: [],
           importKey: existing?.importKey ?? null,
+          reconciled: existing?.reconciled ?? false,
         };
         if (existing) Object.assign(existing, tx);
         else b.transactions.push(tx);

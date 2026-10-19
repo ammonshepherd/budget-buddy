@@ -201,12 +201,17 @@ non-card budget balances − all envelope money (P included)`.
   month band, an Account picker ("All accounts" or one budget account,
   closed ones last; kept between months and pages until reload; it narrows
   the rows, totals and To review list, and a transfer shows when either side
-  is in the account), an In / Out / Transfers strip (display only, from
-  `src/models/activity.ts`; transfers never count as In or Out), then day
-  headings (newest first, with the day's net without transfers; not
-  collapsible). Each row: a status mark (cleared = imported, uncleared = typed,
-  until reconciliation stores a status), payee over account, envelope, signed
-  amount. A transfer shows once, from its money-out side ("From → To",
+  is in the account), an In / Out / Balance today strip (display only, from
+  `src/models/activity.ts`; transfers count in In and Out only when one
+  account is chosen; the balance is as of today, whatever the month, with
+  the reconciled balance under it, or cash and card debt on All accounts
+  with a card), then day headings (newest first, with the day's net; not
+  collapsible). Each row: a checkbox, a bank icon (grey = not reconciled,
+  green = reconciled), payee over account, envelope, signed amount (outflows
+  red, inflows green). Ticked rows are highlighted; a pinned bar shows their
+  count and total with Mark reconciled / Mark unreconciled (decided in
+  v0.27.0: `transactions.reconciled` is only a mark: no statement balance,
+  no lock on edits, no budget math). A transfer shows once, from its money-out side ("From → To",
   unsigned). A split shows a "Split (N)" pill and its parts, open until closed
   (not remembered). Tapping the payee opens the same dialog to edit, with
   Delete (Delete transfer for a transfer) at the bottom. Rows have no
@@ -254,7 +259,8 @@ spending.
 
 Later: matching a transaction typed after its bank row was imported (import
 already matches typed transactions, and transfers link to bank rows),
-reconciliation, tithing/fast-offering rules. See
+statement reconciliation (v0.27.0 added only the reconciled mark),
+tithing/fast-offering rules. See
 `docs/SPEC.md` §9 for everything not built yet.
 
 ## Supabase state
@@ -267,7 +273,7 @@ transaction_allocations, income_rules. Every table has household-scoped RLS; mul
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
 `import_envelope_plan`, `import_transactions`, `save_transfer`, `mark_income`,
-`reorder_category_groups`, `reorder_categories`). Triggers create, rename and protect
+`set_reconciled`, `reorder_category_groups`, `reorder_categories`). Triggers create, rename and protect
 each credit card's payment envelope and reject allocations to it. Imported transactions carry an
 `import_key` (unique per account) for duplicate prevention; each account keeps
 its CSV column mapping in `import_format`. Budget math stays in

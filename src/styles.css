@@ -1914,6 +1914,10 @@ div.sheet-field .sheet-field-value {
 :root {
   --bb-day-bg: #faf8fc;
   --bb-income: #1f6b42;
+  --bb-spend: #b3261e;
+  --bb-checked: #f1e9f9;
+  --bb-bank: #2e8b57;
+  --bb-bank-off: #b9b3c0;
 }
 
 .activity-page {
@@ -1993,8 +1997,83 @@ div.sheet-field .sheet-field-value {
   color: var(--bb-income);
 }
 
-.activity-totals .activity-transfer {
+.activity-totals .activity-out {
+  color: var(--bb-spend);
+}
+
+/* Balance today, with reconciled (or cash and card debt) under it. */
+.activity-totals .activity-balance-detail {
   color: var(--bb-muted);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: normal;
+}
+
+/* Ticked rows: how many, their total, and what to do with them. Pinned to
+   the top while the list scrolls. */
+.selection-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: max(6px, env(safe-area-inset-top)) 12px 6px 16px;
+  color: #fff;
+  background: var(--bb-purple);
+}
+
+.selection-summary {
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto 0 0;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.selection-summary strong {
+  font-size: 15px;
+}
+
+.selection-action {
+  min-block-size: 2.25rem;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--bb-purple);
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.selection-action.quiet {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.selection-action:disabled {
+  opacity: 0.6;
+}
+
+.selection-clear {
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.selection-bar .error-message {
+  flex-basis: 100%;
+  margin: 0;
+  color: #fff;
 }
 
 .activity-page > .activity-notice,
@@ -2044,31 +2123,59 @@ div.sheet-field .sheet-field-value {
 
 .activity-grid {
   display: grid;
-  grid-template-columns: 14px minmax(0, 1fr) minmax(0, 0.9fr) 84px;
+  grid-template-columns: 22px 16px minmax(0, 1fr) minmax(0, 1fr) 84px;
   align-items: center;
-  gap: 8px;
-  padding: 4px 16px;
+  gap: 6px;
+  padding: 4px 16px 4px 10px;
+}
+
+.activity-item.checked {
+  background: var(--bb-checked);
 }
 
 .activity-row {
   min-block-size: 48px;
 }
 
-.status-mark {
-  inline-size: 10px;
-  block-size: 10px;
-  border: 1.5px solid var(--bb-purple);
-  border-radius: 50%;
+/* The checkbox gets a full-height tap target; the box itself stays small. */
+.activity-check {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  margin-inline: -6px;
+  cursor: pointer;
 }
 
-.status-mark.cleared,
-.status-mark.reconciled {
-  background: var(--bb-purple);
+.activity-check input {
+  inline-size: 18px;
+  block-size: 18px;
+  margin: 0;
+  accent-color: var(--bb-purple);
+  cursor: pointer;
 }
 
-/* Square, so reconciled differs from cleared by more than color. */
-.status-mark.reconciled {
-  border-radius: 2px;
+/* Grey bank until reconciled; then green and filled in (more than color). */
+.bank-mark {
+  display: grid;
+  color: var(--bb-bank-off);
+}
+
+.bank-mark svg {
+  inline-size: 16px;
+  block-size: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.bank-mark.reconciled {
+  color: var(--bb-bank);
+}
+
+.bank-mark.reconciled svg {
+  fill: currentColor;
 }
 
 .activity-who {
@@ -2125,6 +2232,10 @@ div.sheet-field .sheet-field-value {
 
 .activity-amount.in {
   color: var(--bb-income);
+}
+
+.activity-amount.out {
+  color: var(--bb-spend);
 }
 
 .activity-amount.transfer {
@@ -2201,6 +2312,14 @@ div.sheet-field .sheet-field-value {
   font-weight: 700;
   text-align: end;
   white-space: nowrap;
+}
+
+.portion-amount.out {
+  color: var(--bb-spend);
+}
+
+.portion-amount.in {
+  color: var(--bb-income);
 }
 
 /* ---- v0.26.0: desktop layout (docs/proposals/desktop-layout.md) ---------- */
@@ -2866,6 +2985,7 @@ body:has(.app-shell.desktop) {
 
 .activity-band .activity-totals {
   grid-template-columns: repeat(3, auto);
+  align-items: center;
   gap: 1.25rem;
   padding: 0.375rem 0.875rem;
   border: 0;
@@ -2897,10 +3017,16 @@ body:has(.app-shell.desktop) {
   box-shadow: 0 6px 20px rgba(75, 42, 104, 0.06);
 }
 
-/* Rows: status | payee over account | envelope | memo | amount. */
+/* Rows: checkbox | bank | payee over account | envelope | memo | amount. */
 .desktop .activity-grid {
-  grid-template-columns: 14px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 7rem;
+  grid-template-columns: 22px 16px minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 7rem;
   column-gap: 0.75rem;
+}
+
+/* Below the pinned band, at the top of the list. */
+.desktop .selection-bar {
+  inset-block-start: var(--desktop-band);
+  padding-block: 6px;
 }
 
 .desktop .activity-item:hover {
@@ -2910,6 +3036,10 @@ body:has(.app-shell.desktop) {
 .desktop .activity-item.selected {
   background: #f6f1fb;
   box-shadow: inset 4px 0 0 var(--bb-purple);
+}
+
+.desktop .activity-item.checked {
+  background: var(--bb-checked);
 }
 
 .desktop .activity-who:hover .activity-payee {

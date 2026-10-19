@@ -82,8 +82,9 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
 
   await openActivityMonth(page, "2030-01");
   await expect(page.locator(".budget-month")).toContainText("January 2030");
-  // In excludes transfers; Out is spending; the transfer counts once.
-  await expect(totals(page)).toHaveText(["+$250.00", "−$25.00", "$40.00"]);
+  // In and Out leave transfers out on All accounts. The balance is today's,
+  // so these 2030 transactions are not in it yet; none is reconciled.
+  await expect(totals(page)).toHaveText(["+$250.00", "−$25.00", "$500.00", "Reconciled $500.00"]);
 
   // Newest day first, each with its net (transfers left out).
   const list = page.getByRole("region", { name: "Transactions" });
@@ -99,7 +100,7 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
   await expect(kroger.locator(".activity-account")).toHaveText("Main Checking");
   await expect(kroger.locator(".activity-category")).toHaveText("Groceries");
   await expect(kroger.locator(".activity-amount")).toHaveText("−$20.00");
-  await expect(kroger.locator(".activity-amount")).toHaveCSS("color", "rgb(30, 26, 36)");
+  await expect(kroger.locator(".activity-amount")).toHaveCSS("color", "rgb(179, 38, 30)");
   const pay = activityRow(page, "Paycheck");
   await expect(pay.locator(".activity-category")).toHaveText("Income");
   await expect(pay.locator(".activity-amount")).toHaveText("+$250.00");
@@ -115,22 +116,22 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
   await expect(activityRow(page, "Coffee").locator(".badge-uncategorized")).toHaveText(
     "Uncategorized",
   );
-  // Typed transactions have not been seen by the bank yet.
-  await expect(kroger.getByRole("img", { name: "Uncleared" })).toBeVisible();
+  // Nothing is reconciled with the bank yet: a grey bank.
+  await expect(kroger.getByRole("img", { name: "Not reconciled" })).toBeVisible();
   // Another month's transaction is not listed.
   await expect(activityRow(page, "Next month")).toHaveCount(0);
 
   // The next month reloads the list and the totals.
   await page.getByRole("link", { name: "Next month" }).click();
   await expect(page).toHaveURL(/#activity\/2030-02$/);
-  await expect(totals(page)).toHaveText(["$0.00", "−$7.00", "$0.00"]);
+  await expect(totals(page)).toHaveText(["$0.00", "−$7.00", "$500.00", "Reconciled $500.00"]);
   await expect(activityRow(page, "Next month")).toBeVisible();
   await expect(activityRow(page, "Kroger")).toHaveCount(0);
 
   // An empty month: a message and zero totals.
   await page.getByRole("link", { name: "Next month" }).click();
   await expect(page.getByText("No transactions in March 2030.")).toBeVisible();
-  await expect(totals(page)).toHaveText(["$0.00", "$0.00", "$0.00"]);
+  await expect(totals(page)).toHaveText(["$0.00", "$0.00", "$500.00", "Reconciled $500.00"]);
 });
 
 test("tapping the payee opens the transaction to edit or delete", async ({ page }) => {
@@ -205,4 +206,74 @@ test("a closed account's transactions keep its name", async ({ page }) => {
 
   await openActivityMonth(page, "2030-01");
   await expect(activityRow(page, "Fee").locator(".activity-account")).toHaveText("Old Bank");
+});
+
+test("ticking rows shows their total and marks them reconciled", async ({ page }) => {
+  await addAccount(page, "Checking", "500");
+  await addAccount(page, "Savings", "0");
+  await add(page, { payee: "Lunch", amount: "12", date: "2030-01-02" });
+  await add(page, { payee: "Refund", amount: "5", date: "2030-01-03", inflow: true });
+  await add(page, {
+    payee: "To savings",
+    amount: "40",
+    date: "2030-01-04",
+    envelope: "Transfer (not spending or income)",
+  });
+  await add(page, { payee: "February shop", amount: "1", date: "2030-02-01" });
+  await openActivityMonth(page, "2030-01");
+
+  const lunch = activityRow(page, "Lunch");
+  const refund = activityRow(page, "Refund");
+  const bar = page.getByRole("toolbar", { name: "Selected transactions" });
+  await expect(bar).toHaveCount(0);
+
+  // Ticked rows are highlighted and added up, signed.
+  await lunch.getByRole("checkbox", { name: "Select Lunch, −$12.00" }).check();
+  await expect(lunch).toHaveClass(/checked/);
+  await expect(bar).toContainText("1 selected");
+  await expect(bar).toContainText("−$12.00");
+  await refund.getByRole("checkbox").check();
+  await expect(bar).toContainText("2 selected");
+  await expect(bar).toContainText("−$7.00");
+  // On All accounts a transfer's sides cancel out.
+  await activityRow(page, "To savings").getByRole("checkbox").check();
+  await expect(bar).toContainText("3 selected");
+  await expect(bar).toContainText("−$7.00");
+  await expect(bar.getByRole("button", { name: "Mark unreconciled" })).toHaveCount(0);
+
+  await bar.getByRole("button", { name: "Mark reconciled" }).click();
+  await expect(bar).toHaveCount(0);
+  await expect(lunch.getByRole("img", { name: "Reconciled" })).toBeVisible();
+  await expect(refund.getByRole("img", { name: "Reconciled" })).toBeVisible();
+  await expect(lunch).not.toHaveClass(/checked/);
+  await expect(lunch.getByRole("checkbox")).not.toBeChecked();
+  // Reconciled counts whatever the date: what the bank should show.
+  await expect(page.locator(".activity-balance-detail")).toHaveText("Reconciled $493.00");
+
+  // In one account a transfer stands for its side there.
+  await page.getByLabel("Account", { exact: true }).selectOption({ label: "Savings" });
+  const transfer = activityRow(page, "To savings");
+  await expect(transfer.getByRole("img", { name: "Reconciled" })).toBeVisible();
+  await expect(totals(page).nth(0)).toHaveText("+$40.00");
+  await transfer.getByRole("checkbox").check();
+  await expect(bar).toContainText("+$40.00");
+  await expect(bar.getByRole("button", { name: "Mark reconciled" })).toHaveCount(0);
+  await bar.getByRole("button", { name: "Mark unreconciled" }).click();
+  await expect(transfer.getByRole("img", { name: "Not reconciled" })).toBeVisible();
+
+  // Changing the month (or account) starts with nothing ticked.
+  await page.getByLabel("Account", { exact: true }).selectOption({ label: "All accounts" });
+  await lunch.getByRole("checkbox").check();
+  await expect(bar).toBeVisible();
+  await page.getByRole("link", { name: "Next month" }).click();
+  await expect(activityRow(page, "February shop")).toBeVisible();
+  await expect(bar).toHaveCount(0);
+  await page.getByRole("link", { name: "Previous month" }).click();
+  await expect(lunch.getByRole("checkbox")).not.toBeChecked();
+
+  // Clear unticks everything without saving.
+  await lunch.getByRole("checkbox").check();
+  await bar.getByRole("button", { name: "Clear selection" }).click();
+  await expect(bar).toHaveCount(0);
+  await expect(lunch.getByRole("img", { name: "Reconciled" })).toBeVisible();
 });

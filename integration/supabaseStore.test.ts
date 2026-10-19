@@ -368,4 +368,58 @@ describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
     await store.deleteGroup(group.id);
     await store.signOut();
   }, 30_000);
+
+  it("marks transactions reconciled, keeping the mark through an edit", async () => {
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
+    if (!(await store.load())) await store.createHousehold("Integration test");
+    let data = (await store.load())!;
+    const householdId = data.household.id;
+    const run = `reconcile-${Date.now()}`;
+    await store.addAccount(householdId, {
+      name: run,
+      type: "checking",
+      openingBalance: 0,
+      openingDate: "2026-10-01",
+    });
+    data = (await store.load())!;
+    const account = data.accounts.find((a) => a.name === run)!;
+    const typed = (payee: string) =>
+      store.saveTransaction(householdId, {
+        accountId: account.id,
+        date: "2026-10-05",
+        amount: -1_000,
+        payee,
+        memo: run,
+        isIncome: false,
+        allocations: [],
+      });
+    await typed("One");
+    await typed("Two");
+    const mine = async () =>
+      (await store.load())!.transactions.filter((t) => t.accountId === account.id);
+    const [one, two] = (await mine()).sort((a, b) => a.payee.localeCompare(b.payee));
+    expect([one!.reconciled, two!.reconciled]).toEqual([false, false]);
+
+    expect(await store.setReconciled([one!.id], true)).toBe(1);
+    expect(await store.setReconciled([one!.id, two!.id], true)).toBe(1);
+    expect(await store.setReconciled([two!.id], false)).toBe(1);
+    await store.saveTransaction(householdId, {
+      id: one!.id,
+      accountId: account.id,
+      date: "2026-10-06",
+      amount: -1_500,
+      payee: "One edited",
+      memo: run,
+      isIncome: false,
+      allocations: [],
+    });
+    const after = await mine();
+    expect(after.find((t) => t.id === one!.id)).toMatchObject({ amount: -1_500, reconciled: true });
+    expect(after.find((t) => t.id === two!.id)!.reconciled).toBe(false);
+
+    for (const t of after) await store.deleteTransaction(t.id);
+    await store.closeAccount(account.id);
+    await store.signOut();
+  }, 30_000);
 });

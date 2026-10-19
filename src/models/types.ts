@@ -88,6 +88,11 @@ export interface Transaction {
   allocations: Allocation[];
   /** Set on imported transactions, to recognise the same bank row again. */
   importKey: string | null;
+  /**
+   * Ticked off against the bank (Activity's colored bank icon). Only a mark:
+   * it changes no budget math and does not lock the transaction.
+   */
+  reconciled: boolean;
 }
 
 /** Everything one household's budget needs, loaded at once. */

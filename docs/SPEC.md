@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.26.2.
+Version described: 0.27.0.
 
 ## 1. Purpose
 
@@ -108,7 +108,7 @@ visitors get nothing.
 | `category_groups`         | name, `position`. Deletable only when empty.                                                                                                                                                                                                                            |
 | `categories` (envelopes)  | group, name, `position`, `card_account_id` (set on a card's payment envelope; unique per card). Deletable only with no transactions; deleting removes its months (their Assigned returns to Available to Assign).                                                       |
 | `category_months`         | (envelope, `YYYY-MM`) → `assigned` (may be negative after moves), `released` (≥ 0), `planned` (≥ 0).                                                                                                                                                                    |
-| `transactions`            | account, date, amount (≠ 0), payee (≤ 200), memo (≤ 500), `is_transfer`, `transfer_id`, `is_income`, `voided`, `source` (`manual`/`csv`), `import_key` (unique per account).                                                                                            |
+| `transactions`            | account, date, amount (≠ 0), payee (≤ 200), memo (≤ 500), `is_transfer`, `transfer_id`, `is_income`, `voided`, `source` (`manual`/`csv`), `import_key` (unique per account), `reconciled` (a mark only).                                                                |
 | `transaction_allocations` | transaction, envelope, amount. One row per envelope (several = a split), each envelope at most once, each with the transaction's sign. Must sum to the transaction amount (checked at commit). None for transfers, income or card credits; never to a payment envelope. |
 | `income_rules`            | `pattern` (2–100 chars), `account_id` (null = any account).                                                                                                                                                                                                             |
 
@@ -132,6 +132,7 @@ SQL functions (all `security invoker` except `create_household`):
 | `import_transactions(account, format, rows)`                     | Inserts imported rows (≤ 2000) as `source='csv'`, skipping existing `import_key`s, applies `is_income` (never on cards); a row with `match_id` gives that typed-in transaction its `import_key` (and `source='csv'`) instead, all or nothing; saves the account's `import_format`, returns how many were added or matched. |
 | `import_envelope_plan(household, month, rows)`                   | Creates missing groups/envelopes (names match ignoring case) and sets Planned for the month (≤ 500 rows).                                                                                                                                                                                                                  |
 | `mark_income(ids)`                                               | Marks plain Uncategorized inflows (not on cards) as Income; returns the count.                                                                                                                                                                                                                                             |
+| `set_reconciled(ids, reconciled)`                                | Marks (or unmarks) up to 2000 transactions reconciled with the bank; rows already so are left alone; returns how many changed.                                                                                                                                                                                             |
 | `reorder_category_groups(household, ids)`                        | Saves the order of the household's groups; the list must name every group once.                                                                                                                                                                                                                                            |
 | `reorder_categories(group, ids)`                                 | Saves the order of a group's envelopes; the list must name every envelope of the group once.                                                                                                                                                                                                                               |
 
@@ -345,25 +346,47 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
   money-out row) when either side is in it. The choice lasts across months and
   pages until the app reloads; an account no longer offered means all.
   Empty: "No transactions in ⟨account⟩ in ⟨Month YYYY⟩."
-- Totals strip (purple tint, three columns): IN (green, "+$X": non-transfer
-  inflows, i.e. income, refunds, card credits), OUT ("−$X": non-transfer
-  outflows, card purchases included), TRANSFERS (grey, each transfer once).
-  Dated in the month, budget accounts only, voided left out, a split once.
-  Display figures from `activityMonth`, not Available to Assign or balances.
+- Totals strip (purple tint, three columns), display figures from
+  `activityMonth` and `activityBalance` (`src/models/activity.ts`), not
+  Available to Assign: IN (green, "+$X") and OUT (red, "−$X") for the month,
+  dated in it, budget accounts only, voided left out, a split once. On All
+  accounts transfers are left out (their sides cancel); with one account
+  chosen they count as that account's money in or out, so In − Out is the
+  change in its balance, like a bank statement. BALANCE TODAY: opening
+  balances plus everything dated today or earlier, whatever month is shown
+  (`accountBalance` with `through`), to compare with the bank. Under it, for
+  one account (or All accounts without a card): "Reconciled $X" (opening
+  balance plus reconciled transactions: what the bank should show once
+  everything it has is ticked off). All accounts with a card: the balance is
+  cash minus card debt (it can be negative), with "Cash $X · Cards owe $Y"
+  under it.
 - "No accounts" notice, then the "To review" card when anything waits (from
   any month): totals in and out, rows (tap to edit), "Mark as Income" on
   non-card inflows, "Apply income rules (N matches)", "Mark all N inflows as
   Income" (confirm), link to Settings income rules.
 - Days with transactions, newest first: a tinted heading ("THU OCT 15", an
-  `<h2>`) with the day's net on the right (signed, transfers left out; $0.00
-  for a day of only transfers). Within a day, newest first.
-- Row (grid 14px | payee | envelope | 84px): a status mark (hollow circle
-  Uncleared = typed, filled circle Cleared = imported, filled square
-  Reconciled, not used until reconciliation; `role="img"` with the name);
-  payee over account (a button, "Edit ⟨payee⟩, ⟨amount⟩, ⟨account⟩", that
-  opens the edit dialog); the envelope, Income, Transfer, Card credit, or
-  Uncategorized (amber label); the amount ("−$X" ink, "+$X" green, a
-  transfer unsigned grey). Closed accounts keep their name.
+  `<h2>`) with the day's net on the right (signed; transfers counted as in
+  the totals, so $0.00 for a day of only transfers on All accounts). Within a
+  day, newest first.
+- Row (grid 22px | 16px | payee | envelope | 84px): a checkbox ("Select
+  ⟨payee⟩, ⟨amount⟩"); a bank icon (`role="img"`): grey outline "Not
+  reconciled", green and filled "Reconciled" (imported or typed makes no
+  difference); payee over account (a button, "Edit ⟨payee⟩, ⟨amount⟩,
+  ⟨account⟩", that opens the edit dialog); the envelope, Income, Transfer,
+  Card credit, or Uncategorized (amber label); the amount ("−$X" red, "+$X"
+  green, a transfer unsigned grey; a split's parts the same). Closed
+  accounts keep their name.
+- Ticking rows (reconciling): a ticked row is highlighted. While any is
+  ticked, a purple toolbar ("Selected transactions") is pinned to the top
+  (desktop: at the top of the list, under the band): "N selected", their
+  total (signed), "Mark reconciled" (when one is not), "Mark unreconciled"
+  (when one is), and × to clear; the count is announced (`aria-live`).
+  Marking saves in one step (`setReconciled`) and clears the ticks. A split
+  is ticked as a whole. A transfer stands for its side in the account
+  shown, or both sides (adding $0.00) on All accounts; it shows reconciled
+  when every side it stands for is. Changing the month or account clears the
+  ticks. Reconciled is only a mark: it changes no budget math and does not
+  stop editing. To review rows have no checkboxes.
 - A transfer is one row: its money-out side's date and payee, "From → To".
 - A split shows a "Split (N)" pill (`aria-expanded`, "Close/Open split for
   ⟨payee⟩", chevron) instead of an envelope, and its parts underneath (dashed
@@ -373,8 +396,9 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
 - **Desktop** (see Desktop layout):
   - One purple band, pinned to the top: the month picker, then the account
     picker (white label) and the totals in a white box on the right.
-  - The rows sit in a card: status | payee over account | envelope | memo
-    (muted, cut short with …) | amount; a split's parts line up below.
+  - The rows sit in a card: checkbox | bank icon | payee over account |
+    envelope | memo (muted, cut short with …) | amount; a split's parts
+    line up below.
   - The panel shows the To review card (same content and buttons; "Nothing
     to review…" when empty) until a transaction is chosen, in the list or in
     To review. Then it holds that transaction's edit form (the row is
@@ -483,7 +507,7 @@ fitid, transactionnumber, id`
    first, then file order. Matches are listed in the preview ("Matched to
    transactions you entered": your payee and amount, "You entered DATE · bank:
    DATE, DESCRIPTION", a Match checkbox, ticked). A matched row adds nothing:
-   the typed transaction takes its import key (so it shows as Cleared and the
+   the typed transaction takes its import key (so the
    row is a duplicate next time) and keeps everything entered (date, payee,
    memo, envelopes, Income, transfer). Unticked, the row is imported as new.
    If a typed transaction changed before saving, the import fails with "A
@@ -527,8 +551,9 @@ Decided or wanted, but not in the app:
 - Import and matching: matching a transaction typed after its bank row was
   imported (import already matches typed transactions to new rows, and
   transfers link to bank rows); undoing a match.
-- Reconciliation, and a stored cleared/reconciled status (Activity's status
-  mark comes from whether a row was imported).
+- Reconciliation beyond the mark: entering a statement balance and
+  finishing only when the ticked rows match it, locking reconciled rows,
+  a separate cleared status, "Select all" for a day or month.
 - Tithing/fast-offering rules.
 - Inviting a second household member.
 - Editing an income rule (delete and re-add instead).

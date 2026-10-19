@@ -109,6 +109,11 @@ export interface DataStore {
    * list is left alone. Resolves to how many were marked.
    */
   markIncome(transactionIds: string[]): Promise<number>;
+  /**
+   * Marks transactions reconciled with the bank (or not) in one step.
+   * Resolves to how many changed.
+   */
+  setReconciled(transactionIds: string[], reconciled: boolean): Promise<number>;
 
   addIncomeRule(householdId: string, rule: NewIncomeRule): Promise<void>;
   deleteIncomeRule(ruleId: string): Promise<void>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityAccounts, activityMonth } from "./activity";
+import { activityAccounts, activityBalance, activityMonth, selectionTotal } from "./activity";
 import { transactionsToReview } from "./budgetMath";
 import type { Account, BudgetData, Transaction } from "./types";
 
@@ -29,6 +29,7 @@ const tx = (partial: Partial<Transaction>): Transaction => ({
   voided: false,
   allocations: [],
   importKey: null,
+  reconciled: false,
   ...partial,
 });
 
@@ -71,7 +72,7 @@ describe("activityMonth totals", () => {
       ]),
       "2026-10",
     );
-    expect(totals).toEqual({ moneyIn: 245_500, moneyOut: 12_760, transfers: 30_000 });
+    expect(totals).toEqual({ moneyIn: 245_500, moneyOut: 12_760 });
   });
 
   it("counts a split once, at its full amount", () => {
@@ -101,7 +102,7 @@ describe("activityMonth totals", () => {
       ),
       "2026-10",
     );
-    expect(month.totals).toEqual({ moneyIn: 0, moneyOut: 300, transfers: 0 });
+    expect(month.totals).toEqual({ moneyIn: 0, moneyOut: 300 });
     expect(month.days.flatMap((d) => d.rows)).toHaveLength(1);
   });
 
@@ -120,7 +121,7 @@ describe("activityMonth totals", () => {
 
   it("is all zero for an empty month", () => {
     expect(activityMonth(budget([tx({ date: "2026-09-01" })]), "2026-10")).toEqual({
-      totals: { moneyIn: 0, moneyOut: 0, transfers: 0 },
+      totals: { moneyIn: 0, moneyOut: 0 },
       days: [],
     });
   });
@@ -209,9 +210,12 @@ describe("activity rows", () => {
     ]);
   });
 
-  it("marks imported rows cleared and typed ones uncleared", () => {
-    const rows = rowsOf([tx({ importKey: "bank-1" }), tx({})]);
-    expect(rows.map((r) => r.status)).toEqual(["cleared", "uncleared"]);
+  it("shows whether a row is reconciled, imported or not", () => {
+    const rows = rowsOf([
+      tx({ importKey: "bank-1", reconciled: true }),
+      tx({ importKey: "bank-2" }),
+    ]);
+    expect(rows.map((r) => r.reconciled)).toEqual([true, false]);
   });
 
   it("still names a closed account", () => {
@@ -254,10 +258,10 @@ describe("one account's activity", () => {
       activityMonth(data, "2026-10", id).days.flatMap((d) => d.rows.map((r) => r.tx.payee));
 
     expect(payees("card")).toEqual(["Cafe", "Payment"]);
+    // In one account, transfers count like the bank shows them.
     expect(activityMonth(data, "2026-10", "card").totals).toEqual({
-      moneyIn: 0,
+      moneyIn: 30_000,
       moneyOut: 500,
-      transfers: 30_000,
     });
     // A transfer into the account shows too, from its money-out side.
     const checking = activityMonth(data, "2026-10", "checking");
@@ -267,7 +271,8 @@ describe("one account's activity", () => {
       "Main Checking → Discover Card",
       "Savings → Main Checking",
     ]);
-    expect(checking.totals).toEqual({ moneyIn: 100_000, moneyOut: 2_000, transfers: 37_000 });
+    expect(checking.totals).toEqual({ moneyIn: 107_000, moneyOut: 32_000 });
+    expect(checking.days[0]!.net).toBe(75_000);
     expect(payees(null)).toHaveLength(5);
   });
 
@@ -283,5 +288,104 @@ describe("one account's activity", () => {
     });
     expect(transactionsToReview(data, "card")).toMatchObject({ count: 1, outflow: 500 });
     expect(transactionsToReview(data).count).toBe(3);
+  });
+});
+
+describe("ticking rows for reconciling", () => {
+  const rowsIn = (data: BudgetData, accountId: string | null) =>
+    activityMonth(data, "2026-10", accountId).days.flatMap((d) => d.rows);
+
+  it("stands for the transaction itself, or a transfer's side in the account shown", () => {
+    const [out, into] = transfer("checking", "card", 30_000);
+    const data = budget([out!, into!, tx({ id: "shop", amount: -2_000 })]);
+
+    const all = rowsIn(data, null);
+    expect(all.map((r) => [r.sideIds, r.sideAmount])).toEqual([
+      [[out!.id, into!.id], 0],
+      [["shop"], -2_000],
+    ]);
+    const card = rowsIn(data, "card");
+    expect(card.map((r) => [r.sideIds, r.sideAmount])).toEqual([[[into!.id], 30_000]]);
+    expect(rowsIn(data, "checking")[0]).toMatchObject({ sideIds: [out!.id], sideAmount: -30_000 });
+  });
+
+  it("leaves out a transfer side in an off-budget account", () => {
+    const accounts = [
+      account("checking", "Main Checking"),
+      account("loan", "Loan", { onBudget: false }),
+    ];
+    const [out, into] = transfer("checking", "loan", 10_000);
+    const [row] = rowsIn(budget([out!, into!], accounts), null);
+    expect(row).toMatchObject({ sideIds: [out!.id], sideAmount: -10_000 });
+  });
+
+  it("counts a transfer reconciled only when every side it stands for is", () => {
+    const [out, into] = transfer("checking", "card", 30_000);
+    const data = budget([{ ...out!, reconciled: true }, into!]);
+    expect(rowsIn(data, null)[0]!.reconciled).toBe(false);
+    expect(rowsIn(data, "checking")[0]!.reconciled).toBe(true);
+    expect(rowsIn(data, "card")[0]!.reconciled).toBe(false);
+  });
+
+  it("adds up the ticked rows, signed", () => {
+    const data = budget([
+      tx({ id: "a", amount: -2_000 }),
+      tx({ id: "b", amount: 50_000 }),
+      tx({ id: "c", amount: -700 }),
+      ...transfer("checking", "card", 30_000),
+    ]);
+    const rows = rowsIn(data, null);
+    const transferRow = rows.find((r) => r.kind === "transfer")!;
+    expect(selectionTotal(rows, new Set(["a", "b", transferRow.tx.id]))).toBe(48_000);
+    expect(selectionTotal(rows, new Set())).toBe(0);
+    expect(selectionTotal(rowsIn(data, "checking"), new Set([transferRow.tx.id]))).toBe(-30_000);
+  });
+});
+
+describe("activityBalance", () => {
+  const accounts = [
+    account("checking", "Main Checking", { openingBalance: 100_000 }),
+    account("card", "Discover Card", { type: "credit_card", openingBalance: -20_000 }),
+    account("offbudget", "Mortgage", { onBudget: false, openingBalance: -9_000_000 }),
+  ];
+  const data = budget(
+    [
+      tx({ amount: -5_000, date: "2026-10-10", reconciled: true }),
+      tx({ amount: -1_000, date: "2026-10-18" }),
+      tx({ amount: -3_000, date: "2026-10-25" }), // after today
+      tx({ amount: -400, voided: true }),
+      tx({ accountId: "card", amount: -2_500, date: "2026-10-12", reconciled: true }),
+      ...transfer("checking", "card", 10_000, "2026-10-15"),
+    ],
+    accounts,
+  );
+
+  it("is one account's balance today, plus its reconciled balance", () => {
+    expect(activityBalance(data, "checking", "2026-10-19")).toEqual({
+      today: 100_000 - 5_000 - 1_000 - 10_000,
+      reconciled: 100_000 - 5_000,
+      cash: 84_000,
+      cardsOwe: 0,
+      hasCards: false,
+    });
+    expect(activityBalance(data, "card", "2026-10-19")).toMatchObject({
+      today: -20_000 - 2_500 + 10_000,
+      reconciled: -22_500,
+      cardsOwe: 12_500,
+      hasCards: true,
+    });
+  });
+
+  it("adds up every budget account: cash minus what the cards owe", () => {
+    expect(activityBalance(data, null, "2026-10-19")).toMatchObject({
+      today: 84_000 - 12_500,
+      cash: 84_000,
+      cardsOwe: 12_500,
+      hasCards: true,
+    });
+  });
+
+  it("counts a future-dated transaction once its day comes", () => {
+    expect(activityBalance(data, "checking", "2026-10-25").today).toBe(81_000);
   });
 });

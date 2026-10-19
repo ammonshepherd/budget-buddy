@@ -84,6 +84,7 @@ function tx(id: string, date: string, amount: number, partial: Partial<Transacti
     voided: false,
     allocations: [{ envelopeId: "food", amount }],
     importKey: null,
+    reconciled: false,
     ...partial,
   } satisfies Transaction;
 }
