@@ -45,12 +45,16 @@ async function importCsv(
   const card = page.getByRole("region", { name: "Import transactions" });
   await card.getByLabel("Account").selectOption({ label: account });
   await card.getByLabel("Bank CSV file").setInputFiles(file(name, text));
+  // The file is read asynchronously: wait for the preview before looking in it
+  // (`all()` does not wait, and would find no Match boxes on a slow machine).
+  const importButton = card.getByRole("button", { name: /^(Import|Match) \d+/ });
+  await expect(importButton).toBeVisible();
   if (asNew) {
-    for (const box of await card.getByRole("checkbox", { name: /^Match / }).all()) {
-      await box.uncheck();
-    }
+    const boxes = card.getByRole("checkbox", { name: /^Match / });
+    await expect(boxes.first()).toBeVisible();
+    for (const box of await boxes.all()) await box.uncheck();
   }
-  await card.getByRole("button", { name: /^(Import|Match) \d+/ }).click();
+  await importButton.click();
   await expect(card.getByRole("status")).toContainText(new RegExp(`(into|in) ${account}`));
 }
 

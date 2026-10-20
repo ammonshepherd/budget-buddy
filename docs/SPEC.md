@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.27.1.
+Version described: 0.27.2.
 
 ## 1. Purpose
 
