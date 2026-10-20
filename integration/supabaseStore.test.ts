@@ -422,4 +422,45 @@ describe.skipIf(!!skipReason)("supabaseStore against the test project", () => {
     await store.closeAccount(account.id);
     await store.signOut();
   }, 30_000);
+  it("exports the whole household and restores only into an empty one", async () => {
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
+    const data = (await store.load())!;
+    const backup = await store.exportBackup(data.household.id);
+
+    // Everything the app loads is in the file, with the extra columns.
+    expect(backup.household.name).toBe(data.household.name);
+    expect(backup.accounts.map((a) => a.id).sort()).toEqual(data.accounts.map((a) => a.id).sort());
+    expect(backup.categories).toHaveLength(data.envelopes.length);
+    expect(backup.category_months).toHaveLength(data.envelopeMonths.length);
+    expect(backup.transactions).toHaveLength(data.transactions.length);
+    expect(backup.transaction_allocations).toHaveLength(
+      data.transactions.reduce((n, t) => n + t.allocations.length, 0),
+    );
+    expect(backup.income_rules).toHaveLength(data.incomeRules.length);
+    expect(backup.transactions.every((t) => typeof t.created_at === "string")).toBe(true);
+    expect(backup.transactions.some((t) => t.transfer_id !== null)).toBe(true);
+    expect(backup.categories.some((c) => c.card_account_id !== null)).toBe(true);
+
+    // Household A has data, so a restore is refused and nothing changes.
+    await expect(store.restoreBackup(data.household.id, backup)).rejects.toThrow(
+      "only be restored into an empty household",
+    );
+    expect((await store.load())!.transactions).toHaveLength(data.transactions.length);
+    await store.signOut();
+  }, 30_000);
+
+  it("cannot export or restore another household", async () => {
+    const other = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await other.signIn(testEnv.users.b.email, testEnv.users.b.password);
+    const householdB = (await other.load())!.household.id;
+    await other.signOut();
+
+    const store = createSupabaseStore(testEnv.url, testEnv.anonKey);
+    await store.signIn(email, password);
+    await expect(store.exportBackup(householdB)).rejects.toThrow("not a member");
+    const mine = await store.exportBackup((await store.load())!.household.id);
+    await expect(store.restoreBackup(householdB, mine)).rejects.toThrow("not a member");
+    await store.signOut();
+  }, 30_000);
 });

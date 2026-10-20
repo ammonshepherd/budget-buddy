@@ -3,8 +3,10 @@
  * each user to their own household, so these queries need no household filter.
  */
 import { createClient, type PostgrestError, type SupabaseClient } from "@supabase/supabase-js";
+import { validateBackup, withFreshIds, type Backup } from "./backup";
 import type { Database, Json } from "./database.types";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
+import { APP_VERSION } from "./appInfo";
 import { fetchAll } from "./fetchAll";
 import { asImportFormat } from "./transactionImport";
 
@@ -424,6 +426,22 @@ export function createSupabaseStore(
 
     async deleteTransaction(transactionId) {
       check((await db().from("transactions").delete().eq("id", transactionId)).error);
+    },
+
+    async exportBackup(householdId) {
+      const { data, error } = await db().rpc("export_backup", { p_household_id: householdId });
+      check(error);
+      // Not checked here: saving the data must never be blocked. The file is
+      // checked when it is chosen for a restore.
+      return { ...(data as unknown as Backup), app_version: APP_VERSION };
+    },
+
+    async restoreBackup(householdId, backup) {
+      const { error } = await db().rpc("restore_backup", {
+        p_household_id: householdId,
+        p_backup: withFreshIds(validateBackup(backup)) as unknown as Json,
+      });
+      check(error);
     },
   };
 }

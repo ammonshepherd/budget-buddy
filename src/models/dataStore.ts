@@ -3,6 +3,7 @@
  * use this interface, so the real Supabase store and the in-memory store used
  * by UI tests are interchangeable ("dependency injection").
  */
+import type { Backup } from "./backup";
 import type { EnvelopePlanRow, PlannedAmount } from "./envelopePlan";
 import type { Cents } from "./money";
 import type { Month } from "./month";
@@ -131,6 +132,15 @@ export interface DataStore {
     rows: ImportedTransaction[],
   ): Promise<number>;
   deleteTransaction(transactionId: string): Promise<void>;
+
+  /** Everything in the household, read as one consistent snapshot (see backup.ts). */
+  exportBackup(householdId: string): Promise<Backup>;
+  /**
+   * All or nothing: loads a backup into the household, which must hold no
+   * budget data yet, and renames the household to the backup's name. Every
+   * row gets a fresh id. Rejects a file that breaks any database rule.
+   */
+  restoreBackup(householdId: string, backup: Backup): Promise<void>;
 }
 
 /** An error whose message is safe and useful to show the user. */

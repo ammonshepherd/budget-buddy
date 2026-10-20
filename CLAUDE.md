@@ -247,6 +247,13 @@ non-card budget balances − all envelope money (P included)`.
   new transaction (`OtherSideChoice`); a stale choice falls back to automatic.
   Deleting or un-transferring one side deletes a typed-in other side and
   keeps an imported one as an Uncategorized row.
+- Backup (decided in v0.28.0, `src/models/backup.ts`): Settings exports the
+  whole household to one JSON file (every column that matters, including
+  reconciled, voided, import keys, source, transfer links, closed accounts,
+  CSV mappings and income rules) and restores such a file only into an empty
+  household, all or nothing, with fresh ids. When a column or table is added,
+  add it to `export_backup`, `restore_backup`, the `Backup` types and
+  `validateBackup` (bump the format version if old files need converting).
 - A card payment the cover prompt cannot cover is never suggested as Uncategorized
   (that would hide the cash it spent): assign or add income first.
 
@@ -276,7 +283,8 @@ transaction_allocations, income_rules. Every table has household-scoped RLS; mul
 writes go through SQL functions (`create_household`, `save_transaction`,
 `adjust_category_month`, `move_between_envelopes`,
 `import_envelope_plan`, `import_transactions`, `save_transfer`, `mark_income`,
-`set_reconciled`, `reorder_category_groups`, `reorder_categories`). Triggers create, rename and protect
+`set_reconciled`, `reorder_category_groups`, `reorder_categories`,
+`export_backup`, `restore_backup`). Triggers create, rename and protect
 each credit card's payment envelope and reject allocations to it. Imported transactions carry an
 `import_key` (unique per account) for duplicate prevention; each account keeps
 its CSV column mapping in `import_format`. Budget math stays in

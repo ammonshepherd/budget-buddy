@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { withFreshIds, type Backup } from "./backup";
 import { UserFacingError, type TransactionInput } from "./dataStore";
 import { createMemoryStore } from "./memoryStore";
 import type { ImportFormat } from "./transactionImport";
@@ -286,5 +287,120 @@ describe("memory store reconciling", () => {
     const after = (await store.load())!.transactions.filter((t) => t.isTransfer);
     expect(after.find((t) => t.id === sides[0]!.id)!.reconciled).toBe(true);
     expect(after.find((t) => t.id === sides[1]!.id)!.reconciled).toBe(false);
+  });
+});
+
+describe("memory store backup", () => {
+  /** Gives ids in order of first appearance, so two exports compare equal. */
+  const canonical = (backup: Backup) => {
+    let n = 0;
+    return { ...withFreshIds(backup, () => `id-${++n}`), exported_at: "" };
+  };
+
+  async function richHousehold() {
+    const { store, id, save } = await setUp();
+    const data = (await store.load())!;
+    const householdId = data.household.id;
+    await save(id("Checking"), -5_000, [
+      [id("A"), -2_000],
+      [id("B"), -3_000],
+    ]);
+    await store.saveTransaction(householdId, {
+      accountId: id("Checking"),
+      date: "2026-10-01",
+      amount: 300_000,
+      payee: "Payroll",
+      memo: "October",
+      isIncome: true,
+      allocations: [],
+    });
+    await store.saveTransfer({
+      transferId: null,
+      sides: [
+        {
+          accountId: id("Checking"),
+          date: "2026-10-06",
+          amount: -2_000,
+          payee: "Pay Visa",
+          memo: "",
+        },
+        { accountId: id("Visa"), date: "2026-10-06", amount: 2_000, payee: "Pay Visa", memo: "" },
+      ],
+    });
+    const format: ImportFormat = {
+      version: 1,
+      hasHeader: true,
+      headers: ["date", "description", "amount"],
+      columnCount: 3,
+      date: 0,
+      dateOrder: "MDY",
+      description: 1,
+      memo: -1,
+      amount: { kind: "signed", column: 2, flip: false },
+      bankId: -1,
+    };
+    await store.importTransactions(id("Visa"), format, [
+      {
+        date: "2026-10-07",
+        amount: 700,
+        payee: "Statement credit",
+        memo: "",
+        importKey: "bank-1",
+        isIncome: false,
+        matchId: null,
+      },
+    ]);
+    const all = (await store.load())!.transactions.map((t) => t.id);
+    await store.setReconciled(all.slice(0, 2), true);
+    await store.adjustEnvelopeMonth(id("A"), "2026-10", { assigned: 10_000, released: 0 });
+    await store.setPlanned(householdId, id("B"), "2026-11", 4_000);
+    await store.addIncomeRule(householdId, { pattern: "payroll", accountId: id("Checking") });
+    await store.addAccount(householdId, {
+      name: "Old Card",
+      type: "credit_card",
+      openingBalance: 0,
+      openingDate: "2026-09-01",
+    });
+    const old = (await store.load())!.accounts.find((a) => a.name === "Old Card")!;
+    await store.closeAccount(old.id);
+    return { store, householdId };
+  }
+
+  it("restores an export exactly into an empty household", async () => {
+    const { store, householdId } = await richHousehold();
+    const backup = await store.exportBackup(householdId);
+    expect(backup.transactions.some((t) => t.reconciled)).toBe(true);
+    expect(backup.transactions.find((t) => t.import_key === "bank-1")?.source).toBe("csv");
+
+    const other = createMemoryStore();
+    await other.signIn("new@example.com", "password123");
+    await other.createHousehold("New");
+    const target = (await other.load())!.household.id;
+    await other.restoreBackup(target, JSON.parse(JSON.stringify(backup)) as Backup);
+
+    const restored = await other.exportBackup(target);
+    expect(restored.household.name).toBe("Home");
+    expect(canonical(restored)).toEqual(canonical(backup));
+    // Fresh ids: nothing shares an id with the original.
+    expect(restored.accounts.map((a) => a.id)).not.toContain(backup.accounts[0]!.id);
+  });
+
+  it("refuses to restore into a household that has data", async () => {
+    const { store, householdId } = await richHousehold();
+    const backup = await store.exportBackup(householdId);
+    await expect(store.restoreBackup(householdId, backup)).rejects.toThrow(
+      "only be restored into an empty household",
+    );
+  });
+
+  it("refuses a broken file without changing anything", async () => {
+    const { store, householdId } = await richHousehold();
+    const backup = await store.exportBackup(householdId);
+    backup.transaction_allocations[0]!.amount += 1;
+    const other = createMemoryStore();
+    await other.signIn("new@example.com", "password123");
+    await other.createHousehold("New");
+    await expect(other.restoreBackup("", backup)).rejects.toThrow(UserFacingError);
+    expect((await other.load())!.accounts).toEqual([]);
   });
 });
