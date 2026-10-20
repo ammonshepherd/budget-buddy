@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.27.0.
+Version described: 0.27.1.
 
 ## 1. Purpose
 
@@ -260,7 +260,13 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   months and renames; new groups start open. Collapsing saves an open
   Planned/Assigned field first. The + opens "New envelope" (+ becomes ×) and
   opens a collapsed group.
-- Envelope rows as in CLAUDE.md. Planned and Assigned cells are buttons ("Edit
+- "Compact rows" (phone only; a switch under the month in the purple band,
+  `aria-pressed`): every envelope shows only line 1 (name, Saved and what is
+  left); Planned, Assigned, Spent, Refunded and Short are hidden until it is
+  switched off (the sheet still shows them). Kept in localStorage under
+  `bb.budget.compactRows.<userId>` ("1" or "0"; unreadable means off).
+- Envelope rows as in CLAUDE.md. Spent shows with a minus ("−$45.20", a true
+  minus sign; "$0.00" when nothing is spent), in the cell's usual colour. Planned and Assigned cells are buttons ("Edit
   planned amount for Groceries, currently $300.00") that turn into a text field
   in place; errors show under the row ("Only $X available to assign.", "Some is
   already spent: Assigned can go no lower than $X.", "Planned cannot be
@@ -374,7 +380,9 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
   difference); payee over account (a button, "Edit ⟨payee⟩, ⟨amount⟩,
   ⟨account⟩", that opens the edit dialog); the envelope, Income, Transfer,
   Card credit, or Uncategorized (amber label); the amount ("−$X" red, "+$X"
-  green, a transfer unsigned grey; a split's parts the same). Closed
+  green, a transfer the same by its side in the account picked, or on All
+  accounts by the side it is shown from, usually "−$X"; a split's parts the
+  same). Closed
   accounts keep their name.
 - Ticking rows (reconciling): a ticked row is highlighted. While any is
   ticked, a purple toolbar ("Selected transactions") is pinned to the top
@@ -408,13 +416,13 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
     transaction form with its fields side by side in their usual order
     (wrapping as needed; splits, transfer notes and errors on lines of their
     own), starting in the account the page is narrowed to, with Payee
-    focused. Add transaction (after any cover prompt, shown in the row),
+    focused. Save (after any cover prompt, shown in the row),
     Cancel or Escape closes it.
 
 ### Transaction dialog (add and edit)
 
 Fields: Outflow/Inflow, Amount (> 0), Payee, Envelope, Account, Date (default
-today), Memo; then Add transaction / Save changes, Cancel, and (editing)
+today), Memo; then Save (adding) / Save changes, Cancel, and (editing)
 Delete transaction / Delete transfer.
 
 Envelope choices: Uncategorized; Income (to Available to Assign) — disabled for
@@ -535,7 +543,8 @@ Envelopes not in the file are left alone.
   padding 0.5rem on a phone.
 - Money shows as `$1,234.56` / `-$12.50`; negative amounts in red. Activity
   uses its own signs instead: "+$X" (green), "−$X" (a true minus sign, ink),
-  transfers unsigned (`formatSignedCents`).
+  transfers too (`formatSignedCents`); the Budget page's Spent cells show
+  "−$X" in their own colour.
 - Saved above $0.00: larger, purple, shimmering gradient text with a twinkling
   ✨; no animation with "reduce motion".
 - Modal dialogs: centred sheet up to 28rem wide with a dimmed backdrop.

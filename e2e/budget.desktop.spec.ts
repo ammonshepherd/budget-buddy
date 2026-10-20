@@ -21,7 +21,7 @@ async function addTransaction(page: Page, tx: { amount: string; payee: string; e
   await dialog.getByLabel("Amount").fill(tx.amount);
   await dialog.getByLabel("Payee").fill(tx.payee);
   await chooseEnvelope(dialog.getByLabel("Envelope"), tx.envelope);
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 

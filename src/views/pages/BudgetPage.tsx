@@ -4,10 +4,10 @@ import type { Budget } from "../../controllers/useBudget";
 import { useAsyncAction } from "../../controllers/useAsyncAction";
 import { useBudgetPage } from "../../controllers/useBudgetPage";
 import { useCollapsedGroups } from "../../controllers/useCollapsedGroups";
-import { useSidebar } from "../../controllers/useLayout";
+import { useCompactRows, useSidebar } from "../../controllers/useLayout";
 import { formFromTransaction } from "../../controllers/useTransactionEntry";
 import { envelopeLeft, type EnvelopeRow } from "../../models/budgetMath";
-import { centsToInput, formatCents } from "../../models/money";
+import { centsToInput, formatCents, formatSignedCents } from "../../models/money";
 import type { Month } from "../../models/month";
 import type { WatchItem } from "../../models/envelopeDetail";
 import type { BudgetData } from "../../models/types";
@@ -54,6 +54,9 @@ export function BudgetPage({
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId ? page.transaction(editingId) : undefined;
   const panel = useSidebar("panel", userId);
+  // Phone only: rows down to name, Saved and what is left (desktop rows are one line).
+  const rows = useCompactRows(userId);
+  const compact = !desktop && rows.compact;
   const openEnvelope = (id: string) => {
     setOpenId(id);
     setEditingId(null);
@@ -113,7 +116,10 @@ export function BudgetPage({
   const stopEditing = () => setEditingId(null);
 
   return (
-    <section className="page-view budget-page" aria-labelledby="budget-title">
+    <section
+      className={compact ? "page-view budget-page compact-rows" : "page-view budget-page"}
+      aria-labelledby="budget-title"
+    >
       {/* Read by screen readers; the envelopes get the screen space. */}
       <h1 id="budget-title" className="visually-hidden">
         Budget
@@ -128,6 +134,17 @@ export function BudgetPage({
       ) : (
         <>
           {monthNav}
+          <div className="budget-band-tools">
+            <button
+              className="compact-toggle"
+              type="button"
+              aria-pressed={compact}
+              onClick={rows.toggle}
+            >
+              <span className="compact-switch" aria-hidden="true" />
+              Compact rows
+            </button>
+          </div>
           {/* Stays at the top while the envelopes scroll under it. */}
           {assignCard && <div className="assign-wrap">{assignCard}</div>}
         </>
@@ -532,7 +549,8 @@ function EnvelopeItem({
             <span className="cell-label">
               Spent{envelope.overPlan && <span className="visually-hidden"> (over Planned)</span>}
             </span>{" "}
-            <Money cents={envelope.outflow} />
+            {/* Money out of the envelope, so shown with a minus (not red). */}
+            <span className="money">{formatSignedCents(-envelope.outflow)}</span>
           </span>
         </div>
       )}

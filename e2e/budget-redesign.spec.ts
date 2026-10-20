@@ -114,12 +114,12 @@ test("Spent shows whether the month kept to Planned; groups show no totals", asy
 
   // Spent equal to Planned is within plan.
   const spent = envelope(page, "Groceries").locator(".cell.spent");
-  await expect(spent).toHaveText("Spent $100.00");
+  await expect(spent).toHaveText("Spent −$100.00");
   await expect(spent).not.toHaveClass(/over/);
 
   // Above Planned it is over plan, which is not overspending: no Short, no warning.
   await editCell(page, "Groceries", "planned", "99.99");
-  await expect(spent).toHaveText("Spent (over Planned) $100.00");
+  await expect(spent).toHaveText("Spent (over Planned) −$100.00");
   await expect(spent).toHaveClass(/over/);
   await expect(envelope(page, "Groceries")).not.toContainText("Short");
   await expect(available(page)).not.toHaveClass(/over/);

@@ -10,7 +10,7 @@ import { monthOf, type Month } from "./month";
 import { transferPartner } from "./transfers";
 import type { BudgetData, IsoDate, Transaction } from "./types";
 
-/** How a row's amount is shown: outflows with −, inflows green with +, transfers grey. */
+/** What a row is; its amount shows red with − when negative, green with + when positive. */
 export type ActivityKind = "out" | "in" | "transfer";
 
 /** One envelope's part of a split. */
@@ -24,7 +24,11 @@ export interface ActivityRow {
   /** The transaction the row edits (a transfer's money-out side). */
   tx: Transaction;
   kind: ActivityKind;
-  /** Signed for "out" and "in"; a transfer's amount is positive. */
+  /**
+   * Signed. A transfer's is its side in the account shown, or on "All
+   * accounts" the side it is shown by (money out, so negative, unless the
+   * other account is off budget).
+   */
   amount: Cents;
   /** The account, or "From → To" for a transfer. */
   accountLine: string;
@@ -144,7 +148,7 @@ function activityRow(data: BudgetData, tx: Transaction, accountId: string | null
     return {
       ...base,
       kind: "transfer",
-      amount: Math.abs(tx.amount),
+      amount: accountId === null ? tx.amount : base.sideAmount,
       accountLine: other ? `${from} → ${to}` : accountName,
       category: "Transfer",
     };

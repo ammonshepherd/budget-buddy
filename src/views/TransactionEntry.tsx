@@ -406,7 +406,7 @@ function TransactionEditor({
       {/* A box only in the row layout; otherwise the buttons stack like fields. */}
       <div className="form-actions">
         <button className="primary-button" type="submit" disabled={save.pending}>
-          {form.id ? "Save changes" : "Add transaction"}
+          {form.id ? "Save changes" : "Save"}
         </button>
         <button className="secondary-button" type="button" onClick={onCancel}>
           Cancel

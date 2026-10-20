@@ -21,7 +21,7 @@ test("inflows wait for review until marked Income", async ({ page }) => {
     await expect(income).not.toHaveAttribute("disabled");
     await dialog.getByLabel("Amount").fill(amount);
     await dialog.getByLabel("Payee").fill(payee);
-    await dialog.getByRole("button", { name: "Add transaction" }).click();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
     await expect(dialog).toBeHidden();
   }
 

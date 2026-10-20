@@ -29,7 +29,7 @@ async function add(
   await dialog.getByLabel("Payee").fill(tx.payee);
   await dialog.getByLabel("Date").fill(tx.date);
   if (tx.envelope) await chooseEnvelope(dialog.getByLabel("Envelope").first(), tx.envelope);
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -44,7 +44,7 @@ async function addSplit(page: Page, payee: string, date: string, first: string, 
   await dialog.getByLabel("Amount 1").fill("10");
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), second);
   await dialog.getByRole("button", { name: "Put the rest in the last line" }).click();
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -105,13 +105,13 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
   await expect(pay.locator(".activity-category")).toHaveText("Income");
   await expect(pay.locator(".activity-amount")).toHaveText("+$250.00");
   await expect(pay.locator(".activity-amount")).toHaveCSS("color", "rgb(31, 107, 66)");
-  // A transfer once, From → To, unsigned and grey.
+  // A transfer once, From → To, red from its money-out side.
   const transfer = activityRow(page, "To savings");
   await expect(transfer).toHaveCount(1);
   await expect(transfer.locator(".activity-account")).toHaveText("Main Checking → Savings");
   await expect(transfer.locator(".activity-category")).toHaveText("Transfer");
-  await expect(transfer.locator(".activity-amount")).toHaveText("$40.00");
-  await expect(transfer.locator(".activity-amount")).toHaveCSS("color", "rgb(106, 97, 117)");
+  await expect(transfer.locator(".activity-amount")).toHaveText("−$40.00");
+  await expect(transfer.locator(".activity-amount")).toHaveCSS("color", "rgb(179, 38, 30)");
   // Still to review: the amber label.
   await expect(activityRow(page, "Coffee").locator(".badge-uncategorized")).toHaveText(
     "Uncategorized",

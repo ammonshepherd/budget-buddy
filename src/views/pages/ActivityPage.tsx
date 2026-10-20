@@ -13,9 +13,8 @@ import { BankIcon, ChevronDownIcon } from "../icons";
 import { SidePanel } from "../SidePanel";
 import { TransactionDialog, TransactionEntry } from "../TransactionEntry";
 
-/** A row's amount: signed for money in and out, unsigned for a transfer. */
-const amountText = (row: ActivityRow) =>
-  row.kind === "transfer" ? formatCents(row.amount) : formatSignedCents(row.amount);
+/** A row's amount, signed (a transfer too: its side in the account shown). */
+const amountText = (row: ActivityRow) => formatSignedCents(row.amount);
 
 /**
  * One month's transactions under day headings, newest first, with the month's
@@ -532,7 +531,7 @@ function ActivityItem({
           </span>
         )}
         {desktop && <span className="activity-memo">{row.tx.memo}</span>}
-        <span className={`activity-amount ${row.kind}`}>{amount}</span>
+        <span className={`activity-amount ${row.amount < 0 ? "out" : "in"}`}>{amount}</span>
       </div>
       {isSplit && (
         <div className="activity-portions" id={portionsId} hidden={!open}>

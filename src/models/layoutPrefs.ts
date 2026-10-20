@@ -43,3 +43,30 @@ export function saveSidebarCollapsed(
     // Storage full or blocked: the state lasts until the page closes.
   }
 }
+
+export const compactRowsKey = (userId: string) => `bb.budget.compactRows.${userId}`;
+
+/**
+ * Whether the Budget page's envelope rows were left compact (name, Saved and
+ * what is left only) on this device; false when unknown.
+ */
+export function loadCompactRows(storage: KeyValueStorage | null, userId: string): boolean {
+  try {
+    return storage?.getItem(compactRowsKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Remembers whether the envelope rows are compact. Failures are ignored. */
+export function saveCompactRows(
+  storage: KeyValueStorage | null,
+  userId: string,
+  compact: boolean,
+): void {
+  try {
+    storage?.setItem(compactRowsKey(userId), compact ? "1" : "0");
+  } catch {
+    // Storage full or blocked: the state lasts until the page closes.
+  }
+}

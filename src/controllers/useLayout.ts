@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { browserStorage } from "../models/collapsedGroups";
 import {
   DESKTOP_QUERY,
+  loadCompactRows,
   loadSidebarCollapsed,
+  saveCompactRows,
   saveSidebarCollapsed,
   type Sidebar,
 } from "../models/layoutPrefs";
@@ -50,6 +52,22 @@ export function useSidebar(sidebar: Sidebar, userId: string) {
     toggle: () => set(!collapsed),
     expand: () => {
       if (collapsed) set(false);
+    },
+  };
+}
+
+/**
+ * Whether the Budget page's envelope rows are compact (name, Saved and what
+ * is left only), remembered on this device for this user.
+ */
+export function useCompactRows(userId: string) {
+  const [compact, setCompact] = useState(() => loadCompactRows(browserStorage(), userId));
+
+  return {
+    compact,
+    toggle: () => {
+      setCompact(!compact);
+      saveCompactRows(browserStorage(), userId, !compact);
     },
   };
 }

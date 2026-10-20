@@ -45,7 +45,7 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   await dialog.getByLabel("Account").selectOption({ label: "Visa" });
   await dialog.getByLabel("Amount").fill("30");
   await dialog.getByLabel("Payee").fill("Gas");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
   // Uncategorized card spending waits for review: only what is owed changes.
   await expect(available(page)).toContainText("$1,000.00");
@@ -101,7 +101,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await dialog.getByLabel("Amount").fill("40");
   await dialog.getByLabel("Payee").fill("Market");
   await chooseEnvelope(dialog.getByLabel("Envelope"), "Groceries");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
   const payment = envelope(page, "Visa payment");
   await expect(payment.locator(".envelope-remaining")).toHaveText("$40.00");
@@ -115,7 +115,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
   await expect(dialog.getByLabel("To account")).toHaveValue(/.+/);
   await expect(dialog.getByRole("note")).toHaveText("Also adds the matching inflow in Visa.");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
   // Visa payment holds only $40, so the other $100 must be covered.
   const cover = dialog.getByRole("alertdialog");
@@ -148,7 +148,7 @@ test("a payment nothing can cover is not suggested as Uncategorized", async ({ p
   const dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").fill("300");
   await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText(
     "There isn’t enough money to cover this payment yet. Assign more to Visa payment or add income first",

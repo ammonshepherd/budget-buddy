@@ -112,7 +112,7 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
   await dialog.getByLabel("Amount").fill("85.37");
   await dialog.getByLabel("Payee").fill("Insurance refund");
   await chooseEnvelope(dialog.getByLabel("Envelope"), "Car insurance");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 
   const insurance = envelope(page, "Car insurance");
@@ -123,4 +123,32 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
     "Planned $0.00Assigned $700.00Spent $0.00",
   );
   await expect(insurance.locator(".envelope-extra")).toHaveText("Refunded $85.37");
+});
+
+test("Compact rows shows only name, Saved and what is left, and is remembered", async ({
+  page,
+}) => {
+  await signInWithHousehold(page);
+  await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
+  const row = envelope(page, "Groceries");
+  const toggle = page.getByRole("button", { name: "Compact rows" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(row.locator(".cell.planned")).toBeVisible();
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(row.locator(".cell.planned")).toBeHidden();
+  await expect(row.locator(".cell.spent")).toBeHidden();
+  await expect(row.locator(".saved-chip")).toBeVisible();
+  await expect(row.locator(".envelope-left")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("bb.budget.compactRows.memory-user"))).toBe(
+    "1",
+  );
+
+  // Still compact after visiting another page.
+  await goTo(page, "Settings");
+  await goTo(page, "Budget");
+  await expect(row.locator(".cell.planned")).toBeHidden();
+  await toggle.click();
+  await expect(row.locator(".cell.planned")).toBeVisible();
 });

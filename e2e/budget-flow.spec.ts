@@ -66,11 +66,11 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
     payee: "To savings",
     envelope: "Transfer (not spending or income)",
   });
-  // Activity shows the transfer once: from → to, unsigned.
+  // Activity shows the transfer once: from → to, from its money-out side.
   const transfer = activityRow(page, "To savings");
   await expect(transfer).toHaveCount(1);
   await expect(transfer).toContainText("Checking → Savings");
-  await expect(transfer.locator(".activity-amount")).toHaveText("$5.00");
+  await expect(transfer.locator(".activity-amount")).toHaveText("−$5.00");
 
   // Budget: 1,000 − 300 − 100 − 150 (cover); the $20 coffee is still to review
   // and the transfer is neither spending nor income.

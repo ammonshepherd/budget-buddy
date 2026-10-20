@@ -172,10 +172,19 @@ describe("activity rows", () => {
     expect(rows[0]).toMatchObject({
       tx: { id: out!.id },
       kind: "transfer",
-      amount: 30_000,
+      amount: -30_000,
       accountLine: "Main Checking → Discover Card",
       category: "Transfer",
     });
+  });
+
+  it("signs a transfer by its side in the account shown", () => {
+    const data = budget(transfer("checking", "card", 30_000));
+    const amounts = (id: string | null) =>
+      activityMonth(data, "2026-10", id).days.flatMap((d) => d.rows.map((r) => r.amount));
+    expect(amounts(null)).toEqual([-30_000]);
+    expect(amounts("checking")).toEqual([-30_000]);
+    expect(amounts("card")).toEqual([30_000]);
   });
 
   it("names envelopes, Income, card credits and Uncategorized", () => {

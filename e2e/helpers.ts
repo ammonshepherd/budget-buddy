@@ -48,7 +48,7 @@ export async function addTransaction(
   await form.getByLabel("Amount").fill(tx.amount);
   await form.getByLabel("Payee").fill(tx.payee);
   await chooseEnvelope(form.getByLabel("Envelope"), tx.envelope ?? "Uncategorized");
-  await form.getByRole("button", { name: "Add transaction" }).click();
+  await form.getByRole("button", { name: "Save", exact: true }).click();
 }
 
 /**
