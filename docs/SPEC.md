@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.28.2.
+Version described: 0.28.3.
 
 ## 1. Purpose
 
@@ -590,7 +590,16 @@ Decided or wanted, but not in the app:
 
 - Import and matching: matching a transaction typed after its bank row was
   imported (import already matches typed transactions to new rows, and
-  transfers link to bank rows); undoing a match.
+  transfers link to bank rows); undoing a match; skipping one row in the
+  import preview.
+- Deleting an imported transaction removes its import key, so the next CSV
+  that covers its date adds it again (a card payment comes back as a card
+  credit). Options: void instead of delete (`transactions.voided` exists but
+  nothing sets it), or a per-row skip in the preview
+  (`docs/proposals/bulk-actions.md`, problem 1).
+- Bulk actions on ticked Activity rows beyond Mark reconciled: Delete, Mark
+  as Income, Assign to an envelope, Move to account, and ticking rows in To
+  review. Open decisions are in `docs/proposals/bulk-actions.md`.
 - Reconciliation beyond the mark: entering a statement balance and
   finishing only when the ticked rows match it, locking reconciled rows,
   a separate cleared status, "Select all" for a day or month.

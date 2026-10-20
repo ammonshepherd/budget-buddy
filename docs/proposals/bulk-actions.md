@@ -1,11 +1,19 @@
 # Proposal: selecting several transactions and acting on them at once
 
-Status: **not decided, not built.** Written 2026-10-15 against v0.25.0.
-Nothing here changes the app until the owner answers the open decisions below.
-Update (v0.27.0): Activity now has always-visible checkboxes, a pinned bar
-with the ticked rows' total, and Mark reconciled / Mark unreconciled (a
-stored `reconciled` mark, no statement check, no lock). Other bulk actions
-could reuse that selection and bar.
+Status: **partly built; the rest is not decided.** Written 2026-10-15
+against v0.25.0, brought up to date at v0.28.2 (2026-10-20).
+
+Built in v0.27.0: always-visible row checkboxes on Activity, a pinned bar
+("Selected transactions", `role="toolbar"`) with the ticked rows' count and
+signed total (announced with `aria-live`), the selection clearing when the
+month or account changes, and Mark reconciled / Mark unreconciled. The owner
+decided then that reconciled is only a mark (`transactions.reconciled`): no
+statement balance, no lock on edits, no budget math.
+
+Still to build: Delete, Mark as Income, Assign to an envelope and Move to
+account for ticked rows, and selecting in the To review list. They should
+reuse that selection and bar instead of the separate select mode described
+below.
 
 ## The request
 
@@ -19,7 +27,8 @@ asks for confirmation first.
 
 ### Shared groundwork (needed for any action)
 
-- **A select mode on Activity.** Tapping a payee opens the edit dialog today,
+- ~~A select mode on Activity.~~ Superseded in v0.27.0: checkboxes are
+  always shown, so there is no select mode. The original idea: tapping a payee opens the edit dialog today,
   so selecting needs its own mode: a "Select" button near the month band. In
   select mode, a checkbox takes the place of the status mark, tapping a row
   toggles it, and Cancel or Escape leaves the mode. (Long-press is harder to
@@ -41,14 +50,14 @@ asks for confirmation first.
 
 ### Per action, from easiest to hardest
 
-| Action                  | Difficulty              | What gets in the way                                                                                                                                                                                            |
-| ----------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mark as Income          | Trivial                 | `store.markIncome(ids)` already takes a list; it only needs a button.                                                                                                                                           |
-| Delete                  | Easy                    | Problems 1–3 below.                                                                                                                                                                                             |
-| Assign to one envelope  | Hard                    | The cover prompt (problem 4) and mixed selections (problem 5).                                                                                                                                                  |
-| Clear                   | Needs a database change | There's no stored cleared status. Activity's mark only reflects whether a row was imported (`src/models/activity.ts`, `tx.importKey ? "cleared" : "uncleared"`), so this needs a status column and a migration. |
-| Reconcile               | Needs a design first    | Reconciliation isn't designed (SPEC §9).                                                                                                                                                                        |
-| Move to another account | Hard and risky          | Problem 6 below.                                                                                                                                                                                                |
+| Action                  | Difficulty              | What gets in the way                                                                                                            |
+| ----------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Mark as Income          | Trivial                 | `store.markIncome(ids)` already takes a list; it only needs a button.                                                           |
+| Delete                  | Easy                    | Problems 1–3 below.                                                                                                             |
+| Assign to one envelope  | Hard                    | The cover prompt (problem 4) and mixed selections (problem 5).                                                                  |
+| Clear                   | Needs a database change | There's no stored cleared status, only the reconciled mark. A separate cleared status needs a column and a migration (SPEC §9). |
+| Reconcile               | **Built (v0.27.0)**     | Mark reconciled / unreconciled on the ticked rows. A statement-balance check and locking are not built (SPEC §9).               |
+| Move to another account | Hard and risky          | Problem 6 below.                                                                                                                |
 
 ## Problems to expect
 
@@ -136,9 +145,8 @@ asks for confirmation first.
 
 ## Decisions for the owner
 
-- **Clear and Reconcile:** should a stored status be added now (a new data
-  model, so a feature version)? And does Reconcile need a statement-balance
-  check, plus locking reconciled rows against edits, or is it just a mark?
+- ~~Clear and Reconcile~~: decided in v0.27.0. Reconciled is a stored mark
+  only. Still open: whether a separate cleared status is wanted at all.
 - **Bulk assign:** approve a multi-month cover prompt, or block bulk assign
   whenever it would overdraw an envelope (simpler: you'd fix the shortfall
   first)?
@@ -149,12 +157,13 @@ asks for confirmation first.
 
 ## Suggested order
 
-1. Select mode, the action bar, Delete and Mark as Income (no change to the
-   budget math).
+1. ~~Select mode and the action bar~~ (built in v0.27.0 as checkboxes and
+   the selection bar). Next: Delete and Mark as Income on ticked rows (no
+   change to the budget math), and selecting in To review.
 2. Assign to an envelope, with the bulk shortfall function and cover prompt.
 3. A stored cleared status and Clear.
-4. Reconciliation, designed as its own feature.
+4. ~~Reconciliation~~ (the mark is built; statement balances are in SPEC §9).
 5. Move to account, if still wanted.
 
-A phone-width mockup of select mode and the action bar (like those in
-`docs/mockups/`) would be a good first step before building.
+Problem 1 (a deleted imported row comes back on the next import) is still
+true at v0.28.2 and is listed in SPEC §9.
