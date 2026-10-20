@@ -2065,37 +2065,38 @@ div.sheet-field .sheet-field-value {
   color: var(--bb-spend);
 }
 
-/* What the credit cards owe: a strip under the month (top of the page elsewhere). */
+/* What the credit cards owe: a rounded strip under the month (top of the
+   page elsewhere), on one of 30 reds set by CardDebt (--debt-bg, with
+   --debt-text chosen to read on it). */
 .card-debt {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin: 0;
-  padding: 8px 16px;
-  border-block-end: 1px solid var(--bb-purple-line);
-  color: var(--bb-ink);
-  background: var(--bb-purple-tint);
-  font-size: 14px;
+  margin: 12px 16px;
+  padding: 14px 20px;
+  border-radius: 0.875rem;
+  color: var(--debt-text, #fff);
+  background: var(--debt-bg, var(--bb-spend));
+  box-shadow: 0 4px 14px rgba(120, 20, 20, 0.18);
   font-weight: 800;
 }
 
 .card-debt-label {
-  color: var(--bb-muted);
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .card-debt .money {
-  color: var(--bb-spend);
+  color: inherit;
+  font-size: 26px;
+  line-height: 1.1;
 }
 
-/* On Accounts and Settings, and on a desktop: a card of its own. */
-.stack > .card-debt,
-.desktop :is(.budget-page, .activity-page) > .card-debt {
-  border: 1px solid var(--bb-purple-line);
-  border-radius: 0.875rem;
+/* Accounts and Settings: the page's own spacing sets the sides. */
+.stack > .card-debt {
+  margin-inline: 0;
 }
 
 /* Balance today, with reconciled (or cash and card debt) under it. */
@@ -3132,7 +3133,7 @@ body:has(.app-shell.desktop) {
 
 /* Under the band. */
 .desktop :is(.budget-page, .activity-page) > .card-debt {
-  margin-block-start: var(--desktop-gap);
+  margin: calc(var(--desktop-gap) + 6px) 0;
 }
 
 /* Rows: checkbox | bank | payee over account | envelope | memo | amount. */

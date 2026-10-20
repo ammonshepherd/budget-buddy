@@ -199,7 +199,8 @@ non-card budget balances − all envelope money (P included)`.
 - Credit card debt (what the cards owe today, `cardDebt` in
   `src/models/accounts.ts`, display only) shows on every page while above
   $0.00: under the month band on Budget and Activity, at the top of
-  Accounts and Settings.
+  Accounts and Settings. Its background is one of 30 reds picked once per
+  page load (`src/models/cardDebtShades.ts`), with readable text on each.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
   in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in
