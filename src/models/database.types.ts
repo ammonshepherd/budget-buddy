@@ -391,6 +391,7 @@ export type Database = {
         Returns: undefined
       }
       create_household: { Args: { p_name: string }; Returns: string }
+      export_backup: { Args: { p_household_id: string }; Returns: Json }
       import_envelope_plan: {
         Args: { p_household_id: string; p_month: string; p_rows: Json }
         Returns: undefined
@@ -415,6 +416,10 @@ export type Database = {
       }
       reorder_category_groups: {
         Args: { p_group_ids: string[]; p_household_id: string }
+        Returns: undefined
+      }
+      restore_backup: {
+        Args: { p_backup: Json; p_household_id: string }
         Returns: undefined
       }
       save_transaction: {

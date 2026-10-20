@@ -4,9 +4,19 @@
  * a real Supabase project. It mirrors the database rules the UI relies on.
  */
 import { paymentEnvelopeName } from "./accounts";
+import { APP_VERSION } from "./appInfo";
+import {
+  BACKUP_FORMAT,
+  BACKUP_VERSION,
+  NOT_EMPTY,
+  isEmptyHousehold,
+  validateBackup,
+  withFreshIds,
+} from "./backup";
 import { UserFacingError, type DataStore, type UserSession } from "./dataStore";
 import { nameKey } from "./envelopePlan";
 import { MAX_SPLIT_LINES } from "./splits";
+import { asImportFormat } from "./transactionImport";
 import type { BudgetData, Transaction } from "./types";
 
 /** Same message as the import_transactions SQL function. */
@@ -462,6 +472,133 @@ export function createMemoryStore(): DataStore {
       releaseTransfer(transactionId);
       const b = budget();
       b.transactions = b.transactions.filter((t) => t.id !== transactionId);
+    },
+
+    // The memory store keeps no created_at or source: an import key stands
+    // for "came from a bank file", as in `release` above.
+    async exportBackup() {
+      const b = budget();
+      return {
+        format: BACKUP_FORMAT,
+        version: BACKUP_VERSION,
+        exported_at: new Date().toISOString(),
+        app_version: APP_VERSION,
+        household: { name: b.household.name },
+        accounts: b.accounts.map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          opening_balance: a.openingBalance,
+          opening_date: a.openingDate,
+          on_budget: a.onBudget,
+          closed_at: a.closedAt,
+          import_format: a.importFormat && structuredClone(a.importFormat),
+          created_at: null,
+        })),
+        category_groups: b.groups.map((g) => ({ ...g, created_at: null })),
+        categories: b.envelopes.map((e) => ({
+          id: e.id,
+          group_id: e.groupId,
+          name: e.name,
+          position: e.position,
+          card_account_id: e.cardAccountId,
+          created_at: null,
+        })),
+        category_months: b.envelopeMonths.map((m) => ({
+          category_id: m.envelopeId,
+          month: m.month,
+          assigned: m.assigned,
+          released: m.released,
+          planned: m.planned,
+        })),
+        transactions: b.transactions.map((t) => ({
+          id: t.id,
+          account_id: t.accountId,
+          date: t.date,
+          amount: t.amount,
+          payee: t.payee,
+          memo: t.memo,
+          is_transfer: t.isTransfer,
+          is_income: t.isIncome,
+          transfer_id: t.transferId,
+          voided: t.voided,
+          import_key: t.importKey,
+          reconciled: t.reconciled,
+          source: t.importKey === null ? ("manual" as const) : ("csv" as const),
+          created_at: null,
+        })),
+        transaction_allocations: b.transactions.flatMap((t) =>
+          t.allocations.map((a) => ({
+            transaction_id: t.id,
+            category_id: a.envelopeId,
+            amount: a.amount,
+          })),
+        ),
+        income_rules: b.incomeRules.map((r) => ({
+          pattern: r.pattern,
+          account_id: r.accountId,
+          created_at: null,
+        })),
+      };
+    },
+    async restoreBackup(_householdId, backup) {
+      const b = budget();
+      if (!isEmptyHousehold(b)) throw new UserFacingError(NOT_EMPTY);
+      const file = withFreshIds(validateBackup(structuredClone(backup)));
+      const linesOf = (transactionId: string) =>
+        file.transaction_allocations
+          .filter((x) => x.transaction_id === transactionId)
+          .map((x) => ({ envelopeId: x.category_id, amount: x.amount }));
+      data = {
+        household: { id: b.household.id, name: file.household.name.trim() },
+        accounts: file.accounts.map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          openingBalance: a.opening_balance,
+          openingDate: a.opening_date,
+          onBudget: a.on_budget,
+          closedAt: a.closed_at,
+          importFormat: asImportFormat(a.import_format ?? null),
+        })),
+        groups: file.category_groups.map((g) => ({ id: g.id, name: g.name, position: g.position })),
+        envelopes: file.categories.map((e) => ({
+          id: e.id,
+          groupId: e.group_id,
+          name: e.name,
+          position: e.position,
+          cardAccountId: e.card_account_id,
+        })),
+        envelopeMonths: file.category_months.map((m) => ({
+          envelopeId: m.category_id,
+          month: m.month,
+          assigned: m.assigned,
+          released: m.released,
+          planned: m.planned,
+        })),
+        transactions: file.transactions
+          .map((t) => ({
+            id: t.id,
+            accountId: t.account_id,
+            date: t.date,
+            amount: t.amount,
+            payee: t.payee,
+            memo: t.memo,
+            isTransfer: t.is_transfer,
+            isIncome: t.is_income,
+            transferId: t.transfer_id,
+            voided: t.voided,
+            allocations: linesOf(t.id),
+            importKey: t.import_key,
+            reconciled: t.reconciled,
+          }))
+          .sort((x, y) => y.date.localeCompare(x.date)),
+        incomeRules: file.income_rules.map((r) => ({
+          id: id(),
+          pattern: r.pattern,
+          accountId: r.account_id,
+        })),
+      };
     },
   };
 }

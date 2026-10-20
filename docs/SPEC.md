@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.27.2.
+Version described: 0.28.0.
 
 ## 1. Purpose
 
@@ -135,6 +135,8 @@ SQL functions (all `security invoker` except `create_household`):
 | `set_reconciled(ids, reconciled)`                                | Marks (or unmarks) up to 2000 transactions reconciled with the bank; rows already so are left alone; returns how many changed.                                                                                                                                                                                             |
 | `reorder_category_groups(household, ids)`                        | Saves the order of the household's groups; the list must name every group once.                                                                                                                                                                                                                                            |
 | `reorder_categories(group, ids)`                                 | Saves the order of a group's envelopes; the list must name every envelope of the group once.                                                                                                                                                                                                                               |
+| `export_backup(household)`                                       | Returns the whole household as one backup JSON object (one statement, so a consistent snapshot); see "Backup" under Settings.                                                                                                                                                                                              |
+| `restore_backup(household, backup)`                              | Loads a backup into an empty household, all or nothing (cards inserted closed so the trigger-made payment envelopes can be swapped for the exported ones); renames the household.                                                                                                                                          |
 
 Triggers also: create/rename/protect each card's payment envelope (in the
 group that holds the other cards' payment envelopes, else "Credit card
@@ -452,7 +454,8 @@ the matching inflow in ⟨account⟩.", "Also updates the ⟨account⟩ side.").
 ### Settings
 
 In order: household name and "Signed in as ⟨email⟩"; About (version); Sign out;
-Envelope groups; Import transactions; Income rules; Import envelope plan.
+Envelope groups; Import transactions; Income rules; Import envelope plan;
+Backup.
 
 - **Envelope groups:** list with envelope counts, a six-dot drag handle on the
   left of each row (mouse, touch, or keyboard: Space, arrows, Space) to reorder
@@ -470,6 +473,22 @@ Envelope groups; Import transactions; Income rules; Import envelope plan.
   "N inflows waiting for review match your rules. Mark them as Income".
 - **Import envelope plan:** month (default current), CSV file, preview with
   new groups/envelopes and Planned changes, invalid rows by line, then Import.
+- **Backup** (`src/models/backup.ts`, `useBackup`, `BackupSection`): "Export
+  all data" saves `budget-buddy-backup-YYYY-MM-DD.json` (format
+  `budget-buddy-backup`, version 1) and says what it holds (counts and the
+  months with transactions or a stored Planned/Assigned/Released). The file
+  mirrors the tables without `household_id`: household name, accounts (closed
+  ones, `import_format`), groups, envelopes (`card_account_id`), envelope
+  months, transactions (`reconciled`, `voided`, `import_key`, `source`,
+  `transfer_id`, `is_income`, `created_at`), allocations and income rules.
+  "Restore from a backup" reads a file, checks every database rule first
+  (`validateBackup`: types and limits, unique ids/months/split
+  envelopes/import keys per account, links, one payment envelope per card and
+  none allocated to, transfer pairs, split sums and signs, Income and card
+  credits) and shows what it holds. Restore only works while the household
+  has no budget data (otherwise the file can still be checked); every row
+  gets a fresh id (`withFreshIds`) and the household takes the backup's name.
+  Collapsed groups and layout preferences (localStorage) are not included.
 - **Desktop:** the sections in two columns under the heading; Import
   transactions (and its preview) spans both. Group sheets stay sheets.
 
