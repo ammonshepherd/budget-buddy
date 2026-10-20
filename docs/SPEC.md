@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.28.1.
+Version described: 0.28.2.
 
 ## 1. Purpose
 
@@ -192,10 +192,13 @@ These are implemented in `budgetMath.ts` and the controllers:
   Activity opens the transaction dialog.
 - Credit card debt: while the cards owe anything today (`cardDebt` in
   `src/models/accounts.ts`, display only), every page shows "CREDIT CARD
-  DEBT $X" (amount red) in a tinted strip: under the month band on Budget
-  (above Available to Assign) and Activity (above the account picker), and
-  as a rounded card at the top of Accounts and Settings. On a desktop it is
-  a rounded card under the band. Hidden at $0.00 or less.
+  DEBT" (14px) and the amount (26px) in a rounded strip with 12px space
+  above and below: under the month band on Budget (above Available to
+  Assign) and Activity (above the account picker), and at the top of
+  Accounts and Settings. Its background is one of 30 reds, pale to deep
+  (`SHADES` in `src/models/cardDebtShades.ts`), picked at random once per
+  page load, so it changes with every refresh; the text is near-black or
+  white, whichever reads better (at least 4.5:1). Hidden at $0.00 or less.
 - States: "Loading Budget Buddy…", sign-in, create household, or the app.
 
 ### Desktop layout (1000px and up)
