@@ -45,12 +45,12 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   await expect(dialog.getByRole("status")).toHaveText("$25.00 left to split");
   // Saving before the lines add up explains what is missing.
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Household");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("$25.00 is not in an envelope yet");
   await dialog.getByRole("button", { name: "Put the rest in the last line" }).click();
   await expect(dialog.getByLabel("Amount 2")).toHaveValue("25.00");
   await expect(dialog.getByRole("status")).toHaveText("Adds up");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 
   // Each envelope pays its line; Available to Assign does not change.
@@ -113,7 +113,7 @@ test("a split that overdraws two envelopes covers them one at a time", async ({ 
   await dialog.getByLabel("Amount 1").fill("130");
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Fun");
   await dialog.getByLabel("Amount 2").fill("130");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Envelope 1 of 2 to cover");
@@ -155,7 +155,7 @@ test("a card purchase can be split; money into a card cannot", async ({ page }) 
   await dialog.getByLabel("Amount 1").fill("50");
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Fun");
   await dialog.getByLabel("Amount 2").fill("20");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 
   // The whole purchase moves into the card's payment envelope.

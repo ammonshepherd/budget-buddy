@@ -30,7 +30,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   let dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").fill("30");
   await dialog.getByLabel("Payee").fill("Market");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(available(page)).toContainText("$400.00");
   await expect(page.getByText("1 transaction to review ($0.00 in, $30.00 out)")).toBeVisible();
   await goTo(page, "Activity");
@@ -48,7 +48,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await dialog.getByLabel("Amount").fill("150");
   await dialog.getByLabel("Payee").fill("Big shop");
   await chooseEnvelope(dialog.getByLabel("Envelope"), "Groceries");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $80.00 short");
   await cover.getByLabel(/cover .* from/i).selectOption("available");
@@ -64,7 +64,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await dialog.getByLabel("Amount").fill("10");
   await dialog.getByLabel("Payee").fill("Refund");
   await chooseEnvelope(dialog.getByLabel("Envelope"), "Groceries");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(groceries.locator(".envelope-remaining")).toHaveText("$10.00");
   await expect(available(page)).toContainText("$320.00");
@@ -72,7 +72,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   // Nothing was planned, so Spent is over plan. No refund beyond this month's
   // spending, so no Refunded line.
   await expect(groceries.locator(".envelope-cells")).toHaveText(
-    "Planned $0.00Assigned $180.00Spent (over Planned) $170.00",
+    "Planned $0.00Assigned $180.00Spent (over Planned) −$170.00",
   );
   await expect(groceries.locator(".envelope-extra")).toHaveCount(0);
 });
@@ -102,7 +102,7 @@ test("money into a credit card is a card credit that only lowers what is owed", 
   ]);
   await dialog.getByLabel("Amount").fill("30");
   await dialog.getByLabel("Payee").fill("Returned shoes");
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
 
   // No prompt, nothing to review, Available to Assign unchanged; Visa owes less.

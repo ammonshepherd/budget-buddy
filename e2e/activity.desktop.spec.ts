@@ -43,7 +43,7 @@ test("Add transaction opens a new row at the top of the list", async ({ page }) 
   await newRow(page).getByLabel("Amount").fill("12.50");
   await chooseEnvelope(newRow(page).getByLabel("Envelope"), "Groceries");
   await newRow(page).getByLabel("Memo").fill("milk and eggs");
-  await newRow(page).getByRole("button", { name: "Add transaction" }).click();
+  await newRow(page).getByRole("button", { name: "Save", exact: true }).click();
 
   await expect(newRow(page)).toHaveCount(0);
   const row = activityRow(page, "Corner Market");
@@ -76,7 +76,7 @@ test("the new row starts in the chosen account and runs the cover prompt", async
   await newRow(page).getByLabel("Payee").fill("Big Shop");
   await newRow(page).getByLabel("Amount").fill("150");
   await chooseEnvelope(newRow(page).getByLabel("Envelope"), "Groceries");
-  await newRow(page).getByRole("button", { name: "Add transaction" }).click();
+  await newRow(page).getByRole("button", { name: "Save", exact: true }).click();
 
   // Groceries has $100: the cover prompt shows in the row.
   const cover = page.getByRole("alertdialog");
@@ -98,7 +98,7 @@ test("transactions edit in the panel, which shows To review otherwise", async ({
     await newRow(page)
       .getByLabel("Amount")
       .fill(payee === "Paycheck" ? "800" : "30");
-    await newRow(page).getByRole("button", { name: "Add transaction" }).click();
+    await newRow(page).getByRole("button", { name: "Save", exact: true }).click();
     await expect(newRow(page)).toHaveCount(0);
   }
 

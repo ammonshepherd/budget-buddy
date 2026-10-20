@@ -89,7 +89,7 @@ test("marking an imported row as a Transfer links the other account's bank row",
   await expect(items(page)).toHaveCount(1);
   await expect(out.locator(".activity-account")).toHaveText("Checking → Savings");
   await expect(out.locator(".activity-category")).toHaveText("Transfer");
-  await expect(out.locator(".activity-amount")).toHaveText("$200.00");
+  await expect(out.locator(".activity-amount")).toHaveText("−$200.00");
   const into = activityRow(page, "TRANSFER FROM CHECKING");
   await expect(into).toHaveCount(0);
 
@@ -123,7 +123,7 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
   await dialog.getByLabel("Payee").fill("Move");
   await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
   await expect(dialog.getByLabel("From account")).toHaveValue(/.+/);
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
   // One row for both sides, opened at its money-out side.
   const move = activityRow(page, "Move");
@@ -134,7 +134,7 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
   await expect(form.getByRole("note")).toHaveText("Also updates the Savings side.");
   await form.getByLabel("Amount").fill("80");
   await form.getByRole("button", { name: "Save changes" }).click();
-  await expect(move.locator(".activity-amount")).toHaveText("$80.00");
+  await expect(move.locator(".activity-amount")).toHaveText("−$80.00");
 
   // Making one side ordinary spending removes the typed-in other side.
   await editActivityRow(page, "Move");
@@ -216,7 +216,7 @@ async function typeTransferToSavings(page: Page) {
   await dialog.getByLabel("Date").fill("2030-01-10");
   await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
   await expect(dialog.getByLabel("Other side")).toHaveCount(0); // nothing to choose yet
-  await dialog.getByRole("button", { name: "Add transaction" }).click();
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
 }
 
 const SAVINGS_ROW = "Date,Description,Amount\n01/11/2030,ONLINE TRANSFER,50.00";

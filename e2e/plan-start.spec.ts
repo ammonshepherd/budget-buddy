@@ -74,7 +74,7 @@ test("a new month copies last month's Spent", async ({ page }) => {
   await form.getByLabel("Amount").fill("123.45");
   await form.getByLabel("Payee").fill("Market");
   await chooseEnvelope(form.getByLabel("Envelope"), "Food");
-  await form.getByRole("button", { name: "Add transaction" }).click();
+  await form.getByRole("button", { name: "Save", exact: true }).click();
   await expect(form).toBeHidden();
 
   await page.goto("./#budget/2030-02");

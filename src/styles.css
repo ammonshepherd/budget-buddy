@@ -1345,6 +1345,70 @@ button.cell::after {
   font-weight: 700;
 }
 
+/* Compact rows (phone): a switch under the month in the purple band; when on,
+   each envelope shows only line 1 (name, Saved and what is left). */
+.budget-band-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 12px 6px;
+  background: var(--bb-purple);
+}
+
+.compact-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 32px;
+  padding: 0 4px;
+  border: 0;
+  color: #fff;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.compact-switch {
+  position: relative;
+  inline-size: 30px;
+  block-size: 18px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 30%);
+  transition: background 0.15s;
+}
+
+.compact-switch::after {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-start: 2px;
+  inline-size: 14px;
+  block-size: 14px;
+  border-radius: 50%;
+  background: #fff;
+  content: "";
+  transition: transform 0.15s;
+}
+
+.compact-toggle[aria-pressed="true"] .compact-switch {
+  background: #2e8b57;
+}
+
+.compact-toggle[aria-pressed="true"] .compact-switch::after {
+  transform: translateX(12px);
+}
+
+.compact-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.compact-rows .envelope-cells,
+.compact-rows .envelope-extra {
+  display: none;
+}
+
 /* ---- v0.17.0: envelope sheet --------------------------------------------- */
 
 /* A sheet that rises from the bottom of the screen (the envelope sheet). */
@@ -2236,10 +2300,6 @@ div.sheet-field .sheet-field-value {
 
 .activity-amount.out {
   color: var(--bb-spend);
-}
-
-.activity-amount.transfer {
-  color: var(--bb-muted);
 }
 
 .split-pill {

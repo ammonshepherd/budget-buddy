@@ -147,7 +147,7 @@ test("bank rows match transactions typed in before the import", async ({ page })
     await dialog.getByLabel("Date").fill(date!);
     await dialog.getByLabel("Amount").fill(amount!);
     await dialog.getByLabel("Payee").fill(payee!);
-    await dialog.getByRole("button", { name: "Add transaction" }).click();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
     await expect(dialog).toBeHidden();
   }
 

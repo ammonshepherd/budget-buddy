@@ -162,7 +162,9 @@ non-card budget balances − all envelope money (P included)`.
   six sparkles and a glow once above $0.00, quiet at $0.00), and what is left
   on the right (muted at $0.00; no visible caption, screen readers hear
   "remaining"). Line 2: Planned, Assigned and Spent
-  cells. Planned and Assigned are edited in place (tap; blur or Enter saves,
+  cells (Spent with a minus, "−$45.20"; a "Compact rows" switch under the
+  month, phone only, hides line 2 and below, remembered per device and user in
+  localStorage, `src/models/layoutPrefs.ts`). Planned and Assigned are edited in place (tap; blur or Enter saves,
   Escape cancels; amounts rounded to the cent by `roundMoney`; never
   negative). Raising Assigned is blocked beyond Available to Assign, and
   lowering it below what is spent is blocked. Spent turns orange (no extra
@@ -212,7 +214,8 @@ non-card budget balances − all envelope money (P included)`.
   count and total with Mark reconciled / Mark unreconciled (decided in
   v0.27.0: `transactions.reconciled` is only a mark: no statement balance,
   no lock on edits, no budget math). A transfer shows once, from its money-out side ("From → To",
-  unsigned). A split shows a "Split (N)" pill and its parts, open until closed
+  signed and coloured by its side in the account picked, or on All accounts
+  by the side shown). A split shows a "Split (N)" pill and its parts, open until closed
   (not remembered). Tapping the payee opens the same dialog to edit, with
   Delete (Delete transfer for a transfer) at the bottom. Rows have no
   Edit/Delete links. Transactions to review show "Uncategorized" on an amber
