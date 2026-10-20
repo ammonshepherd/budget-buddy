@@ -32,6 +32,11 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   // What the card owes does not lower Available to Assign; it shows as Uncovered.
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$1,000.00");
+  // What the cards owe shows at the top of every page.
+  await expect(page.locator(".card-debt")).toHaveText("Credit card debt$200.00");
+  await goTo(page, "Settings");
+  await expect(page.locator(".card-debt")).toContainText("$200.00");
+  await goTo(page, "Budget");
   const payment = envelope(page, "Visa payment");
   await expect(page.getByRole("region", { name: "Credit card payments" })).toContainText(
     "Visa payment",

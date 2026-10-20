@@ -12,6 +12,7 @@ import type { Month } from "../../models/month";
 import type { WatchItem } from "../../models/envelopeDetail";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
+import { CardDebt } from "../CardDebt";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
 import { ChevronDownIcon, EnvelopeIcon } from "../icons";
@@ -145,10 +146,12 @@ export function BudgetPage({
               Compact rows
             </button>
           </div>
+          <CardDebt data={data} />
           {/* Stays at the top while the envelopes scroll under it. */}
           {assignCard && <div className="assign-wrap">{assignCard}</div>}
         </>
       )}
+      {desktop && <CardDebt data={data} />}
 
       {view.toReview.count > 0 && (
         <p className="notice compact">

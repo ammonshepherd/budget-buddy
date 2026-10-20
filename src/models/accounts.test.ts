@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { openingBalanceFromEntry, openingBalanceToEntry } from "./accounts";
+import { cardDebt, openingBalanceFromEntry, openingBalanceToEntry } from "./accounts";
+import type { Account, Transaction } from "./types";
 
 describe("opening balance entry", () => {
   it("keeps checking balances as entered", () => {
@@ -17,5 +18,66 @@ describe("opening balance entry", () => {
     for (const type of ["checking", "credit_card"] as const) {
       expect(openingBalanceToEntry(type, openingBalanceFromEntry(type, 7_550))).toBe(7_550);
     }
+  });
+});
+
+describe("card debt", () => {
+  const account = (id: string, extra: Partial<Account> = {}): Account => ({
+    id,
+    name: id,
+    type: "credit_card",
+    openingBalance: 0,
+    openingDate: "2026-01-01",
+    onBudget: true,
+    closedAt: null,
+    importFormat: null,
+    ...extra,
+  });
+  const tx = (accountId: string, amount: number, date = "2026-10-01"): Transaction => ({
+    id: `${accountId}-${amount}-${date}`,
+    accountId,
+    date,
+    amount,
+    payee: "",
+    memo: "",
+    isTransfer: false,
+    isIncome: false,
+    transferId: null,
+    voided: false,
+    allocations: [],
+    importKey: null,
+    reconciled: false,
+  });
+
+  it("adds up what every card owes today, leaving out checking and future dates", () => {
+    const data = {
+      accounts: [
+        account("visa", { openingBalance: -10_000 }),
+        account("discover"),
+        account("checking", { type: "checking", openingBalance: -5_000 }),
+      ],
+      transactions: [
+        tx("visa", -2_500),
+        tx("discover", -4_000),
+        tx("discover", 1_000),
+        tx("checking", -9_999),
+        tx("visa", -7_000, "2026-11-01"),
+      ],
+    };
+    expect(cardDebt(data, "2026-10-20")).toBe(15_500);
+  });
+
+  it("is $0.00 without cards, and a card in credit lowers it", () => {
+    expect(
+      cardDebt({ accounts: [account("c", { type: "checking" })], transactions: [] }, "2026-10-20"),
+    ).toBe(0);
+    const data = {
+      accounts: [
+        account("visa", { openingBalance: -3_000 }),
+        account("amex", { openingBalance: 1_000 }),
+      ],
+      transactions: [],
+    };
+    expect(cardDebt(data, "2026-10-20")).toBe(2_000);
   });
 });

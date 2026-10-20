@@ -1,5 +1,6 @@
 import type { Cents } from "./money";
-import type { AccountType } from "./types";
+import { accountBalance } from "./budgetMath";
+import type { AccountType, BudgetData, IsoDate } from "./types";
 
 export const ACCOUNT_TYPE_NAMES: Record<AccountType, string> = {
   checking: "Checking",
@@ -22,4 +23,17 @@ export function openingBalanceToEntry(type: AccountType, openingBalance: Cents):
 /** A card's payment envelope is named after it (the database trigger does the same). */
 export function paymentEnvelopeName(cardName: string): string {
   return `${cardName} payment`.slice(0, 100);
+}
+
+/**
+ * What every credit card owes as of a day (positive when owed; a card in
+ * credit lowers it). Display only: the app shows it at the top of each page.
+ */
+export function cardDebt(
+  data: Pick<BudgetData, "accounts" | "transactions">,
+  today: IsoDate,
+): Cents {
+  return data.accounts
+    .filter((a) => a.type === "credit_card")
+    .reduce((owed, card) => owed - accountBalance(card.id, data, { through: today }), 0);
 }
