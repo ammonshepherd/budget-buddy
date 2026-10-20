@@ -7,6 +7,7 @@ import { ACCOUNT_TYPE_NAMES } from "../../models/accounts";
 import { todayIso } from "../../models/month";
 import type { AccountType, BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet } from "../components";
+import { CardDebt } from "../CardDebt";
 import { SidePanel } from "../SidePanel";
 
 type Page = ReturnType<typeof useAccountsPage>;
@@ -98,6 +99,7 @@ export function AccountsPage({
 
   return (
     <section className="page-view stack accounts-page" aria-labelledby="accounts-title">
+      <CardDebt data={data} />
       <header className="page-heading">
         <p className="eyebrow">Your money sources</p>
         <h1 id="accounts-title">Accounts</h1>

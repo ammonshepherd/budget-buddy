@@ -10,6 +10,7 @@ import { formatDay, type Month } from "../../models/month";
 import type { BudgetData, Transaction } from "../../models/types";
 import { ErrorMessage, Money } from "../components";
 import { BankIcon, ChevronDownIcon } from "../icons";
+import { CardDebt } from "../CardDebt";
 import { SidePanel } from "../SidePanel";
 import { TransactionDialog, TransactionEntry } from "../TransactionEntry";
 
@@ -20,9 +21,10 @@ const amountText = (row: ActivityRow) => formatSignedCents(row.amount);
  * One month's transactions under day headings, newest first, with the month's
  * totals and today's balance; tap a payee to edit or delete. Splits show their
  * parts until closed. Tick rows to see their total and mark them reconciled.
- * On a desktop the month, account and totals share one band, the rows show
- * the memo too, and a panel on the right holds To review or the transaction
- * being edited; Add transaction opens a new row at the top of the list.
+ * On a desktop the month has a band of its own, the rows show the memo too,
+ * and a panel on the right holds the account picker and totals, then To
+ * review or the transaction being edited; Add transaction opens a new row at
+ * the top of the list.
  */
 export function ActivityPage({
   budget,
@@ -296,15 +298,16 @@ export function ActivityPage({
       </h1>
 
       {desktop ? (
-        // One band, pinned to the top: the month, then the account and totals.
-        <div className="activity-band">
-          {monthNav}
-          {accountFilter}
-          {totals}
-        </div>
+        // The band, pinned to the top, holds the month; the account and its
+        // totals sit at the top of the panel.
+        <>
+          <div className="activity-band">{monthNav}</div>
+          <CardDebt data={data} />
+        </>
       ) : (
         <>
           {monthNav}
+          <CardDebt data={data} />
           {accountFilter}
           {totals}
           {selectionBar}
@@ -336,6 +339,10 @@ export function ActivityPage({
             collapsed={panel.collapsed}
             onToggle={panel.toggle}
           >
+            <div className="panel-account">
+              {accountFilter}
+              {totals}
+            </div>
             {editing ? (
               <div className="panel-edit">
                 <button
@@ -506,7 +513,9 @@ function ActivityItem({
           aria-label={`Edit ${payee}, ${amount}, ${row.accountLine}`}
           onClick={onEdit}
         >
-          <span className="activity-payee">{payee}</span>
+          <span className={row.toReview ? "activity-payee to-review" : "activity-payee"}>
+            {payee}
+          </span>
           <span className="activity-account">{row.accountLine}</span>
         </button>
         {isSplit ? (

@@ -191,10 +191,15 @@ non-card budget balances − all envelope money (P included)`.
   localStorage, `src/models/layoutPrefs.ts`). Budget: one-line envelope rows
   under a band with the month and Available to Assign; the panel shows the
   month summary, the chosen envelope, or a transaction being edited.
-  Activity edits in the panel too and adds through a new row at the top of
-  its list; Budget and Accounts add through the dialog. Accounts adds and
+  Activity edits in the panel too (the account picker and totals sit at
+  the top of its panel, not in the band) and adds through a new row at the
+  top of its list; Budget and Accounts add through the dialog. Accounts adds and
   edits accounts in the panel; Settings shows its sections in two columns.
   Below 1000px nothing changes.
+- Credit card debt (what the cards owe today, `cardDebt` in
+  `src/models/accounts.ts`, display only) shows on every page while above
+  $0.00: under the month band on Budget and Activity, at the top of
+  Accounts and Settings.
 - Transactions are added with the floating round + button (bottom right of
   Budget, Accounts and Activity; not Settings), which opens the transaction form
   in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in
@@ -210,7 +215,7 @@ non-card budget balances − all envelope money (P included)`.
   with a card), then day headings (newest first, with the day's net; not
   collapsible). Each row: a checkbox, a bank icon (grey = not reconciled,
   green = reconciled), payee over account, envelope, signed amount (outflows
-  red, inflows green). Ticked rows are highlighted; a pinned bar shows their
+  red, inflows green, always bold; the payee is bold only while to review). Ticked rows are highlighted; a pinned bar shows their
   count and total with Mark reconciled / Mark unreconciled (decided in
   v0.27.0: `transactions.reconciled` is only a mark: no statement balance,
   no lock on edits, no budget math). A transfer shows once, from its money-out side ("From → To",

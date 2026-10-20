@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.28.0.
+Version described: 0.28.1.
 
 ## 1. Purpose
 
@@ -190,6 +190,12 @@ These are implemented in `budgetMath.ts` and the controllers:
   month), and their nav links carry it (`routeHref`).
 - Floating round + button (bottom right, above the nav) on Budget, Accounts and
   Activity opens the transaction dialog.
+- Credit card debt: while the cards owe anything today (`cardDebt` in
+  `src/models/accounts.ts`, display only), every page shows "CREDIT CARD
+  DEBT $X" (amount red) in a tinted strip: under the month band on Budget
+  (above Available to Assign) and Activity (above the account picker), and
+  as a rounded card at the top of Accounts and Settings. On a desktop it is
+  a rounded card under the band. Hidden at $0.00 or less.
 - States: "Loading Budget Buddy…", sign-in, create household, or the app.
 
 ### Desktop layout (1000px and up)
@@ -380,7 +386,8 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
   ⟨payee⟩, ⟨amount⟩"); a bank icon (`role="img"`): grey outline "Not
   reconciled", green and filled "Reconciled" (imported or typed makes no
   difference); payee over account (a button, "Edit ⟨payee⟩, ⟨amount⟩,
-  ⟨account⟩", that opens the edit dialog); the envelope, Income, Transfer,
+  ⟨account⟩", that opens the edit dialog; the payee is regular weight, bold
+  only while the row is to review; the amount is always bold); the envelope, Income, Transfer,
   Card credit, or Uncategorized (amber label); the amount ("−$X" red, "+$X"
   green, a transfer the same by its side in the account picked, or on All
   accounts by the side it is shown from, usually "−$X"; a split's parts the
@@ -404,8 +411,10 @@ Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
   open; closing is kept only until the month changes.
 - Empty month: "No transactions in ⟨Month YYYY⟩." with $0.00 totals.
 - **Desktop** (see Desktop layout):
-  - One purple band, pinned to the top: the month picker, then the account
-    picker (white label) and the totals in a white box on the right.
+  - One purple band, pinned to the top, holds only the month picker. The
+    account picker and the totals (two columns, Balance today on a line of
+    its own) sit at the top of the panel, above To review or the edit form,
+    so they are hidden while the panel is collapsed.
   - The rows sit in a card: checkbox | bank icon | payee over account |
     envelope | memo (muted, cut short with …) | amount; a split's parts
     line up below.

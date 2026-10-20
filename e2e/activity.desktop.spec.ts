@@ -102,6 +102,15 @@ test("transactions edit in the panel, which shows To review otherwise", async ({
     await expect(newRow(page)).toHaveCount(0);
   }
 
+  // The totals sit at the top of the panel, not in the band; the payee is
+  // bold only while it waits for review.
+  await expect(panel(page).locator(".activity-totals")).toContainText("Balance today");
+  await expect(page.locator(".activity-band .activity-totals")).toHaveCount(0);
+  await expect(activityRow(page, "Shell").locator(".activity-payee")).toHaveCSS(
+    "font-weight",
+    "700",
+  );
+
   // To review lives in the panel, not above the list.
   await expect(panel(page)).toHaveAccessibleName("To review");
   await expect(panel(page).getByRole("list", { name: "To review" })).toContainText("Shell");
@@ -121,6 +130,10 @@ test("transactions edit in the panel, which shows To review otherwise", async ({
   await expect(panel(page)).toHaveAccessibleName("To review");
   await expect(panel(page)).toContainText("Nothing to review");
   await expect(activityRow(page, "Shell")).toContainText("Groceries");
+  await expect(activityRow(page, "Shell").locator(".activity-payee")).toHaveCSS(
+    "font-weight",
+    "400",
+  );
 
   // And deletes from there.
   await activityRow(page, "Shell").locator(".activity-who").click();

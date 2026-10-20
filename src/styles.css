@@ -2065,6 +2065,39 @@ div.sheet-field .sheet-field-value {
   color: var(--bb-spend);
 }
 
+/* What the credit cards owe: a strip under the month (top of the page elsewhere). */
+.card-debt {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  padding: 8px 16px;
+  border-block-end: 1px solid var(--bb-purple-line);
+  color: var(--bb-ink);
+  background: var(--bb-purple-tint);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.card-debt-label {
+  color: var(--bb-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.card-debt .money {
+  color: var(--bb-spend);
+}
+
+/* On Accounts and Settings, and on a desktop: a card of its own. */
+.stack > .card-debt,
+.desktop :is(.budget-page, .activity-page) > .card-debt {
+  border: 1px solid var(--bb-purple-line);
+  border-radius: 0.875rem;
+}
+
 /* Balance today, with reconciled (or cash and card debt) under it. */
 .activity-totals .activity-balance-detail {
   color: var(--bb-muted);
@@ -2270,6 +2303,11 @@ div.sheet-field .sheet-field-value {
 .activity-payee {
   color: var(--bb-ink);
   font-size: 14px;
+  font-weight: 400;
+}
+
+/* Bold only while it waits for review, so it stands out. */
+.activity-payee.to-review {
   font-weight: 700;
 }
 
@@ -3032,28 +3070,43 @@ body:has(.app-shell.desktop) {
   background: rgba(255, 255, 255, 0.12);
 }
 
-.activity-band .activity-account-filter {
-  min-block-size: 0;
-  margin-inline-start: auto;
-  padding: 0;
-  background: transparent;
+/* The account picker and its totals, at the top of the panel. */
+.panel-account {
+  display: grid;
+  margin: -1rem -1.125rem 1rem;
+  border-block-end: 1px solid var(--bb-purple-line);
+  border-radius: 0.875rem 0.875rem 0 0;
+  overflow: clip;
 }
 
-.activity-band .activity-account-filter label {
-  color: #e3d6f2;
+/* Leaves room for the panel's toggle, top right. */
+.panel-account > :first-child {
+  padding-inline-end: 3rem;
 }
 
-.activity-band .activity-totals {
-  grid-template-columns: repeat(3, auto);
-  align-items: center;
-  gap: 1.25rem;
-  padding: 0.375rem 0.875rem;
+.panel-account .activity-account-filter {
+  padding-block: 8px 2px;
+}
+
+.panel-account .activity-account-filter .move-picker {
+  flex: 1;
+}
+
+.panel-account .activity-account-filter select {
+  inline-size: 100%;
+}
+
+.panel-account .activity-totals {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-block: 8px 12px;
   border: 0;
-  border-radius: 0.75rem;
-  background: var(--surface);
 }
 
-.activity-band .activity-totals dd {
+.panel-account .activity-balance {
+  grid-column: 1 / -1;
+}
+
+.panel-account .activity-totals dd {
   font-size: 13px;
 }
 
@@ -3075,6 +3128,11 @@ body:has(.app-shell.desktop) {
   border-radius: 0.875rem;
   background: var(--surface);
   box-shadow: 0 6px 20px rgba(75, 42, 104, 0.06);
+}
+
+/* Under the band. */
+.desktop :is(.budget-page, .activity-page) > .card-debt {
+  margin-block-start: var(--desktop-gap);
 }
 
 /* Rows: checkbox | bank | payee over account | envelope | memo | amount. */
@@ -3121,10 +3179,6 @@ body:has(.app-shell.desktop) {
   padding: 0;
   border: 0;
   box-shadow: none;
-}
-
-.side-panel .activity-review .section-heading {
-  padding-inline-end: 2.5rem;
 }
 
 .side-panel .activity-review .secondary-button {

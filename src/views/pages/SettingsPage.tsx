@@ -4,6 +4,7 @@ import { APP_VERSION } from "../../models/appInfo";
 import type { BudgetData } from "../../models/types";
 import { BackupSection } from "../BackupSection";
 import { ErrorMessage } from "../components";
+import { CardDebt } from "../CardDebt";
 import { EnvelopeGroups } from "../EnvelopeGroups";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { IncomeRules } from "../IncomeRules";
@@ -25,6 +26,7 @@ export function SettingsPage({
   return (
     // On a desktop the sections sit in two columns (see .settings-page).
     <section className="page-view stack settings-page" aria-labelledby="settings-title">
+      <CardDebt data={data} />
       <header className="page-heading">
         <p className="eyebrow">Your preferences</p>
         <h1 id="settings-title">Settings</h1>
