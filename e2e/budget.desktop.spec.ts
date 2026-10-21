@@ -7,6 +7,7 @@ import {
   envelope,
   goTo,
   signInWithHousehold,
+  addAccount,
 } from "./helpers";
 
 // The desktop layout (1000px and up; this project runs at 1280×800).
@@ -27,10 +28,7 @@ async function addTransaction(page: Page, tx: { amount: string; payee: string; e
 
 async function setUp(page: Page) {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1000");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "1000" });
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Gas"]);
   await editCell(page, "Groceries", "planned", "100");
   await editCell(page, "Groceries", "assigned", "300");
@@ -45,7 +43,7 @@ test("a sidebar takes the place of the header and the bottom bar", async ({ page
   await expect(page.locator(".bottom-nav")).toHaveCount(0);
   await expect(page.locator(".fab")).toHaveCount(0);
 
-  for (const name of ["Accounts", "Activity", "Settings", "Budget"] as const) {
+  for (const name of ["Accounts", "Settings", "Budget"] as const) {
     await goTo(page, name);
     await expect(page.getByRole("heading", { level: 1, name })).toBeAttached();
   }
@@ -60,7 +58,7 @@ test("a sidebar takes the place of the header and the bottom bar", async ({ page
   await expect(sidebar).toHaveClass(/collapsed/);
   await expect(sidebar.getByText("test@example.com")).toBeHidden();
   await goTo(page, "Accounts");
-  await expect(page).toHaveURL(/#accounts$/);
+  await expect(page).toHaveURL(/#accounts\/\d{4}-\d\d$/);
   expect(
     await page.evaluate(() =>
       Object.entries(localStorage).find(([key]) => key.startsWith("bb.layout.navCollapsed.")),

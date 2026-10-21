@@ -11,28 +11,19 @@ import { ROUTE_TITLES, ROUTES, routeHref, type Route } from "../models/routes";
 import { store } from "../models/store";
 import { CreateHouseholdPage } from "./CreateHouseholdPage";
 import { ErrorMessage } from "./components";
-import {
-  AccountsIcon,
-  ActivityIcon,
-  BudgetIcon,
-  ChevronLeftIcon,
-  InstallIcon,
-  SettingsIcon,
-} from "./icons";
+import { AccountsIcon, BudgetIcon, ChevronLeftIcon, InstallIcon, SettingsIcon } from "./icons";
 import { AccountsPage } from "./pages/AccountsPage";
-import { ActivityPage } from "./pages/ActivityPage";
 import { BudgetPage } from "./pages/BudgetPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./SignInPage";
 import { AddTransactionButton } from "./TransactionEntry";
 
 /** Pages with the Add transaction button. */
-const QUICK_ADD: Route[] = ["budget", "accounts", "activity"];
+const QUICK_ADD: Route[] = ["budget", "accounts"];
 
 const NAV_ICONS: Record<Route, () => JSX.Element> = {
   budget: BudgetIcon,
   accounts: AccountsIcon,
-  activity: ActivityIcon,
   settings: SettingsIcon,
 };
 
@@ -111,16 +102,17 @@ function SignedInApp({
   const budget = useBudget(store);
   const location = useHashRoute();
   const { state } = budget;
-  // The month last shown on Budget or Activity, so moving between pages keeps
+  // The month last shown on Budget or Accounts, so moving between pages keeps
   // it. (Updating state while rendering is React's way to follow a prop.)
   const [lastMonth, setLastMonth] = useState<Month | null>(null);
   if (location.month && location.month !== lastMonth) setLastMonth(location.month);
-  // The account Activity is narrowed to (null: all); kept between months and pages.
-  const [activityAccount, setActivityAccount] = useState<string | null>(null);
-  // Counts Add transaction clicks on Activity on a desktop: each opens its new row.
-  const [activityAdds, setActivityAdds] = useState(0);
+  // Counts Add transaction clicks with an account (or All accounts) open on a
+  // desktop: each opens its new row.
+  const [listAdds, setListAdds] = useState(0);
   const month = location.month ?? lastMonth ?? currentMonth();
   const data = state.status === "ready" ? state.data : null;
+  /** What Accounts has open: All accounts, an account, or nothing (also on other pages). */
+  const opened = location.route === "accounts" ? location.account : null;
 
   // The Add transaction button: round and floating on a phone, at the top of
   // the sidebar on a desktop. Not on Settings.
@@ -130,9 +122,8 @@ function SignedInApp({
         budget={budget}
         data={data}
         desktop={desktop}
-        onAdd={
-          desktop && location.route === "activity" ? () => setActivityAdds((n) => n + 1) : undefined
-        }
+        accountId={opened === "all" ? null : opened}
+        onAdd={desktop && opened !== null ? () => setListAdds((n) => n + 1) : undefined}
       />
     ) : null;
   const nav = (
@@ -178,20 +169,14 @@ function SignedInApp({
       />
     ),
     accounts: (
-      <AccountsPage budget={budget} data={data} userId={session.userId} desktop={desktop} />
-    ),
-    // key: each month starts with every split open.
-    activity: (
-      <ActivityPage
-        key={month}
+      <AccountsPage
         budget={budget}
         data={data}
         month={month}
-        accountId={activityAccount}
-        onAccountChange={setActivityAccount}
+        open={opened}
         userId={session.userId}
         desktop={desktop}
-        addRequest={activityAdds}
+        addRequest={listAdds}
       />
     ),
     settings: (

@@ -118,10 +118,14 @@ export function formFromTransaction(tx: Transaction, data: BudgetData): Transact
   };
 }
 
-/** An empty form for a new transaction: today, in the first open account. */
-export function blankTransactionForm(data: BudgetData): TransactionForm {
+/**
+ * An empty form for a new transaction: today, in `accountId` when that
+ * account is open (the account open on Accounts), else the first open account.
+ */
+export function blankTransactionForm(data: BudgetData, accountId?: string | null): TransactionForm {
+  const open = data.accounts.filter((a) => !a.closedAt);
   return {
-    accountId: data.accounts.find((a) => !a.closedAt)?.id ?? "",
+    accountId: (open.find((a) => a.id === accountId) ?? open[0])?.id ?? "",
     date: todayIso(),
     direction: "outflow",
     amount: "",
@@ -167,7 +171,7 @@ export function useEnvelopeRemaining(data: BudgetData, date: string): Map<string
 
 /**
  * Adding or editing one transaction, wherever the form is shown (the Add
- * transaction dialog, or a row on Activity): saves it, or returns the cover
+ * transaction dialog, or a new row on Accounts): saves it, or returns the cover
  * prompt when its envelope would go negative.
  */
 export function useTransactionEntry(budget: Budget, data: BudgetData) {

@@ -5,7 +5,7 @@ import { Money } from "./components";
 
 /**
  * What the credit cards owe today, in a strip at the top of each page (under
- * the month on Budget and Activity), on one of 30 reds picked at each page
+ * the month on Budget and Accounts), on one of 30 reds picked at each page
  * load. Hidden when nothing is owed.
  */
 export function CardDebt({ data }: { data: BudgetData }) {

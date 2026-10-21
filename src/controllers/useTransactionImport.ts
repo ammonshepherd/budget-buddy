@@ -11,7 +11,7 @@ import {
   type ImportFormat,
 } from "../models/transactionImport";
 import { monthOf } from "../models/month";
-import { activityHref } from "../models/routes";
+import { accountsHref } from "../models/routes";
 import type { BudgetData } from "../models/types";
 import type { Budget } from "./useBudget";
 
@@ -24,8 +24,8 @@ type Done = {
   /** Typed-in transactions matched to bank rows. */
   matched: number;
   alreadyThere: number;
-  /** Activity for the month of the newest imported row. */
-  activityHref: string;
+  /** The account's page on Accounts, where the imported rows wait for review. */
+  reviewHref: string;
 };
 
 /**
@@ -35,9 +35,9 @@ type Done = {
  * matches it, otherwise from what detectFormat guesses. Rows that match a
  * typed-in transaction are matched to it unless the user keeps them separate.
  */
-export function useTransactionImport(budget: Budget, data: BudgetData) {
+export function useTransactionImport(budget: Budget, data: BudgetData, startAccountId?: string) {
   const openAccounts = data.accounts.filter((a) => !a.closedAt);
-  const [accountId, setAccountId] = useState(openAccounts[0]?.id ?? "");
+  const [accountId, setAccountId] = useState(startAccountId ?? openAccounts[0]?.id ?? "");
   const [file, setFile] = useState<Loaded | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   /** The user's column changes; null = use the saved or detected format. */
@@ -148,7 +148,7 @@ export function useTransactionImport(budget: Budget, data: BudgetData) {
         added: saved - matches.length,
         matched: matches.length,
         alreadyThere: rows.length - saved,
-        activityHref: activityHref(monthOf(newest)),
+        reviewHref: accountsHref(account.id, monthOf(newest)),
       });
     },
   };

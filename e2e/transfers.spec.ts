@@ -5,6 +5,8 @@ import {
   goTo,
   openActivityMonth,
   signInWithHousehold,
+  addAccount,
+  openAllAccounts,
 } from "./helpers";
 
 const file = (name: string, text: string) => ({
@@ -13,14 +15,8 @@ const file = (name: string, text: string) => ({
   buffer: Buffer.from(text),
 });
 
-async function addAccount(page: Page, name: string, balance: string) {
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill(name);
-  await page.getByLabel("Opening balance").fill(balance);
-  await page.getByLabel("Opening date").fill("2030-01-01");
-  await page.getByRole("button", { name: "Add account" }).click();
-  await expect(page.locator(".item", { hasText: name }).first()).toBeVisible();
-}
+const newAccount = (page: Page, name: string, balance: string) =>
+  addAccount(page, { name, balance, date: "2030-01-01" });
 
 /** Rows of the Activity page's Transactions list (not the review list). */
 const items = (page: Page) =>
@@ -62,8 +58,8 @@ test("marking an imported row as a Transfer links the other account's bank row",
   page,
 }) => {
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1000");
-  await addAccount(page, "Savings", "0");
+  await newAccount(page, "Checking", "1000");
+  await newAccount(page, "Savings", "0");
   // Made-up rows: the same $200 move as each bank reports it.
   await importCsv(
     page,
@@ -115,10 +111,10 @@ test("marking an imported row as a Transfer links the other account's bank row",
 test("a typed transfer edits and deletes as one", async ({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1000");
-  await addAccount(page, "Savings", "0");
+  await newAccount(page, "Checking", "1000");
+  await newAccount(page, "Savings", "0");
 
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   await page.getByRole("button", { name: "Add transaction", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Add a transaction" });
   await dialog.getByRole("radio", { name: "Inflow" }).check();
@@ -152,8 +148,8 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
 
 test("pick a different bank row, or a new transaction, as the other side", async ({ page }) => {
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1000");
-  await addAccount(page, "Savings", "0");
+  await newAccount(page, "Checking", "1000");
+  await newAccount(page, "Savings", "0");
   await importCsv(
     page,
     "Checking",
@@ -209,10 +205,10 @@ test("pick a different bank row, or a new transaction, as the other side", async
 /** A transfer from Checking typed in on 2030-01-10, its Savings side typed in too. */
 async function typeTransferToSavings(page: Page) {
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1000");
-  await addAccount(page, "Savings", "0");
+  await newAccount(page, "Checking", "1000");
+  await newAccount(page, "Savings", "0");
 
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   await page.getByRole("button", { name: "Add transaction", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Add a transaction" });
   await dialog.getByLabel("Amount").fill("50");

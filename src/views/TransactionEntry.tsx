@@ -43,7 +43,7 @@ export function TransactionEntry({
   onCancel: () => void;
   /** Set when editing: shows a Delete button. */
   onDelete?: () => Promise<void>;
-  /** "row": the fields side by side, as Activity's new transaction row on a desktop. */
+  /** "row": the fields side by side, as the new transaction row on Accounts on a desktop. */
   layout?: "stack" | "row";
 }) {
   const entry = useTransactionEntry(budget, data);
@@ -132,20 +132,24 @@ export function TransactionDialog({
 }
 
 /**
- * The round + button in the bottom-right corner (Budget, Accounts and
- * Activity), or on a desktop "+ Add transaction" at the top of the sidebar.
- * It opens the transaction form in a modal dialog, unless `onAdd` takes over
- * (Activity on a desktop opens a new row instead).
+ * The round + button in the bottom-right corner (Budget and Accounts), or on
+ * a desktop "+ Add transaction" at the top of the sidebar. It opens the
+ * transaction form in a modal dialog, starting in the account open on
+ * Accounts, unless `onAdd` takes over (with an account or All accounts open
+ * on a desktop, a new row opens instead).
  */
 export function AddTransactionButton({
   budget,
   data,
   desktop = false,
+  accountId = null,
   onAdd,
 }: {
   budget: Budget;
   data: BudgetData;
   desktop?: boolean;
+  /** The account open on Accounts: a new transaction starts in it. */
+  accountId?: string | null;
   onAdd?: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -167,7 +171,7 @@ export function AddTransactionButton({
         data={data}
         open={open}
         heading="Add a transaction"
-        initial={() => blankTransactionForm(data)}
+        initial={() => blankTransactionForm(data, accountId)}
         onClose={() => setOpen(false)}
       />
     </>

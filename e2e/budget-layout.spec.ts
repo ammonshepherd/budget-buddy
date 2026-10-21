@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  editAccount,
   addGroupWithEnvelopes,
   available,
   envelope,
@@ -8,6 +9,7 @@ import {
   openAddTransaction,
   signInWithHousehold,
   chooseEnvelope,
+  addAccount,
 } from "./helpers";
 
 test("the Budget page is envelopes under a sticky Available to Assign", async ({ page }) => {
@@ -21,10 +23,7 @@ test("the Budget page is envelopes under a sticky Available to Assign", async ({
   // Nothing to assign yet: the card is hidden, the month picker is not.
   await expect(available(page)).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Next month" })).toBeVisible();
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("50");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "50" });
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$50.00");
 
@@ -75,10 +74,7 @@ test("the + button adds envelopes, and groups are managed in Settings", async ({
 
 test("the card hides at $0.00 and comes back red when over assigned", async ({ page }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("100");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "100" });
   await addGroupWithEnvelopes(page, "Everyday", ["Fun"]);
   await expect(available(page)).toContainText("$100.00");
 
@@ -87,10 +83,9 @@ test("the card hides at $0.00 and comes back red when over assigned", async ({ p
   await expect(available(page)).toHaveCount(0);
 
   // Lower the account's balance: now over assigned, and the card warns.
-  await goTo(page, "Accounts");
-  await page.locator(".item", { hasText: "Checking" }).click();
-  await page.getByRole("form", { name: "Edit Checking" }).getByLabel("Opening balance").fill("60");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  const edit = await editAccount(page, "Checking");
+  await edit.getByLabel("Opening balance").fill("60");
+  await edit.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("Over Assigned$40.00");
   await expect(available(page)).toHaveClass(/over/);
@@ -100,10 +95,7 @@ test("a refund with no spending this month shows as Refunded, not negative Spent
   page,
 }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1000");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "1000" });
   await addGroupWithEnvelopes(page, "Bills", ["Car insurance"]);
   await editCell(page, "Car insurance", "assigned", "700");
 

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  editAccount,
+  openAccount,
   activityRow,
   addGroupWithEnvelopes,
   editCell,
@@ -8,16 +10,12 @@ import {
   openAddTransaction,
   signInWithHousehold,
   chooseEnvelope,
+  addAccount,
+  accountRow,
 } from "./helpers";
 
-async function addAccount(page: Page, name: string, opening: string) {
-  await goTo(page, "Accounts");
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByLabel("Account name").fill(name);
-  await add.getByLabel("Opening balance").fill(opening);
-  await add.getByLabel("Opening date", { exact: true }).fill("2030-01-01");
-  await add.getByRole("button", { name: "Add account" }).click();
-}
+const newAccount = (page: Page, name: string, opening: string) =>
+  addAccount(page, { name, balance: opening, date: "2030-01-01" });
 
 async function add(
   page: Page,
@@ -56,8 +54,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("a month's transactions by day, with totals and day nets", async ({ page }) => {
-  await addAccount(page, "Main Checking", "500");
-  await addAccount(page, "Savings", "0");
+  await newAccount(page, "Main Checking", "500");
+  await newAccount(page, "Savings", "0");
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
   await page.evaluate(() => (location.hash = "#budget/2030-01"));
@@ -123,7 +121,7 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
 
   // The next month reloads the list and the totals.
   await page.getByRole("link", { name: "Next month" }).click();
-  await expect(page).toHaveURL(/#activity\/2030-02$/);
+  await expect(page).toHaveURL(/#accounts\/all\/2030-02$/);
   await expect(totals(page)).toHaveText(["$0.00", "−$7.00", "$500.00", "Reconciled $500.00"]);
   await expect(activityRow(page, "Next month")).toBeVisible();
   await expect(activityRow(page, "Kroger")).toHaveCount(0);
@@ -135,7 +133,7 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
 });
 
 test("tapping the payee opens the transaction to edit or delete", async ({ page }) => {
-  await addAccount(page, "Checking", "500");
+  await newAccount(page, "Checking", "500");
   await add(page, { payee: "Lunch", amount: "12", date: "2030-01-02" });
   await openActivityMonth(page, "2030-01");
 
@@ -151,7 +149,7 @@ test("tapping the payee opens the transaction to edit or delete", async ({ page 
 });
 
 test("splits open with their parts and close one at a time", async ({ page }) => {
-  await addAccount(page, "Checking", "500");
+  await newAccount(page, "Checking", "500");
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Kids"]);
   await page.evaluate(() => (location.hash = "#budget/2030-01"));
@@ -193,24 +191,22 @@ test("splits open with their parts and close one at a time", async ({ page }) =>
 });
 
 test("a closed account's transactions keep its name", async ({ page }) => {
-  await addAccount(page, "Old Bank", "0");
+  await newAccount(page, "Old Bank", "0");
   await add(page, { payee: "Fee", amount: "3", date: "2030-01-02" });
   await add(page, { payee: "Fee refund", amount: "3", date: "2030-01-03", inflow: true });
-  await goTo(page, "Accounts");
-  await page.locator(".item", { hasText: "Old Bank" }).click();
-  await page
-    .getByRole("dialog", { name: "Edit Old Bank" })
-    .getByRole("button", { name: "Close account" })
-    .click();
-  await expect(page.getByRole("heading", { name: "Closed accounts" })).toBeVisible();
+  const form = await editAccount(page, "Old Bank");
+  await form.getByRole("button", { name: "Close account" }).click();
+  // Closing goes back to the list, where closed accounts wait behind a toggle.
+  await expect(page.getByRole("button", { name: "Show closed accounts (1)" })).toBeVisible();
+  await expect(accountRow(page, "Old Bank")).toHaveCount(0);
 
   await openActivityMonth(page, "2030-01");
   await expect(activityRow(page, "Fee").locator(".activity-account")).toHaveText("Old Bank");
 });
 
 test("ticking rows shows their total and marks them reconciled", async ({ page }) => {
-  await addAccount(page, "Checking", "500");
-  await addAccount(page, "Savings", "0");
+  await newAccount(page, "Checking", "500");
+  await newAccount(page, "Savings", "0");
   await add(page, { payee: "Lunch", amount: "12", date: "2030-01-02" });
   await add(page, { payee: "Refund", amount: "5", date: "2030-01-03", inflow: true });
   await add(page, {
@@ -251,10 +247,9 @@ test("ticking rows shows their total and marks them reconciled", async ({ page }
   await expect(page.locator(".activity-balance-detail")).toHaveText("Reconciled $493.00");
 
   // In one account a transfer stands for its side there.
-  await page.getByLabel("Account", { exact: true }).selectOption({ label: "Savings" });
+  await openAccount(page, "Savings");
   const transfer = activityRow(page, "To savings");
   await expect(transfer.getByRole("img", { name: "Reconciled" })).toBeVisible();
-  await expect(totals(page).nth(0)).toHaveText("+$40.00");
   await transfer.getByRole("checkbox").check();
   await expect(bar).toContainText("+$40.00");
   await expect(bar.getByRole("button", { name: "Mark reconciled" })).toHaveCount(0);
@@ -262,7 +257,7 @@ test("ticking rows shows their total and marks them reconciled", async ({ page }
   await expect(transfer.getByRole("img", { name: "Not reconciled" })).toBeVisible();
 
   // Changing the month (or account) starts with nothing ticked.
-  await page.getByLabel("Account", { exact: true }).selectOption({ label: "All accounts" });
+  await openActivityMonth(page, "2030-01");
   await lunch.getByRole("checkbox").check();
   await expect(bar).toBeVisible();
   await page.getByRole("link", { name: "Next month" }).click();

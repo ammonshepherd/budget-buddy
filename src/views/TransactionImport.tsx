@@ -38,9 +38,21 @@ function importLabel(preview: TransactionImportPreview | null) {
   return `Import ${added} and match ${matched}`;
 }
 
-/** Settings card: import a bank or card CSV into an account. */
-export function TransactionImport({ budget, data }: { budget: Budget; data: BudgetData }) {
-  const io = useTransactionImport(budget, data);
+/**
+ * Import a bank or card CSV into an account: a Settings card with an account
+ * picker, or (with `accountId`) into the account open on Accounts.
+ */
+export function TransactionImport({
+  budget,
+  data,
+  accountId,
+}: {
+  budget: Budget;
+  data: BudgetData;
+  /** Import into this account only: no picker, and no link back to it. */
+  accountId?: string;
+}) {
+  const io = useTransactionImport(budget, data, accountId);
   const save = useAsyncAction(io.importNow);
   // Changing the key empties the file input after an import or a cancel.
   const [inputKey, setInputKey] = useState(0);
@@ -67,21 +79,23 @@ export function TransactionImport({ budget, data }: { budget: Budget; data: Budg
       <p className="empty-state">
         Download a CSV from your bank or card website and choose it here. Columns are detected
         automatically, and remembered for each account. Imported transactions arrive Uncategorized;
-        give them envelopes on Activity. A bank row that matches a transaction you typed in is
+        give them envelopes on Accounts. A bank row that matches a transaction you typed in is
         matched to it instead of being added twice.
       </p>
 
       <div className="form">
-        <label className="field">
-          Account
-          <select value={io.accountId} onChange={(e) => io.chooseAccount(e.target.value)}>
-            {io.openAccounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!accountId && (
+          <label className="field">
+            Account
+            <select value={io.accountId} onChange={(e) => io.chooseAccount(e.target.value)}>
+              {io.openAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="field">
           Bank CSV file
           <input
@@ -106,8 +120,13 @@ export function TransactionImport({ budget, data }: { budget: Budget; data: Budg
           {io.done.added > 0 &&
             io.done.matched > 0 &&
             ` and matched ${io.done.matched} you entered`}
-          {io.done.alreadyThere > 0 && ` (${io.done.alreadyThere} were already there)`}.{" "}
-          <a href={io.done.activityHref}>Give them envelopes on Activity</a>
+          {io.done.alreadyThere > 0 && ` (${io.done.alreadyThere} were already there)`}.
+          {!accountId && (
+            <>
+              {" "}
+              <a href={io.done.reviewHref}>Give them envelopes on Accounts</a>
+            </>
+          )}
         </p>
       )}
 

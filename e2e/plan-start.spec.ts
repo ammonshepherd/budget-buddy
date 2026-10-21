@@ -2,10 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   envelope,
   editCell,
-  goTo,
   openAddTransaction,
   signInWithHousehold,
   chooseEnvelope,
+  addAccount,
+  openAllAccounts,
 } from "./helpers";
 
 const planStart = (page: Page) => page.getByRole("region", { name: /^No plan for/ });
@@ -14,10 +15,7 @@ const planStart = (page: Page) => page.getByRole("region", { name: /^No plan for
 async function januaryPlan(page: Page) {
   await signInWithHousehold(page);
   await page.getByRole("link", { name: "adding an account" }).click();
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("3000");
-  await page.getByLabel("Opening date").fill("2030-01-01");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "3000", date: "2030-01-01" });
 
   // An empty month offers a CSV upload for that month (no month to choose).
   await page.goto("./#budget/2030-01");
@@ -68,7 +66,7 @@ test("a new month copies last month's Spent", async ({ page }) => {
   await januaryPlan(page);
   await editCell(page, "Food", "assigned", "400");
 
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   const form = await openAddTransaction(page);
   await form.getByLabel("Date").fill("2030-01-15");
   await form.getByLabel("Amount").fill("123.45");

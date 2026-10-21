@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  addAccount,
   activityRow,
   addGroupWithEnvelopes,
   available,
@@ -10,25 +11,20 @@ import {
   openAddTransaction,
   signInWithHousehold,
   chooseEnvelope,
+  openAllAccounts,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await signInWithHousehold(page);
 });
 
-async function addAccount(page: Page, name: string, opening: string, card = false) {
-  await goTo(page, "Accounts");
-  const add = page.getByRole("form", { name: "Add an account" });
-  if (card) await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill(name);
-  await add.getByLabel(card ? "Amount owed on the opening date" : "Opening balance").fill(opening);
-  await add.getByRole("button", { name: "Add account" }).click();
-}
+const newAccount = (page: Page, name: string, opening: string, card = false) =>
+  addAccount(page, card ? { name, owed: opening } : { name, balance: opening });
 
 const remaining = (page: Page, name: string) => envelope(page, name).locator(".envelope-remaining");
 
 test("split a transaction across envelopes, edit it, and undo the split", async ({ page }) => {
-  await addAccount(page, "Checking", "1000");
+  await newAccount(page, "Checking", "1000");
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Household"]);
   await editCell(page, "Groceries", "assigned", "200");
@@ -59,7 +55,7 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   await expect(available(page)).toContainText("$700.00");
 
   // Activity shows the split with its parts; editing loads every line.
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   const row = activityRow(page, "Superstore");
   await expect(row.getByRole("button", { name: "Close split for Superstore" })).toHaveText(
     "Split (2)",
@@ -97,7 +93,7 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
 });
 
 test("a split that overdraws two envelopes covers them one at a time", async ({ page }) => {
-  await addAccount(page, "Checking", "1000");
+  await newAccount(page, "Checking", "1000");
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun", "Gifts"]);
   await editCell(page, "Groceries", "assigned", "100");
@@ -139,8 +135,8 @@ test("a split that overdraws two envelopes covers them one at a time", async ({ 
 });
 
 test("a card purchase can be split; money into a card cannot", async ({ page }) => {
-  await addAccount(page, "Checking", "1000");
-  await addAccount(page, "Visa", "0", true);
+  await newAccount(page, "Checking", "1000");
+  await newAccount(page, "Visa", "0", true);
   await goTo(page, "Budget");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
   await editCell(page, "Groceries", "assigned", "100");

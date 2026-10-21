@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { activityAccounts, activityBalance, activityMonth, selectionTotal } from "./activity";
+import {
+  accountFigures,
+  accountHistory,
+  activityBalance,
+  activityMonth,
+  daysByMonth,
+  firstRows,
+  selectionTotal,
+  type ActivityDay,
+} from "./activity";
 import { transactionsToReview } from "./budgetMath";
 import type { Account, BudgetData, Transaction } from "./types";
 
@@ -243,15 +252,6 @@ describe("one account's activity", () => {
     account("offbudget", "Mortgage", { onBudget: false }),
   ];
 
-  it("offers budget accounts, open ones first, then closed", () => {
-    expect(activityAccounts(budget([], accounts))).toEqual([
-      { id: "card", name: "Discover Card", closed: false },
-      { id: "checking", name: "Main Checking", closed: false },
-      { id: "savings", name: "Savings", closed: false },
-      { id: "old", name: "Old Checking", closed: true },
-    ]);
-  });
-
   it("shows only that account's transactions and transfers to or from it", () => {
     const data = budget(
       [
@@ -396,5 +396,161 @@ describe("activityBalance", () => {
 
   it("counts a future-dated transaction once its day comes", () => {
     expect(activityBalance(data, "checking", "2026-10-25").today).toBe(81_000);
+  });
+});
+
+describe("accountFigures", () => {
+  const data = budget(
+    [
+      tx({ date: "2026-11-02", amount: -2_000, allocations: groceries(-2_000) }),
+      tx({ date: "2026-10-20", amount: 300_000, isIncome: true, reconciled: true }),
+      tx({ date: "2026-10-18", amount: 1_500, allocations: groceries(1_500) }), // a refund
+      tx({
+        date: "2026-10-10",
+        amount: -9_000,
+        allocations: [
+          { envelopeId: "groceries", amount: -4_000 },
+          { envelopeId: "kids", amount: -5_000 },
+        ],
+      }),
+      ...transfer("checking", "card", 25_000, "2026-10-05"), // a card payment
+      tx({ date: "2026-10-03", amount: -700, voided: true }),
+      tx({ date: "2026-09-30", amount: -1_000, reconciled: true }),
+    ],
+    [
+      account("checking", "Main Checking", { openingBalance: 100_000 }),
+      account("card", "Discover Card", { type: "credit_card", openingBalance: -40_000 }),
+    ],
+  );
+
+  it("shows the current, month start, opening and reconciled balances", () => {
+    expect(accountFigures(data, "checking", "2026-10")).toMatchObject({
+      current: 100_000 - 2_000 + 300_000 + 1_500 - 9_000 - 25_000 - 1_000,
+      monthStart: 100_000 - 1_000,
+      opening: 100_000,
+      reconciled: 100_000 + 300_000 - 1_000,
+    });
+  });
+
+  it("leaves transfers out of money in and out, and counts a split once", () => {
+    expect(accountFigures(data, "checking", "2026-10")).toMatchObject({
+      moneyIn: 301_500,
+      moneyOut: 9_000,
+    });
+    // On the card the payment is a transfer too: nothing in or out.
+    expect(accountFigures(data, "card", "2026-10")).toMatchObject({
+      moneyIn: 0,
+      moneyOut: 0,
+      opening: -40_000,
+      current: -15_000,
+    });
+  });
+
+  it("adds a month's net activity to its start to give the next month's start", () => {
+    for (const month of ["2026-09", "2026-10", "2026-11"]) {
+      const next = `${month.slice(0, 5)}${String(Number(month.slice(5)) + 1).padStart(2, "0")}`;
+      const net = data.transactions
+        .filter((t) => t.accountId === "checking" && !t.voided && t.date.startsWith(month))
+        .reduce((sum, t) => sum + t.amount, 0);
+      expect(accountFigures(data, "checking", next).monthStart).toBe(
+        accountFigures(data, "checking", month).monthStart + net,
+      );
+    }
+  });
+});
+
+describe("accountHistory", () => {
+  const data = budget([
+    tx({ id: "nov", date: "2026-11-02", amount: -2_000 }),
+    tx({ id: "oct", date: "2026-10-20", amount: 5_000, isIncome: true }),
+    ...transfer("checking", "card", 25_000, "2026-10-20"),
+    tx({ id: "card", accountId: "card", date: "2026-10-19", amount: -3_000 }),
+    tx({ id: "gone", date: "2026-09-01", amount: -700, voided: true }),
+    tx({ id: "sep", date: "2026-09-01", amount: -1_000 }),
+  ]);
+
+  it("lists the account's transactions from every month, newest first", () => {
+    const days = accountHistory(data, "checking");
+    expect(days.map((d) => d.date)).toEqual(["2026-11-02", "2026-10-20", "2026-09-01"]);
+    expect(days.flatMap((d) => d.rows.map((r) => r.tx.id))).toEqual([
+      "nov",
+      "oct",
+      expect.any(String),
+      "sep",
+    ]);
+  });
+
+  it("lists card payments on both sides, with each side's sign, and leaves them out of day nets", () => {
+    const [payment] = accountHistory(data, "card")
+      .flatMap((d) => d.rows)
+      .filter((r) => r.kind === "transfer");
+    expect(payment).toMatchObject({ amount: 25_000, accountLine: "Main Checking → Discover Card" });
+    // The row edits the money-out side, as on All accounts.
+    expect(payment!.tx.accountId).toBe("checking");
+    const checking = accountHistory(data, "checking");
+    expect(checking[1]!.rows.find((r) => r.kind === "transfer")!.amount).toBe(-25_000);
+    expect(checking[1]!.net).toBe(5_000);
+  });
+});
+
+describe("firstRows", () => {
+  const day = (date: string, count: number): ActivityDay => ({
+    date,
+    net: -count * 100,
+    rows: Array.from({ length: count }, () => ({
+      tx: tx({ date }),
+      kind: "out",
+      amount: -100,
+      accountLine: "Main Checking",
+      category: "Uncategorized",
+      toReview: true,
+      portions: [],
+      sideIds: [],
+      sideAmount: -100,
+      reconciled: false,
+    })),
+  });
+  const days = [day("2026-10-03", 60), day("2026-10-02", 60), day("2026-10-01", 120)];
+
+  it("shows the first rows, cutting a day short but keeping its full net", () => {
+    const page = firstRows(days, 100);
+    expect(page).toMatchObject({ shown: 100, total: 240 });
+    expect(page.days.map((d) => d.rows.length)).toEqual([60, 40]);
+    expect(page.days[1]!.net).toBe(-6_000);
+  });
+
+  it("continues a cut day under the same heading, with no rows repeated or skipped", () => {
+    const first = firstRows(days, 100).days.flatMap((d) => d.rows);
+    const more = firstRows(days, 200);
+    expect(more.days.map((d) => d.date)).toEqual(["2026-10-03", "2026-10-02", "2026-10-01"]);
+    const rows = more.days.flatMap((d) => d.rows);
+    expect(rows.slice(0, 100)).toEqual(first);
+    expect(new Set(rows).size).toBe(200);
+    expect(firstRows(days, 300)).toMatchObject({ shown: 240, total: 240 });
+  });
+
+  it("keeps a split's parts with it: a split is one row", () => {
+    const split = day("2026-10-01", 1);
+    split.rows[0]!.portions = [
+      { envelopeId: "kids", envelopeName: "Kids", amount: -40 },
+      { envelopeId: "groceries", envelopeName: "Groceries", amount: -60 },
+    ];
+    const page = firstRows([day("2026-10-02", 99), split], 100);
+    expect(page.days[1]!.rows[0]!.portions).toHaveLength(2);
+  });
+});
+
+describe("daysByMonth", () => {
+  it("puts days under their month, newest first", () => {
+    const days = ["2026-11-02", "2026-10-20", "2026-10-01", "2025-12-12"].map((date) => ({
+      date,
+      net: 0,
+      rows: [],
+    }));
+    expect(daysByMonth(days).map((m) => [m.month, m.days.length])).toEqual([
+      ["2026-11", 1],
+      ["2026-10", 2],
+      ["2025-12", 1],
+    ]);
   });
 });

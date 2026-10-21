@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { goTo, signInWithHousehold } from "./helpers";
+import { goTo, signInWithHousehold, openAllAccounts } from "./helpers";
 
 test("shows sign-in first, with the app version", async ({ page }) => {
   await page.goto("./");
@@ -14,9 +14,10 @@ test("bottom navigation switches pages and updates the URL hash", async ({ page 
   await signInWithHousehold(page);
   const nav = page.getByRole("navigation", { name: "Primary navigation" });
 
-  for (const name of ["Accounts", "Activity", "Settings", "Budget"]) {
+  await expect(nav.getByRole("link")).toHaveText(["Budget", "Accounts", "Settings"]);
+  for (const name of ["Accounts", "Settings", "Budget"]) {
     await nav.getByRole("link", { name }).click();
-    // Budget and Activity carry the month, so it stays the same between them.
+    // Budget and Accounts carry the month, so it stays the same between them.
     await expect(page).toHaveURL(new RegExp(`#${name.toLowerCase()}(/\\d{4}-\\d{2})?$`));
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
     await expect(nav.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
@@ -24,20 +25,38 @@ test("bottom navigation switches pages and updates the URL hash", async ({ page 
   }
 });
 
-test("Budget and Activity keep the chosen month in the URL and between them", async ({ page }) => {
+test("Budget and Accounts keep the chosen month in the URL and between them", async ({ page }) => {
   await signInWithHousehold(page);
   await page.evaluate(() => (location.hash = "#budget/2030-01"));
   await expect(page.locator(".budget-month")).toContainText("January 2030");
-  await goTo(page, "Activity");
-  await expect(page).toHaveURL(/#activity\/2030-01$/);
+  await openAllAccounts(page);
+  await expect(page).toHaveURL(/#accounts\/all\/2030-01$/);
   await expect(page.locator(".budget-month")).toContainText("January 2030");
   await page.getByRole("link", { name: "Next month" }).click();
-  await expect(page).toHaveURL(/#activity\/2030-02$/);
+  await expect(page).toHaveURL(/#accounts\/all\/2030-02$/);
   await expect(page.locator(".budget-month")).toContainText("February 2030");
   await goTo(page, "Settings");
   await goTo(page, "Budget");
   await expect(page).toHaveURL(/#budget\/2030-02$/);
   await expect(page.locator(".budget-month")).toContainText("February 2030");
+});
+
+test("the old Activity link opens All accounts, and Back closes what is open", async ({ page }) => {
+  await signInWithHousehold(page);
+  await page.evaluate(() => (location.hash = "#activity/2030-01"));
+  await expect(page).toHaveURL(/#accounts\/all\/2030-01$/);
+  await expect(page.getByRole("heading", { level: 2, name: "All accounts" })).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "Primary navigation" });
+  await expect(nav.getByRole("link", { name: "Accounts" })).toHaveAttribute("aria-current", "page");
+
+  // The back arrow returns to the list; so does the browser's Back button.
+  await page.getByRole("link", { name: "Back to accounts" }).click();
+  await expect(page).toHaveURL(/#accounts\/2030-01$/);
+  await page.getByRole("link", { name: /^Open All accounts/ }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "All accounts" })).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/#accounts\/2030-01$/);
+  await expect(page.getByRole("link", { name: /^Open All accounts/ })).toBeVisible();
 });
 
 test("signing out returns to the sign-in page", async ({ page }) => {

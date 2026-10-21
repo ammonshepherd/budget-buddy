@@ -22,7 +22,7 @@ export function formatCents(cents: Cents): string {
 }
 
 /**
- * Formats cents with an explicit sign, as the Activity page shows amounts:
+ * Formats cents with an explicit sign, as Accounts lists show amounts:
  * 245000 → "+$2,450.00", -8642 → "−$86.42" (a true minus sign), 0 → "$0.00".
  */
 export function formatSignedCents(cents: Cents): string {

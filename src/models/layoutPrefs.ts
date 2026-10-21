@@ -1,6 +1,6 @@
 /**
  * The desktop layout's collapsible sidebars: the left navigation and the
- * right panel (Budget, Activity, Accounts). Like collapsed groups, a
+ * right panel (Budget, Accounts). Like collapsed groups, a
  * per-device preference in localStorage (never in Supabase), one key per user.
  * Any storage failure or unknown value means "expanded".
  */

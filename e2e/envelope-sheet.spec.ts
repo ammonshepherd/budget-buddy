@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  addAccount,
   addGroupWithEnvelopes,
   addTransaction,
   available,
@@ -16,17 +17,11 @@ test.beforeEach(async ({ page }) => {
   await signInWithHousehold(page);
 });
 
-async function addAccount(page: Page, name: string, opening: string, card = false) {
-  await goTo(page, "Accounts");
-  const add = page.getByRole("form", { name: "Add an account" });
-  if (card) await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill(name);
-  await add.getByLabel(card ? "Amount owed on the opening date" : "Opening balance").fill(opening);
-  await add.getByRole("button", { name: "Add account" }).click();
-}
+const newAccount = (page: Page, name: string, opening: string, card = false) =>
+  addAccount(page, card ? { name, owed: opening } : { name, balance: opening });
 
 test("the sheet shows what is left, the plan and the month's transactions", async ({ page }) => {
-  await addAccount(page, "Checking", "1000");
+  await newAccount(page, "Checking", "1000");
   await addGroupWithEnvelopes(page, "Weekly Basics", ["Groceries"]);
   await editCell(page, "Groceries", "assigned", "300");
   await editCell(page, "Groceries", "planned", "300");
@@ -80,7 +75,7 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
 });
 
 test("tapping a transaction in the sheet opens it to edit, over the sheet", async ({ page }) => {
-  await addAccount(page, "Checking", "1000");
+  await newAccount(page, "Checking", "1000");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
   await editCell(page, "Groceries", "assigned", "300");
   await editCell(page, "Fun", "assigned", "100");
@@ -129,7 +124,7 @@ test("tapping a transaction in the sheet opens it to edit, over the sheet", asyn
 });
 
 test("Saved can be moved into Remaining from the sheet", async ({ page }) => {
-  await addAccount(page, "Checking", "1000");
+  await newAccount(page, "Checking", "1000");
   await addGroupWithEnvelopes(page, "Often", ["Gifts"]);
   await editCell(page, "Gifts", "assigned", "50");
 
@@ -165,7 +160,7 @@ test("Saved can be moved into Remaining from the sheet", async ({ page }) => {
 });
 
 test("an envelope is deleted from its sheet", async ({ page }) => {
-  await addAccount(page, "Checking", "100");
+  await newAccount(page, "Checking", "100");
   await addGroupWithEnvelopes(page, "Everyday", ["Old", "Keep"]);
   const sheet = await openEnvelope(page, "Old");
   await sheet.getByRole("button", { name: "Delete envelope" }).click();
@@ -177,8 +172,8 @@ test("an envelope is deleted from its sheet", async ({ page }) => {
 test("a card's payment envelope sheet shows what can be paid and takes assigning", async ({
   page,
 }) => {
-  await addAccount(page, "Checking", "1000");
-  await addAccount(page, "Visa", "200", true);
+  await newAccount(page, "Checking", "1000");
+  await newAccount(page, "Visa", "200", true);
   await goTo(page, "Budget");
   const sheet = await openEnvelope(page, "Visa payment");
   await expect(sheet.locator(".sheet-hero-label")).toHaveText("Available to pay");

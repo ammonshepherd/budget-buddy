@@ -89,7 +89,7 @@ export interface Transaction {
   /** Set on imported transactions, to recognise the same bank row again. */
   importKey: string | null;
   /**
-   * Ticked off against the bank (Activity's colored bank icon). Only a mark:
+   * Ticked off against the bank (the colored bank icon on Accounts). Only a mark:
    * it changes no budget math and does not lock the transaction.
    */
   reconciled: boolean;

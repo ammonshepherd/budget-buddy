@@ -1996,35 +1996,6 @@ div.sheet-field .sheet-field-value {
   font-size: 0.875rem;
 }
 
-/* Narrows the page to one account: a pill picker on a tinted strip. */
-.activity-account-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-block-size: 2.75rem;
-  padding: 4px 16px;
-  background: var(--bb-purple-tint);
-}
-
-.activity-account-filter label {
-  color: var(--bb-muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.activity-account-filter .move-picker {
-  min-inline-size: 0;
-}
-
-.activity-account-filter select {
-  max-inline-size: 100%;
-  min-block-size: 2.25rem;
-  background: var(--surface);
-  text-overflow: ellipsis;
-}
-
 .activity-totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2202,7 +2173,7 @@ div.sheet-field .sheet-field-value {
   white-space: nowrap;
 }
 
-.activity-day-head h2 {
+.activity-day-head :is(h2, h3) {
   margin: 0;
   font-size: inherit;
   font-weight: inherit;
@@ -3071,46 +3042,6 @@ body:has(.app-shell.desktop) {
   background: rgba(255, 255, 255, 0.12);
 }
 
-/* The account picker and its totals, at the top of the panel. */
-.panel-account {
-  display: grid;
-  margin: -1rem -1.125rem 1rem;
-  border-block-end: 1px solid var(--bb-purple-line);
-  border-radius: 0.875rem 0.875rem 0 0;
-  overflow: clip;
-}
-
-/* Leaves room for the panel's toggle, top right. */
-.panel-account > :first-child {
-  padding-inline-end: 3rem;
-}
-
-.panel-account .activity-account-filter {
-  padding-block: 8px 2px;
-}
-
-.panel-account .activity-account-filter .move-picker {
-  flex: 1;
-}
-
-.panel-account .activity-account-filter select {
-  inline-size: 100%;
-}
-
-.panel-account .activity-totals {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding-block: 8px 12px;
-  border: 0;
-}
-
-.panel-account .activity-balance {
-  grid-column: 1 / -1;
-}
-
-.panel-account .activity-totals dd {
-  font-size: 13px;
-}
-
 .desktop .activity-page > .activity-notice {
   margin: var(--desktop-gap) 0 0;
 }
@@ -3268,42 +3199,11 @@ body:has(.app-shell.desktop) {
   max-inline-size: 36rem;
 }
 
-/* ---- Accounts and Settings, desktop ---- */
+/* ---- Settings, desktop ---- */
 
-.desktop .accounts-page,
 .desktop .settings-page {
   max-inline-size: 100rem;
   margin-inline: auto;
-}
-
-/* Accounts: the list on the left, the panel (add, or edit the chosen one)
-   on the right. */
-.accounts-work {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.accounts-work .side-panel {
-  inset-block-start: var(--desktop-gap);
-  max-block-size: calc(100dvh - 2 * var(--desktop-gap));
-}
-
-.accounts-work .side-panel .form > .section-heading {
-  padding-inline-end: 2.5rem;
-}
-
-/* Rows reach the card's edges, so the selected one's bar has room. */
-.accounts-work .item-button {
-  inline-size: calc(100% + 1.7rem);
-  margin-inline: -0.85rem;
-  padding-inline: 0.85rem;
-}
-
-.desktop .item-button.selected {
-  background: #f6f1fb;
-  box-shadow: inset 4px 0 0 var(--bb-purple);
 }
 
 /* Settings: two columns of sections; the bank import gets both. */
@@ -3380,4 +3280,303 @@ body:has(.app-shell.desktop) {
 /* A long name wraps between words, not inside them. */
 .desktop .envelope-name {
   overflow-wrap: break-word;
+}
+
+/* ---- v0.29.0: Accounts and Activity merged into one Accounts page ---- */
+
+/* Phone: the month and + Add account share the purple band. */
+.accounts-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline-end: 12px;
+  background: var(--bb-purple);
+}
+
+.accounts-band .budget-month {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.band-add {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-block-size: 2.75rem;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--bb-purple);
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.band-add svg {
+  inline-size: 16px;
+  block-size: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2.6;
+}
+
+/* The list: All accounts first, then a bar per type (like Budget's groups). */
+.account-list {
+  background: var(--surface);
+}
+
+.account-group-heading {
+  min-block-size: 2.25rem;
+  padding-inline: 16px;
+}
+
+.account-group-heading h2 {
+  color: var(--bb-purple);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.account-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-block-size: 3rem;
+  padding: 8px 16px;
+  border-block-end: 1px solid var(--bb-row-line);
+  color: var(--bb-ink);
+  text-decoration: none;
+}
+
+.account-row:hover {
+  background: var(--bb-day-bg);
+}
+
+.account-row-name {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.account-row-name small {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.account-row-balance {
+  flex: none;
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.account-row-balance.negative {
+  color: var(--bb-spend);
+}
+
+.all-accounts-row {
+  border-block-end: 0;
+}
+
+.account-list .activity-in {
+  color: var(--bb-income);
+}
+
+.account-list .activity-out {
+  color: var(--bb-spend);
+}
+
+.account-list > .unused-toggle {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+}
+
+/* An account (or All accounts) open: the info pane, and the bar of ticked
+   rows under it, stay pinned to the top while the transactions scroll. */
+.account-sticky {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 5;
+  padding: 8px 12px 0;
+  background: var(--app-background);
+}
+
+.account-sticky .selection-bar {
+  position: static;
+  margin: 8px -12px 0;
+}
+
+.account-pane {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bb-purple-tint);
+}
+
+.account-pane-head {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: 4px;
+  margin: -8px -8px 4px;
+}
+
+.account-pane-head h2 {
+  margin: 0;
+  color: var(--bb-purple);
+  font-size: 17px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.account-closed-tag {
+  margin-inline-start: 0.5rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: var(--bb-muted);
+  background: var(--surface);
+  font-size: 11px;
+  vertical-align: middle;
+}
+
+.pane-icon-button {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: 0;
+  border-radius: 50%;
+  color: var(--bb-purple);
+  background: transparent;
+  cursor: pointer;
+}
+
+.pane-icon-button:hover {
+  background: rgba(75, 42, 104, 0.08);
+}
+
+.pane-icon-button svg {
+  inline-size: 20px;
+  block-size: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.account-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.account-figure {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.account-figure dt {
+  color: var(--bb-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-figure dd {
+  margin: 0;
+  color: var(--bb-ink);
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.account-figure.in dd {
+  color: var(--bb-income);
+}
+
+.account-figure.out dd {
+  color: var(--bb-spend);
+}
+
+/* All accounts: the In / Out / Balance strip sits in the pane. */
+.account-pane .activity-totals {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 10px;
+}
+
+.pane-action {
+  min-block-size: 2.25rem;
+  padding: 0 14px;
+  border: 1px solid var(--bb-purple-line);
+  border-radius: 999px;
+  color: var(--bb-purple);
+  background: var(--surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* An open account's list crosses months: a divider above each month. */
+.activity-month-head {
+  margin: 0;
+  padding: 10px 16px 6px;
+  border-block-end: 1px solid var(--bb-purple-line);
+  color: var(--bb-purple);
+  background: var(--bb-purple-tint);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.show-more {
+  display: block;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  border: 0;
+  border-block-start: 1px solid var(--bb-row-line);
+  color: var(--bb-purple);
+  background: var(--bb-day-bg);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.show-more:hover {
+  background: var(--bb-purple-tint);
+}
+
+/* Desktop: the pane sits under the band, which is pinned too. */
+.desktop .account-sticky {
+  inset-block-start: var(--desktop-band);
+  padding: 12px 12px 0;
+  background: var(--surface);
 }

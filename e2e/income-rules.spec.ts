@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { available, goTo, signInWithHousehold } from "./helpers";
+import { addAccount, available, goTo, signInWithHousehold, openAllAccounts } from "./helpers";
 
 const file = (name: string, text: string) => ({
   name,
@@ -17,11 +17,7 @@ const CHECKING = [
 
 async function setUp(page: Page) {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("100");
-  await page.getByLabel("Opening date").fill("2030-01-01");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "100", date: "2030-01-01" });
   await goTo(page, "Settings");
 }
 
@@ -103,7 +99,7 @@ test("Activity applies the rules to the review list", async ({ page }) => {
   await expect(card.getByRole("status")).toContainText("Imported 3 transactions");
   await addRule(page, "refund");
 
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   const review = page.getByRole("region", { name: "To review" });
   await expect(review.getByRole("listitem")).toHaveCount(3); // payroll, refund, grocery
   await review.getByRole("button", { name: "Apply income rules (1 match)" }).click();

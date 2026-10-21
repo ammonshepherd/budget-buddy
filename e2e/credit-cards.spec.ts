@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  editAccount,
   addGroupWithEnvelopes,
   available,
   envelope,
@@ -8,26 +9,22 @@ import {
   openAddTransaction,
   signInWithHousehold,
   chooseEnvelope,
+  addAccount,
+  accountRow,
 } from "./helpers";
 
 test("a credit card account owes money and gets a payment envelope", async ({ page }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1000");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "1000" });
 
   // Choosing Credit card asks for the amount owed instead of a balance.
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill("Visa");
-  await add.getByLabel("Amount owed on the opening date").fill("200");
-  await add.getByRole("button", { name: "Add account" }).click();
-  const visa = page.locator(".item", { hasText: "Visa" });
+  await addAccount(page, { name: "Visa", owed: "200" });
+  const visa = accountRow(page, "Visa");
   await expect(visa).toContainText("-$200.00");
-  await expect(visa).toContainText(/Credit card · opened \d{4}-\d\d-\d\d owing \$200\.00/);
-  // The add form goes back to Checking for the next account.
-  await expect(add.getByRole("radio", { name: "Checking" })).toBeChecked();
+  // Cards are listed under their own group.
+  await expect(
+    page.getByRole("region", { name: "Credit cards" }).getByRole("link", { name: /^Open Visa/ }),
+  ).toBeVisible();
 
   // What the card owes does not lower Available to Assign; it shows as Uncovered.
   await goTo(page, "Budget");
@@ -60,40 +57,37 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   // Editing keeps the type and shows the amount owed.
   await goTo(page, "Accounts");
   await expect(visa).toContainText("-$230.00");
-  await visa.click();
-  const edit = page.getByRole("form", { name: "Edit Visa" });
+  const edit = await editAccount(page, "Visa");
   await expect(edit.getByRole("radiogroup", { name: "Account type" })).toHaveCount(0);
   await expect(edit.getByLabel("Amount owed on the opening date")).toHaveValue("200.00");
   await edit.getByLabel("Amount owed on the opening date").fill("250");
   await edit.getByRole("button", { name: "Save changes" }).click();
-  await expect(visa).toContainText("-$280.00");
-  await expect(visa).toContainText("owing $250.00");
+  // The pane shows the new opening balance, signed like the balance.
+  await expect(
+    page.locator(".account-figure").filter({ hasText: "Opening balance" }),
+  ).toContainText("-$250.00");
+  await expect(
+    page.locator(".account-figure").filter({ hasText: "Current balance" }),
+  ).toContainText("-$280.00");
 
   // Renaming the card renames its payment envelope.
-  await visa.click();
-  await page.getByRole("form", { name: "Edit Visa" }).getByLabel("Account name").fill("Visa Gold");
-  await page.getByRole("button", { name: "Save changes" }).click();
+  const rename = await editAccount(page, "Visa");
+  await rename.getByLabel("Account name").fill("Visa Gold");
+  await rename.getByRole("button", { name: "Save changes" }).click();
   await goTo(page, "Budget");
   await expect(envelope(page, "Visa Gold payment")).toContainText("Remaining debt $280.00");
 });
 
 test("pay a card from checking, covering what the payment envelope lacks", async ({ page }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1000");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "1000" });
 
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
   await editCell(page, "Groceries", "assigned", "100");
 
   await goTo(page, "Accounts");
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill("Visa");
-  await add.getByLabel("Amount owed on the opening date").fill("200");
-  await add.getByRole("button", { name: "Add account" }).click();
-  await expect(page.locator(".item", { hasText: "Visa" })).toContainText("-$200.00");
+  await addAccount(page, { name: "Visa", owed: "200" });
+  await expect(accountRow(page, "Visa")).toContainText("-$200.00");
 
   // A $40 grocery purchase on the card moves $40 into Visa payment.
   await goTo(page, "Budget");
@@ -134,20 +128,14 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await expect(payment).toContainText("Available to pay $0.00");
   await expect(payment).toContainText("Remaining debt $100.00");
   await goTo(page, "Accounts");
-  await expect(page.locator(".item", { hasText: "Visa" })).toContainText("-$100.00");
-  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$860.00");
+  await expect(accountRow(page, "Visa")).toContainText("-$100.00");
+  await expect(accountRow(page, "Checking")).toContainText("$860.00");
 });
 
 test("a payment nothing can cover is not suggested as Uncategorized", async ({ page }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByRole("button", { name: "Add account" }).click();
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill("Visa");
-  await add.getByLabel("Amount owed on the opening date").fill("300");
-  await add.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking" });
+  await addAccount(page, { name: "Visa", owed: "300" });
 
   // Checking holds $0, so nothing can cover an extra $300 payment.
   const dialog = await openAddTransaction(page);

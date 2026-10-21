@@ -1,11 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  openAccount,
   activityRow,
   addGroupWithEnvelopes,
   chooseEnvelope,
   editCell,
-  goTo,
   signInWithHousehold,
+  addAccount,
+  openAllAccounts,
 } from "./helpers";
 
 // Activity in the desktop layout (this project runs at 1280×800).
@@ -17,19 +19,15 @@ const addButton = (page: Page) =>
     name: "Add transaction",
   });
 
-async function addAccount(page: Page, name: string, balance: string) {
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill(name);
-  await page.getByLabel("Opening balance").fill(balance);
-  await page.getByRole("button", { name: "Add account" }).click();
-}
+const newAccount = (page: Page, name: string, balance: string) =>
+  addAccount(page, { name, balance });
 
 async function setUp(page: Page) {
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1000");
+  await newAccount(page, "Checking", "1000");
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
   await editCell(page, "Groceries", "assigned", "100");
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
 }
 
 test("Add transaction opens a new row at the top of the list", async ({ page }) => {
@@ -62,11 +60,10 @@ test("Add transaction opens a new row at the top of the list", async ({ page }) 
   await expect(activityRow(page, "Never mind")).toHaveCount(0);
 });
 
-test("the new row starts in the chosen account and runs the cover prompt", async ({ page }) => {
+test("the new row starts in the open account and runs the cover prompt", async ({ page }) => {
   await setUp(page);
-  await addAccount(page, "Savings", "500");
-  await goTo(page, "Activity");
-  await page.locator("#activity-account").selectOption({ label: "Savings" });
+  await newAccount(page, "Savings", "500");
+  await openAccount(page, "Savings");
 
   await addButton(page).click();
   const account = newRow(page).getByRole("combobox", { name: "Account" });
@@ -86,7 +83,8 @@ test("the new row starts in the chosen account and runs the cover prompt", async
   await from.selectOption((await available.getAttribute("value"))!);
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(newRow(page)).toHaveCount(0);
-  await expect(activityRow(page, "Big Shop")).toContainText("Savings");
+  // Saved in Savings: it is in this account's list.
+  await expect(activityRow(page, "Big Shop")).toContainText("Groceries");
 });
 
 test("transactions edit in the panel, which shows To review otherwise", async ({ page }) => {
@@ -102,10 +100,11 @@ test("transactions edit in the panel, which shows To review otherwise", async ({
     await expect(newRow(page)).toHaveCount(0);
   }
 
-  // The totals sit at the top of the panel, not in the band; the payee is
-  // bold only while it waits for review.
-  await expect(panel(page).locator(".activity-totals")).toContainText("Balance today");
+  // The totals sit in the info pane above the list, not in the band or the
+  // panel; the payee is bold only while it waits for review.
+  await expect(page.locator(".account-pane .activity-totals")).toContainText("Balance today");
   await expect(page.locator(".activity-band .activity-totals")).toHaveCount(0);
+  await expect(panel(page).locator(".activity-totals")).toHaveCount(0);
   await expect(activityRow(page, "Shell").locator(".activity-payee")).toHaveCSS(
     "font-weight",
     "700",

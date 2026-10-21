@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  editAccount,
   activityRow,
   addGroupWithEnvelopes,
   addTransaction,
@@ -10,6 +11,8 @@ import {
   openEnvelope,
   goTo,
   signInWithHousehold,
+  addAccount,
+  accountRow,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -20,10 +23,8 @@ test.beforeEach(async ({ page }) => {
 test("add an account, envelopes, assign, spend, and cover a shortfall", async ({ page }) => {
   // Account: its opening balance becomes money to assign.
   await page.getByRole("link", { name: "adding an account" }).click();
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1,000");
-  await page.getByRole("button", { name: "Add account" }).click();
-  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$1,000.00");
+  await addAccount(page, { name: "Checking", balance: "1,000" });
+  await expect(accountRow(page, "Checking")).toContainText("$1,000.00");
 
   // Group and envelopes.
   await goTo(page, "Budget");
@@ -57,9 +58,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   // Uncategorized spending and a transfer.
   await addTransaction(page, { amount: "20", payee: "Coffee" });
   await expect(activityRow(page, "Coffee")).toContainText("Uncategorized");
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Savings");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Savings" });
   // One entry records both sides: out of Checking, into Savings.
   await addTransaction(page, {
     amount: "5",
@@ -80,10 +79,8 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
 
   // Account balance = 1,000 − 50 − 400 − 20 − 5.
   await goTo(page, "Accounts");
-  const account = (name: string) =>
-    page.locator(".item").filter({ has: page.locator(".item-title", { hasText: name }) });
-  await expect(account("Checking")).toContainText("$525.00");
-  await expect(account("Savings")).toContainText("$5.00");
+  await expect(accountRow(page, "Checking")).toContainText("$525.00");
+  await expect(accountRow(page, "Savings")).toContainText("$5.00");
 
   // Next month: Fun's unspent $100 is now Saved, and the month is in the URL.
   await goTo(page, "Budget");
@@ -111,9 +108,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
 
 test("edit and delete a transaction", async ({ page }) => {
   await page.getByRole("link", { name: "adding an account" }).click();
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("100");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "100" });
 
   await addTransaction(page, { amount: "12.5", payee: "Lunch" });
   const row = activityRow(page, "Lunch");
@@ -144,19 +139,17 @@ test("edit and delete a transaction", async ({ page }) => {
 
 test("an account can only be closed at a zero balance", async ({ page }) => {
   await page.getByRole("link", { name: "adding an account" }).click();
-  await page.getByLabel("Account name").fill("Old bank");
-  await page.getByLabel("Opening balance").fill("10");
-  await page.getByRole("button", { name: "Add account" }).click();
-  await page.locator(".item", { hasText: "Old bank" }).click();
-  const sheet = page.getByRole("dialog", { name: "Edit Old bank" });
-  await sheet.getByRole("button", { name: "Close account" }).click();
-  await expect(sheet.getByRole("alert")).toContainText("only a $0.00 account can be closed");
+  await addAccount(page, { name: "Old bank", balance: "10" });
+  const form = await editAccount(page, "Old bank");
+  await form.getByRole("button", { name: "Close account" }).click();
+  await expect(form.getByRole("alert")).toContainText("only a $0.00 account can be closed");
 
-  // At $0.00 it closes: the sheet shuts and the account moves to Closed accounts.
-  await sheet.getByLabel("Opening balance").fill("0");
-  await sheet.getByRole("button", { name: "Save changes" }).click();
-  await page.locator(".item", { hasText: "Old bank" }).click();
-  await sheet.getByRole("button", { name: "Close account" }).click();
-  await expect(sheet).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Closed accounts" })).toBeVisible();
+  // At $0.00 it closes: the sheet shuts, and the list hides it behind a toggle.
+  await form.getByLabel("Opening balance").fill("0");
+  await form.getByRole("button", { name: "Save changes" }).click();
+  await expect(form).toBeHidden();
+  await page.getByRole("button", { name: "Edit Old bank" }).click();
+  await form.getByRole("button", { name: "Close account" }).click();
+  await expect(form).toBeHidden();
+  await expect(page.getByRole("button", { name: "Show closed accounts (1)" })).toBeVisible();
 });

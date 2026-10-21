@@ -1,14 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
-import { addTransaction, goTo, signInWithHousehold } from "./helpers";
+import { addAccount, addTransaction, goTo, signInWithHousehold, accountRow } from "./helpers";
 
 test("export everything, then restore it into a new empty household", async ({ page }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("100");
-  await page.getByLabel("Opening date").fill("2030-01-01");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "100", date: "2030-01-01" });
   await addTransaction(page, { amount: "12.34", payee: "Corner Shop" });
 
   await goTo(page, "Settings");
@@ -50,7 +46,7 @@ test("export everything, then restore it into a new empty household", async ({ p
   await expect(fresh.getByRole("status")).toContainText("Restored Test Home: 1 account");
 
   await goTo(page, "Accounts");
-  await expect(page.locator(".item", { hasText: "Checking" })).toBeVisible();
+  await expect(accountRow(page, "Checking")).toBeVisible();
   // Restored, the household is no longer empty.
   await goTo(page, "Settings");
   await expect(page.getByRole("region", { name: "Backup" })).toContainText(

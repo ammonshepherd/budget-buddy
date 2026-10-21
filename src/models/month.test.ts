@@ -25,4 +25,9 @@ describe("formatDay", () => {
     expect(formatDay("2026-10-12")).toBe("Mon Oct 12");
     expect(formatDay("2030-01-01")).toBe("Tue Jan 1");
   });
+
+  it("adds the year when it is not this year's", () => {
+    expect(formatDay("2025-12-12", "2026-10-21")).toBe("Fri Dec 12, 2025");
+    expect(formatDay("2026-10-12", "2026-10-21")).toBe("Mon Oct 12");
+  });
 });

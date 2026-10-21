@@ -6,6 +6,8 @@ import {
   openActivityMonth,
   openAddTransaction,
   signInWithHousehold,
+  addAccount,
+  accountRow,
 } from "./helpers";
 
 // Made-up rows in the same layout as the bank's checking export.
@@ -24,18 +26,12 @@ const file = (name: string, text: string) => ({
   buffer: Buffer.from(text),
 });
 
-async function addAccount(page: Page, name: string, balance: string) {
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill(name);
-  await page.getByLabel("Opening balance").fill(balance);
-  await page.getByLabel("Opening date").fill("2030-01-01");
-  await page.getByRole("button", { name: "Add account" }).click();
-  await expect(page.locator(".item", { hasText: name }).first()).toBeVisible();
-}
+const newAccount = (page: Page, name: string, balance: string) =>
+  addAccount(page, { name, balance, date: "2030-01-01" });
 
 test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ page }) => {
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1300.00");
+  await newAccount(page, "Checking", "1300.00");
 
   await goTo(page, "Settings");
   const card = page.getByRole("region", { name: "Import transactions" });
@@ -60,8 +56,10 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
   // They arrive Uncategorized and wait for review: none of them counts toward
   // Available to Assign until it is decided.
   // The link opens Activity at the month of the newest imported row.
-  await card.getByRole("link", { name: "Give them envelopes on Activity" }).click();
-  await expect(page).toHaveURL(/#activity\/2030-01$/);
+  // The link opens the account (the month of the newest imported row).
+  await card.getByRole("link", { name: "Give them envelopes on Accounts" }).click();
+  await expect(page).toHaveURL(/#accounts\/[\w-]+\/2030-01$/);
+  await expect(page.getByRole("heading", { level: 2, name: "Checking" })).toBeVisible();
   const hardware = activityRow(page, "Withdrawal Debit Card HARDWARE STORE");
   await expect(hardware).toContainText("Uncategorized");
   // Importing does not reconcile: that is ticking rows off against the bank.
@@ -73,7 +71,7 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
       "3 transactions to review ($500.00 in, $318.62 out) are not in Available to Assign yet.",
     ),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Review them on Activity" }).click();
+  await page.getByRole("link", { name: "Review them in All accounts" }).click();
   const review = page.getByRole("list", { name: "To review" });
   await review
     .getByRole("listitem")
@@ -86,7 +84,7 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
   await expect(available(page)).toContainText("$1,800.00");
   await expect(available(page)).toContainText("Income this month $500.00");
   await goTo(page, "Accounts");
-  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$1,481.38");
+  await expect(accountRow(page, "Checking")).toContainText("$1,481.38");
 
   // The same file again: the saved columns are reused and nothing is imported twice.
   await goTo(page, "Settings");
@@ -99,7 +97,7 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
 
 test("a card export with positive purchases and changed columns", async ({ page }) => {
   await signInWithHousehold(page);
-  await addAccount(page, "Card", "0");
+  await newAccount(page, "Card", "0");
 
   await goTo(page, "Settings");
   const card = page.getByRole("region", { name: "Import transactions" });
@@ -138,7 +136,7 @@ test("a card export with positive purchases and changed columns", async ({ page 
 
 test("bank rows match transactions typed in before the import", async ({ page }) => {
   await signInWithHousehold(page);
-  await addAccount(page, "Checking", "1300.00");
+  await newAccount(page, "Checking", "1300.00");
   for (const [date, amount, payee] of [
     ["2030-01-10", "18.62", "Hardware"],
     ["2030-01-02", "300.00", "Visa payment"],
@@ -180,5 +178,5 @@ test("bank rows match transactions typed in before the import", async ({ page })
   await expect(activityRow(page, "Visa payment")).toHaveCount(1);
   await expect(activityRow(page, "Withdrawal ACH CARD PAYMENT")).toHaveCount(1);
   await goTo(page, "Accounts");
-  await expect(page.locator(".item", { hasText: "Checking" })).toContainText("$1,181.38");
+  await expect(accountRow(page, "Checking")).toContainText("$1,181.38");
 });

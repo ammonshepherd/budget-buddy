@@ -21,7 +21,7 @@ export const InstallIcon = () => (
 );
 export const PlusIcon = () => <Icon path="M12 5v14M5 12h14" />;
 export const PencilIcon = () => <Icon path="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />;
-/** A bank: roof, four columns, base. Activity's reconciled mark. */
+/** A bank: roof, four columns, base. The reconciled mark on Accounts. */
 export const BankIcon = () => (
   <Icon path="M3 9.5 12 4l9 5.5zM5.5 10.5v7M10 10.5v7M14 10.5v7M18.5 10.5v7M3.5 20h17" />
 );

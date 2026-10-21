@@ -5,6 +5,7 @@ import {
   goTo,
   openEnvelope,
   signInWithHousehold,
+  addAccount,
 } from "./helpers";
 
 const budgetGroups = (page: Page) => page.locator(".budget-group .group-heading h2");
@@ -129,11 +130,7 @@ test("an envelope is renamed in its sheet; a card's payment envelope is not", as
 
   // A card's payment envelope is named after its card.
   await goTo(page, "Accounts");
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill("Visa");
-  await add.getByLabel("Amount owed on the opening date").fill("0");
-  await add.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Visa", owed: "0" });
   await goTo(page, "Budget");
   const card = await openEnvelope(page, "Visa payment");
   await expect(card.getByRole("heading", { name: "Visa payment" })).toBeVisible();
@@ -157,11 +154,7 @@ test("the envelope sheet moves an envelope to another group", async ({ page }) =
 
   // A card's payment envelope stays with the other card payments.
   await goTo(page, "Accounts");
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill("Visa");
-  await add.getByLabel("Amount owed on the opening date").fill("0");
-  await add.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Visa", owed: "0" });
   await goTo(page, "Budget");
   const card = await openEnvelope(page, "Visa payment");
   await expect(card.getByRole("combobox")).toHaveCount(0);

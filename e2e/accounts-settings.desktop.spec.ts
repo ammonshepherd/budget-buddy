@@ -1,19 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
-import { goTo, signInWithHousehold } from "./helpers";
+import { accountRow, goTo, openAccount, signInWithHousehold } from "./helpers";
 
 // Accounts and Settings in the desktop layout (this project runs at 1280×800).
 
 const panel = (page: Page) => page.locator("aside.side-panel");
 
-test("Accounts adds in the panel, and edits and closes the chosen account there", async ({
-  page,
-}) => {
+test("Accounts adds in the panel; an open account edits and imports there", async ({ page }) => {
   await signInWithHousehold(page);
   await goTo(page, "Accounts");
   await expect(panel(page)).toHaveAccessibleName("Add an account");
   await expect(
     page.getByText("No accounts yet. Add your checking account on the right."),
   ).toBeVisible();
+  // No + Add account button: the form is already in the panel.
+  await expect(page.getByRole("button", { name: "Add account", exact: true })).toHaveCount(1);
 
   for (const [name, balance] of [
     ["Checking", "250"],
@@ -23,24 +23,38 @@ test("Accounts adds in the panel, and edits and closes the chosen account there"
     await panel(page).getByLabel("Opening balance").fill(balance);
     await panel(page).getByRole("button", { name: "Add account" }).click();
   }
-  const list = page.locator(".accounts-work .list-card").first();
-  await expect(list).toContainText("Checking");
-  await expect(list).toContainText("$250.00");
+  await expect(accountRow(page, "Checking")).toContainText("$250.00");
 
-  // The chosen account edits in the panel, not in a sheet.
-  await list.getByRole("button", { name: /^Checking/ }).click();
+  // An open account: the pencil edits it in the panel, not in a sheet, and
+  // focus goes back to the pencil afterwards.
+  await accountRow(page, "Checking").click();
+  const pencil = page.getByRole("button", { name: "Edit Checking" });
+  await pencil.click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(panel(page)).toHaveAccessibleName("Edit Checking");
+  // The transactions stay in view beside it.
+  await expect(page.getByRole("region", { name: "Transactions" })).toBeVisible();
+  await panel(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(panel(page)).toHaveAccessibleName("To review");
+  await expect(pencil).toBeFocused();
+  await pencil.click();
   await panel(page).getByLabel("Account name").fill("Everyday Checking");
   await panel(page).getByRole("button", { name: "Save changes" }).click();
-  await expect(panel(page)).toHaveAccessibleName("Add an account");
-  await expect(list).toContainText("Everyday Checking");
+  await expect(panel(page)).toHaveAccessibleName("To review");
+  await expect(page.getByRole("heading", { level: 2, name: "Everyday Checking" })).toBeVisible();
 
-  // Close account from the panel; it moves to Closed accounts.
-  await list.getByRole("button", { name: /^Old Savings/ }).click();
+  // Import CSV opens in the panel too, already in this account.
+  await page.getByRole("button", { name: "Import CSV" }).click();
+  await expect(panel(page)).toHaveAccessibleName("Import CSV into Everyday Checking");
+  await expect(panel(page).getByLabel("Bank CSV file")).toBeVisible();
+  await expect(panel(page).getByLabel("Account", { exact: true })).toHaveCount(0);
+
+  // Close account from the panel; it returns to the list, where it is hidden.
+  await openAccount(page, "Old Savings");
+  await page.getByRole("button", { name: "Edit Old Savings" }).click();
   page.once("dialog", (dialog) => void dialog.accept());
   await panel(page).getByRole("button", { name: "Close account" }).click();
-  await expect(page.getByRole("heading", { name: "Closed accounts" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Show closed accounts (1)" })).toBeVisible();
   await expect(panel(page)).toHaveAccessibleName("Add an account");
 });
 

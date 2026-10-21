@@ -36,7 +36,8 @@ always describes the app as of that version (including §9, not built yet).
 - `src/views/` — React components. Display only; no money math.
 
 Reuse the existing `styles.css`, icons, manifest and page names
-(Budget, Accounts, Activity, Settings) from v0.0.1 where they still fit.
+(Budget, Accounts, Settings; Activity merged into Accounts in v0.29.0) from
+v0.0.1 where they still fit.
 
 ## Money
 
@@ -84,7 +85,8 @@ envelope (the envelope pays; Available to Assign does not change) or made a
 transfer. So giving a transaction an envelope never moves Available to Assign;
 only income, assigning, and covering a shortfall from Available to Assign do.
 The Budget page shows this month's income and how many transactions wait for
-review (money in and out); Activity lists them ("To review", "Mark as Income").
+review (money in and out); Accounts lists them ("To review", "Mark as Income")
+in All accounts and, for its own, in each open account.
 Income rules (`income_rules`, `src/models/incomeRules.ts`) mark inflows whose
 description contains a rule's text (case- and space-insensitive; optionally one
 account) as Income: at import (the preview sets `isIncome` per row) and, on
@@ -191,50 +193,64 @@ non-card budget balances − all envelope money (P included)`.
   localStorage, `src/models/layoutPrefs.ts`). Budget: one-line envelope rows
   under a band with the month and Available to Assign; the panel shows the
   month summary, the chosen envelope, or a transaction being edited.
-  Activity edits in the panel too (the account picker and totals sit at
-  the top of its panel, not in the band) and adds through a new row at the
-  top of its list; Budget and Accounts add through the dialog. Accounts adds and
-  edits accounts in the panel; Settings shows its sections in two columns.
+  Accounts with an account (or All accounts) open edits transactions, the
+  account and its CSV import in the panel (the info pane stays above the
+  list) and adds through a new row at the top of its list; Budget and the
+  accounts list add through the dialog, and the list adds accounts in the
+  panel. Settings shows its sections in two columns.
   Below 1000px nothing changes.
 - Credit card debt (what the cards owe today, `cardDebt` in
   `src/models/accounts.ts`, display only) shows on every page while above
-  $0.00: under the month band on Budget and Activity, at the top of
-  Accounts and Settings. Its background is one of 30 reds picked once per
+  $0.00: under the month band on Budget and Accounts, at the top of
+  Settings. Its background is one of 30 reds picked once per
   page load (`src/models/cardDebtShades.ts`), with readable text on each.
 - Transactions are added with the floating round + button (bottom right of
-  Budget, Accounts and Activity; not Settings), which opens the transaction form
-  in a modal `<dialog>` (`TransactionDialog`). Activity (layout decided in
-  v0.21.0, `docs/mockups/activity-screen.html`) shows one month, the same month
-  as Budget (`#activity/YYYY-MM`; the nav keeps it between the two): a purple
-  month band, an Account picker ("All accounts" or one budget account,
-  closed ones last; kept between months and pages until reload; it narrows
-  the rows, totals and To review list, and a transfer shows when either side
-  is in the account), an In / Out / Balance today strip (display only, from
-  `src/models/activity.ts`; transfers count in In and Out only when one
-  account is chosen; the balance is as of today, whatever the month, with
-  the reconciled balance under it, or cash and card debt on All accounts
-  with a card), then day headings (newest first, with the day's net; not
-  collapsible). Each row: a checkbox, a bank icon (grey = not reconciled,
-  green = reconciled), payee over account, envelope, signed amount (outflows
-  red, inflows green, always bold; the payee is bold only while to review). Ticked rows are highlighted; a pinned bar shows their
-  count and total with Mark reconciled / Mark unreconciled (decided in
-  v0.27.0: `transactions.reconciled` is only a mark: no statement balance,
-  no lock on edits, no budget math). A transfer shows once, from its money-out side ("From → To",
-  signed and coloured by its side in the account picked, or on All accounts
-  by the side shown). A split shows a "Split (N)" pill and its parts, open until closed
-  (not remembered). Tapping the payee opens the same dialog to edit, with
-  Delete (Delete transfer for a transfer) at the bottom. Rows have no
-  Edit/Delete links. Transactions to review show "Uncategorized" on an amber
-  label; Activity's "To review" list (every month) sits above the transactions.
+  Budget and Accounts; not Settings), which opens the transaction form in a
+  modal `<dialog>` (`TransactionDialog`), starting in the open account.
+- Accounts (Accounts and Activity merged in v0.29.0; the Activity layout
+  was decided in v0.21.0, `docs/mockups/activity-screen.html`). Three tabs:
+  Budget, Accounts, Settings. What is open is in the URL (`#accounts`,
+  `#accounts/all`, `#accounts/<id>`, each with `/YYYY-MM`; old `#activity`
+  links open All accounts), so Back closes it; the month is shared with
+  Budget. The list: a purple month band with + Add account (a sheet), "All
+  accounts" (the month's In / Out) first, then Checking, Credit cards and
+  Tracking groups (`groupAccounts`), each row a link with name and balance;
+  closed accounts behind "Show closed accounts". Opening one replaces the
+  list with a sticky info pane (back arrow, name, pencil; Current balance,
+  Month start, Opening balance, Money in, Money out and Reconciled from
+  `accountFigures` in `src/models/activity.ts`, display only; transfers and
+  card payments left out of in and out; only the month figures follow the
+  month; Import CSV), its To review list, and every transaction of the
+  account in any month under month dividers (day nets leave transfers out).
+  All accounts keeps the old Activity page: one month, the In / Out /
+  Balance today strip (transfers left out; the balance is as of today, with
+  the reconciled balance under it, or cash and card debt with a card), To
+  review, rows with the account line. Both lists show 100 rows at a time
+  ("Show N more (M left)", `firstRows`; everything is already loaded, no
+  paging in Supabase). Day headings newest first, with the day's net, not
+  collapsible. Each row: a checkbox, a bank icon (grey = not reconciled,
+  green = reconciled), payee (over the account on All accounts), envelope,
+  signed amount (outflows red, inflows green, always bold; the payee is bold
+  only while to review). Ticked rows are highlighted; a bar under the pane
+  shows their count and total with Mark reconciled / Mark unreconciled
+  (decided in v0.27.0: `transactions.reconciled` is only a mark: no
+  statement balance, no lock on edits, no budget math). A transfer shows
+  once, from its money-out side ("From → To", signed and coloured by its
+  side in the open account, or on All accounts by the side shown). A split
+  shows a "Split (N)" pill and its parts, open until closed (not
+  remembered). Tapping the payee opens the same dialog to edit, with Delete
+  (Delete transfer for a transfer) at the bottom. Rows have no Edit/Delete
+  links. Transactions to review show "Uncategorized" on an amber label.
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount,
   each has the transaction's sign (no mixed refund lines) and an envelope appears
   once. Any outflow (card purchases too) or non-card inflow can be split; a split
   that overdraws several envelopes prompts to cover them one at a time, saving
   only after the last.
-- Accounts are closed (soft delete), never deleted with their transactions. On
-  Accounts, tapping an open account's row opens its edit form in a modal sheet
-  with Close account at the bottom; rows have no Edit/Close links.
+- Accounts are closed (soft delete), never deleted with their transactions. An
+  open account's pencil opens its edit form (a modal sheet on a phone, the
+  panel on a desktop) with Close account at the bottom, which returns to the
+  list; rows have no Edit/Close links. A closed account opens read only.
 - An account's opening balance is its balance on the opening date, before any
   of its transactions, so the opening date can be edited only up to the date
   of its first transaction.
