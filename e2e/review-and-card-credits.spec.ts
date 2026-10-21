@@ -10,16 +10,15 @@ import {
   openAddTransaction,
   signInWithHousehold,
   chooseEnvelope,
+  addAccount,
+  openAllAccounts,
 } from "./helpers";
 
 test("giving envelopes, covering and refunds move Available to Assign as expected", async ({
   page,
 }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("500");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "500" });
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
   await editCell(page, "Groceries", "assigned", "100");
   await expect(available(page)).toContainText("$400.00");
@@ -33,7 +32,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(available(page)).toContainText("$400.00");
   await expect(page.getByText("1 transaction to review ($0.00 in, $30.00 out)")).toBeVisible();
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   await editActivityRow(page, "Market");
   const edit = page.getByRole("dialog", { name: "Edit transaction" });
   await chooseEnvelope(edit.getByLabel("Envelope"), "Groceries");
@@ -81,15 +80,8 @@ test("money into a credit card is a card credit that only lowers what is owed", 
   page,
 }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("500");
-  await page.getByRole("button", { name: "Add account" }).click();
-  const add = page.getByRole("form", { name: "Add an account" });
-  await add.getByRole("radio", { name: "Credit card" }).check();
-  await add.getByLabel("Account name").fill("Visa");
-  await add.getByLabel("Amount owed on the opening date").fill("200");
-  await add.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "500" });
+  await addAccount(page, { name: "Visa", owed: "200" });
 
   await goTo(page, "Budget");
   const dialog = await openAddTransaction(page);
@@ -111,7 +103,7 @@ test("money into a credit card is a card credit that only lowers what is owed", 
   const payment = envelope(page, "Visa payment");
   await expect(payment.locator(".envelope-remaining")).toHaveText("$0.00");
   await expect(payment).toContainText("Remaining debt $170.00");
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   const credit = activityRow(page, "Returned shoes");
   await expect(credit.locator(".activity-account")).toHaveText("Visa");
   await expect(credit.locator(".activity-category")).toHaveText("Card credit");

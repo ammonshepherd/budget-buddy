@@ -8,7 +8,7 @@ const skipReason = missingForTests(env);
 
 test.skip(!!skipReason, skipReason ?? "");
 
-test("user A sees Test Household A's budget, accounts and activity", async ({ page }) => {
+test("user A sees Test Household A's budget, accounts and transactions", async ({ page }) => {
   await page.goto("./");
   await page.getByLabel("Email").fill(env.users.a.email);
   await page.getByLabel("Password").fill(env.users.a.password);
@@ -27,7 +27,7 @@ test("user A sees Test Household A's budget, accounts and activity", async ({ pa
   await expect(page.getByText("Test Visa", { exact: true })).toBeVisible();
   await expect(page.getByText("B Checking")).toHaveCount(0);
 
-  await nav.getByRole("link", { name: "Activity" }).click();
+  await page.getByRole("link", { name: /^Open All accounts/ }).click();
   const review = page.getByRole("region", { name: "To review" });
   await expect(review.getByText("Mystery Charge")).toBeVisible();
 });

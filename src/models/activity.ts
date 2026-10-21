@@ -1,8 +1,10 @@
 /**
- * The Activity page's month: every transaction dated in it, across budget
- * accounts, grouped by day, plus the month's money in and out, today's
- * balance, and the total of the rows ticked for reconciling. These are
- * display figures for this page only; they are not Available to Assign.
+ * The Accounts page's transaction lists. All accounts: every transaction
+ * dated in one month, across budget accounts, grouped by day, plus the
+ * month's money in and out and today's balance. One account open: all its
+ * transactions, any month, plus its info pane figures. Both are shown 100
+ * rows at a time, and ticked rows add up for reconciling. These are display
+ * figures for this page only; they are not Available to Assign.
  */
 import { accountBalance, isCardCredit, isToReview } from "./budgetMath";
 import type { Cents } from "./money";
@@ -76,7 +78,7 @@ export interface ActivityMonth {
 }
 
 /**
- * The transactions Activity shows: not voided, in a budget account. A
+ * The transactions All accounts shows: not voided, in a budget account. A
  * transfer is shown once, by its money-out side (its money-in side when the
  * other account is off budget).
  */
@@ -88,21 +90,6 @@ function shownTransactions(data: BudgetData): Transaction[] {
     const partner = transferPartner(data, tx);
     return !partner || partner.voided || !onBudget.has(partner.accountId);
   });
-}
-
-/** An account Activity can be narrowed to. */
-export interface ActivityAccount {
-  id: string;
-  name: string;
-  closed: boolean;
-}
-
-/** The budget accounts to pick from: open ones first, then closed, each by name. */
-export function activityAccounts(data: BudgetData): ActivityAccount[] {
-  return data.accounts
-    .filter((a) => a.onBudget)
-    .map((a) => ({ id: a.id, name: a.name, closed: a.closedAt !== null }))
-    .sort((a, b) => Number(a.closed) - Number(b.closed) || a.name.localeCompare(b.name));
 }
 
 /** Whether a shown transaction belongs to the account (a transfer: either side). */
@@ -183,7 +170,7 @@ function activityRow(data: BudgetData, tx: Transaction, accountId: string | null
 }
 
 /**
- * Activity for month M: rows by day (by transaction date) and the month's
+ * All accounts for month M: rows by day (by transaction date) and the month's
  * totals; with `accountId`, only that account's transactions (and transfers
  * to or from it, which then count in the totals and day nets).
  */
@@ -266,4 +253,114 @@ export function activityBalance(
     } else balance.cash += now;
   }
   return balance;
+}
+
+// ---------------------------------------------------------------------------
+// The Accounts page: one account open, and lists shown 100 rows at a time.
+// ---------------------------------------------------------------------------
+
+/** The figures on an open account's info pane (display only). */
+export interface AccountFigures {
+  /** Opening balance plus every transaction, whatever its date (as the accounts list shows). */
+  current: Cents;
+  /** The balance at the start of the month: every transaction dated before its first day. */
+  monthStart: Cents;
+  /** The balance on the opening date, as entered (signed: a card owing $50 is −$50.00). */
+  opening: Cents;
+  /** Opening balance plus the transactions marked reconciled. */
+  reconciled: Cents;
+  /** The month's inflows, transfers left out: income, refunds, card credits, inflows to review. */
+  moneyIn: Cents;
+  /** The month's outflows, transfers left out: spending and card purchases (positive). */
+  moneyOut: Cents;
+}
+
+/**
+ * One account's figures for month M. Transfers (card payments too) are left
+ * out of money in and out; a split counts once, at its full amount.
+ */
+export function accountFigures(data: BudgetData, accountId: string, month: Month): AccountFigures {
+  const account = data.accounts.find((a) => a.id === accountId);
+  if (!account) throw new RangeError(`Unknown account ${accountId}`);
+  let moneyIn = 0;
+  let moneyOut = 0;
+  for (const tx of data.transactions) {
+    if (tx.accountId !== accountId || tx.voided || tx.isTransfer) continue;
+    if (monthOf(tx.date) !== month) continue;
+    if (tx.amount > 0) moneyIn += tx.amount;
+    else moneyOut -= tx.amount;
+  }
+  return {
+    current: accountBalance(accountId, data),
+    monthStart: accountBalance(accountId, data, { before: `${month}-01` }),
+    opening: account.openingBalance,
+    reconciled: accountBalance(accountId, data, { reconciled: true }),
+    moneyIn,
+    moneyOut,
+  };
+}
+
+/**
+ * Every transaction of one account, any month, by day (newest first). A
+ * transfer shows once, by its money-out side, with its amount in this
+ * account. Day nets leave transfers out, like the account's money in and out.
+ */
+export function accountHistory(data: BudgetData, accountId: string): ActivityDay[] {
+  const days: ActivityDay[] = [];
+  const byDate = new Map<IsoDate, ActivityDay>();
+  for (const own of data.transactions) {
+    if (own.accountId !== accountId || own.voided) continue;
+    // A transfer's row edits its money-out side, as on All accounts.
+    const partner = own.isTransfer && own.amount > 0 ? transferPartner(data, own) : undefined;
+    const tx = partner && !partner.voided ? partner : own;
+    const row = activityRow(data, tx, accountId);
+    let day = byDate.get(own.date);
+    if (!day) {
+      day = { date: own.date, net: 0, rows: [] };
+      byDate.set(own.date, day);
+      days.push(day);
+    }
+    day.rows.push(row);
+    if (row.kind !== "transfer") day.net += row.amount;
+  }
+  return days.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/** Some of a list's days: the first `limit` rows, a day cut short keeping its full net. */
+export interface DaysPage {
+  days: ActivityDay[];
+  /** Rows shown. */
+  shown: number;
+  /** Rows in the whole list. */
+  total: number;
+}
+
+/**
+ * The first `limit` rows of a list of days, for showing 100 at a time. A
+ * split is one row, so its parts always come with it; a day cut short keeps
+ * its heading and full net, and the next page continues under it.
+ */
+export function firstRows(days: ActivityDay[], limit: number): DaysPage {
+  const total = days.reduce((sum, day) => sum + day.rows.length, 0);
+  const shownDays: ActivityDay[] = [];
+  let shown = 0;
+  for (const day of days) {
+    if (shown >= limit) break;
+    const rows = day.rows.slice(0, limit - shown);
+    shownDays.push(rows.length === day.rows.length ? day : { ...day, rows });
+    shown += rows.length;
+  }
+  return { days: shownDays, shown, total };
+}
+
+/** Days under their month, newest first: an open account's list crosses months. */
+export function daysByMonth(days: ActivityDay[]): { month: Month; days: ActivityDay[] }[] {
+  const months: { month: Month; days: ActivityDay[] }[] = [];
+  for (const day of days) {
+    const month = monthOf(day.date);
+    const last = months[months.length - 1];
+    if (last?.month === month) last.days.push(day);
+    else months.push({ month, days: [day] });
+  }
+  return months;
 }

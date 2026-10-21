@@ -1,6 +1,6 @@
 import type { Cents } from "./money";
 import { accountBalance } from "./budgetMath";
-import type { AccountType, BudgetData, IsoDate } from "./types";
+import type { Account, AccountType, BudgetData, IsoDate } from "./types";
 
 export const ACCOUNT_TYPE_NAMES: Record<AccountType, string> = {
   checking: "Checking",
@@ -36,4 +36,27 @@ export function cardDebt(
   return data.accounts
     .filter((a) => a.type === "credit_card")
     .reduce((owed, card) => owed - accountBalance(card.id, data, { through: today }), 0);
+}
+
+/** The Accounts list's groups, in order. Tracking accounts are off budget. */
+export type AccountGroupName = "Checking" | "Credit cards" | "Tracking";
+
+/**
+ * Accounts under their group (Checking, Credit cards, Tracking), each by
+ * name; empty groups are left out. Pass open or closed accounts as needed.
+ */
+export function groupAccounts<A extends Pick<Account, "name" | "type" | "onBudget">>(
+  accounts: A[],
+): { name: AccountGroupName; accounts: A[] }[] {
+  const groupOf = (a: A): AccountGroupName =>
+    !a.onBudget ? "Tracking" : a.type === "credit_card" ? "Credit cards" : "Checking";
+  const order: AccountGroupName[] = ["Checking", "Credit cards", "Tracking"];
+  return order
+    .map((name) => ({
+      name,
+      accounts: accounts
+        .filter((a) => groupOf(a) === name)
+        .sort((x, y) => x.name.localeCompare(y.name)),
+    }))
+    .filter((group) => group.accounts.length > 0);
 }

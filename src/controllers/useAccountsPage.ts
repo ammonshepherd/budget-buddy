@@ -1,7 +1,9 @@
-import { openingBalanceFromEntry, openingBalanceToEntry } from "../models/accounts";
+import { groupAccounts, openingBalanceFromEntry, openingBalanceToEntry } from "../models/accounts";
+import { activityMonth } from "../models/activity";
 import { accountBalance } from "../models/budgetMath";
 import { UserFacingError, type NewAccount } from "../models/dataStore";
 import { centsToInput } from "../models/money";
+import type { Month } from "../models/month";
 import type { AccountType, BudgetData, IsoDate } from "../models/types";
 import { requireCents, requireName } from "./input";
 import type { Budget } from "./useBudget";
@@ -30,8 +32,12 @@ function readAccountForm(form: AccountForm): NewAccount {
   };
 }
 
-/** The Accounts page: accounts with their computed balances, plus add, edit and close. */
-export function useAccountsPage(budget: Budget, data: BudgetData) {
+/**
+ * The Accounts page: accounts with their computed balances (grouped for the
+ * list), the month's money in and out across all accounts, plus add, edit
+ * and close.
+ */
+export function useAccountsPage(budget: Budget, data: BudgetData, month: Month) {
   const withBalances = data.accounts.map((account) => ({
     ...account,
     balance: accountBalance(account.id, data),
@@ -39,9 +45,17 @@ export function useAccountsPage(budget: Budget, data: BudgetData) {
     openingBalanceInput: centsToInput(openingBalanceToEntry(account.type, account.openingBalance)),
   }));
 
+  const openAccounts = withBalances.filter((a) => !a.closedAt);
+  const closedAccounts = withBalances.filter((a) => a.closedAt);
+
   return {
-    openAccounts: withBalances.filter((a) => !a.closedAt),
-    closedAccounts: withBalances.filter((a) => a.closedAt),
+    openAccounts,
+    closedAccounts,
+    /** The list: Checking, Credit cards, then Tracking (off budget), each by name. */
+    openGroups: groupAccounts(openAccounts),
+    closedGroups: groupAccounts(closedAccounts),
+    /** All accounts' money in and out this month (display only; transfers left out). */
+    monthTotals: activityMonth(data, month).totals,
 
     addAccount: async (form: AccountForm) => {
       const account = readAccountForm(form);

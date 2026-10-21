@@ -51,9 +51,13 @@ export function formatShortDay(date: IsoDate): string {
   });
 }
 
-/** "2026-10-12" → "Mon Oct 12" (the Activity page's day headings; the month band shows the year). */
-export function formatDay(date: IsoDate): string {
+/**
+ * "2026-10-12" → "Mon Oct 12" (day headings in transaction lists). With
+ * `today`, a date in another year adds it: "Fri Dec 12, 2025".
+ */
+export function formatDay(date: IsoDate, today?: IsoDate): string {
   const [year, mon, day] = date.split("-").map(Number) as [number, number, number];
   const weekday = new Date(year, mon - 1, day).toLocaleDateString("en-US", { weekday: "short" });
-  return `${weekday} ${formatShortDay(date)}`;
+  const otherYear = today !== undefined && today.slice(0, 4) !== date.slice(0, 4);
+  return `${weekday} ${formatShortDay(date)}${otherYear ? `, ${year}` : ""}`;
 }

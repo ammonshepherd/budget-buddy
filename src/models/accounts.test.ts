@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cardDebt, openingBalanceFromEntry, openingBalanceToEntry } from "./accounts";
+import {
+  cardDebt,
+  groupAccounts,
+  openingBalanceFromEntry,
+  openingBalanceToEntry,
+} from "./accounts";
 import type { Account, Transaction } from "./types";
 
 describe("opening balance entry", () => {
@@ -79,5 +84,28 @@ describe("card debt", () => {
       transactions: [],
     };
     expect(cardDebt(data, "2026-10-20")).toBe(2_000);
+  });
+});
+
+describe("groupAccounts", () => {
+  const a = (name: string, type: "checking" | "credit_card", onBudget = true) => ({
+    name,
+    type,
+    onBudget,
+  });
+
+  it("groups Checking, Credit cards, then Tracking, each by name, leaving out empty groups", () => {
+    const groups = groupAccounts([
+      a("Visa", "credit_card"),
+      a("Savings", "checking"),
+      a("Brokerage", "checking", false),
+      a("Main", "checking"),
+    ]);
+    expect(groups.map((g) => [g.name, g.accounts.map((x) => x.name)])).toEqual([
+      ["Checking", ["Main", "Savings"]],
+      ["Credit cards", ["Visa"]],
+      ["Tracking", ["Brokerage"]],
+    ]);
+    expect(groupAccounts([a("Visa", "credit_card")]).map((g) => g.name)).toEqual(["Credit cards"]);
   });
 });

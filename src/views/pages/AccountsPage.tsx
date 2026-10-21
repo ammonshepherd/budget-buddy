@@ -1,322 +1,237 @@
-import { useState, type FormEvent, type ReactNode } from "react";
-import { useAccountsPage, type AccountForm as Fields } from "../../controllers/useAccountsPage";
-import { useAsyncAction } from "../../controllers/useAsyncAction";
-import { useSidebar } from "../../controllers/useLayout";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useAccountsPage } from "../../controllers/useAccountsPage";
 import type { Budget } from "../../controllers/useBudget";
-import { ACCOUNT_TYPE_NAMES } from "../../models/accounts";
-import { todayIso } from "../../models/month";
-import type { AccountType, BudgetData } from "../../models/types";
-import { ErrorMessage, Money, Sheet } from "../components";
+import { useSidebar } from "../../controllers/useLayout";
+import { formatCents, formatSignedCents } from "../../models/money";
+import { addMonths, formatMonth, type Month } from "../../models/month";
+import { accountsHref, type AccountsView } from "../../models/routes";
+import type { BudgetData } from "../../models/types";
+import { AddAccount, type AccountRow } from "../AccountForm";
+import { AccountView } from "../AccountView";
 import { CardDebt } from "../CardDebt";
+import { Sheet } from "../components";
+import { PlusIcon } from "../icons";
 import { SidePanel } from "../SidePanel";
 
 type Page = ReturnType<typeof useAccountsPage>;
-type AccountRow = Page["openAccounts"][number];
 
 /**
- * The accounts with their balances; tap one to edit or close it (in a sheet,
- * or on a desktop in the panel on the right, which otherwise holds "Add an
- * account").
+ * Accounts: the list of accounts (nothing open), or with All accounts or one
+ * account open (AccountView). What is open lives in the URL, so the
+ * browser's Back button closes it and a reload keeps it. Coming back to the
+ * list puts it where it was scrolled.
  */
 export function AccountsPage({
   budget,
   data,
+  month,
+  open,
   userId,
   desktop = false,
+  addRequest = 0,
 }: {
   budget: Budget;
   data: BudgetData;
+  month: Month;
+  open: AccountsView;
   userId: string;
   desktop?: boolean;
+  addRequest?: number;
 }) {
-  const page = useAccountsPage(budget, data);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const editing = page.openAccounts.find((a) => a.id === editingId);
-  const panel = useSidebar("panel", userId);
-  const edit = (id: string) => {
-    setEditingId(id);
-    if (desktop) panel.expand();
-  };
+  const page = useAccountsPage(budget, data, month);
 
-  const accountList = (
-    <section className="list-card">
-      <div className="section-heading">
-        <h2>Your accounts</h2>
-        <span className="section-count">{page.openAccounts.length}</span>
-      </div>
-      {page.openAccounts.length === 0 ? (
-        <p className="empty-state">
-          No accounts yet. Add your checking account {desktop ? "on the right" : "below"}.
-        </p>
-      ) : (
-        <ul className="item-list">
-          {page.openAccounts.map((account) => (
-            <li key={account.id}>
-              <button
-                className={
-                  desktop && account.id === editingId
-                    ? "item item-button selected"
-                    : "item item-button"
-                }
-                type="button"
-                aria-expanded={desktop ? account.id === editingId : undefined}
-                onClick={() => edit(account.id)}
-              >
-                <AccountSummary account={account} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-  const addForm = (
-    <AccountForm
-      heading="Add an account"
-      button="Add account"
-      initial={{ type: "checking", name: "", openingBalance: "", openingDate: todayIso() }}
-      chooseType
-      resetAfterSubmit
-      onSubmit={page.addAccount}
-    />
-  );
-  const closedList = page.closedAccounts.length > 0 && (
-    <section className="list-card">
-      <div className="section-heading">
-        <h2>Closed accounts</h2>
-        <span className="section-count">{page.closedAccounts.length}</span>
-      </div>
-      <ul className="item-list">
-        {page.closedAccounts.map((account) => (
-          <li className="item" key={account.id}>
-            <span className="item-title">{account.name}</span>
-            <Money cents={account.balance} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+  // Keep track of how far the list is scrolled; a newly opened view starts
+  // at the top, and the list comes back where it was.
+  const listScroll = useRef(0);
+  useLayoutEffect(() => {
+    window.scrollTo(0, open === null ? listScroll.current : 0);
+    if (open !== null) return;
+    const remember = () => (listScroll.current = window.scrollY);
+    window.addEventListener("scroll", remember, { passive: true });
+    return () => window.removeEventListener("scroll", remember);
+  }, [open]);
 
   return (
-    <section className="page-view stack accounts-page" aria-labelledby="accounts-title">
-      <CardDebt data={data} />
-      <header className="page-heading">
-        <p className="eyebrow">Your money sources</p>
-        <h1 id="accounts-title">Accounts</h1>
-        <p>See the accounts that provide money for your budget.</p>
-      </header>
-
-      {desktop ? (
-        <div className="accounts-work">
-          <div className="stack">
-            {accountList}
-            {closedList}
-          </div>
-          <SidePanel
-            label={editing ? `Edit ${editing.name}` : "Add an account"}
-            collapsed={panel.collapsed}
-            onToggle={panel.toggle}
-          >
-            {editing ? (
-              <div className="panel-edit">
-                <button
-                  className="text-button panel-back"
-                  type="button"
-                  onClick={() => setEditingId(null)}
-                >
-                  ‹ Back to Add an account
-                </button>
-                <EditAccount
-                  key={editing.id}
-                  account={editing}
-                  page={page}
-                  onDone={() => setEditingId(null)}
-                />
-              </div>
-            ) : (
-              addForm
-            )}
-          </SidePanel>
-        </div>
-      ) : (
-        <>
-          {accountList}
-          <Sheet
-            open={editing !== undefined}
-            label={`Edit ${editing?.name ?? "account"}`}
-            onClose={() => setEditingId(null)}
-          >
-            {() => <EditAccount account={editing!} page={page} onDone={() => setEditingId(null)} />}
-          </Sheet>
-          <section className="list-card">{addForm}</section>
-          {closedList}
-        </>
-      )}
-    </section>
-  );
-}
-
-/** The edit form (in the sheet, or the desktop panel), with Close account at the bottom. */
-function EditAccount({
-  account,
-  page,
-  onDone,
-}: {
-  account: AccountRow;
-  page: Page;
-  onDone: () => void;
-}) {
-  const close = useAsyncAction(async () => {
-    await page.closeAccount(account.id);
-    onDone();
-  });
-
-  return (
-    <AccountForm
-      heading={`Edit ${account.name}`}
-      button="Save changes"
-      initial={{
-        type: account.type,
-        name: account.name,
-        openingBalance: account.openingBalanceInput,
-        openingDate: account.openingDate,
-      }}
-      onSubmit={async (form) => {
-        await page.updateAccount(account.id, form);
-        onDone();
-      }}
-      onCancel={onDone}
+    <section
+      className={
+        open === null ? "page-view activity-page accounts-page" : "page-view activity-page"
+      }
+      aria-labelledby="accounts-title"
     >
-      <button
-        className="text-button danger sheet-delete"
-        type="button"
-        disabled={close.pending}
-        onClick={() => {
-          if (window.confirm(`Close ${account.name}? Its history is kept.`)) void close.run();
-        }}
-      >
-        Close account
-      </button>
-      <ErrorMessage error={close.error} />
-    </AccountForm>
-  );
-}
-
-function AccountSummary({ account }: { account: AccountRow }) {
-  return (
-    <>
-      <span className="item-title">{account.name}</span>
-      <strong>
-        <Money cents={account.balance} />
-      </strong>
-      <span className="item-detail">
-        {ACCOUNT_TYPE_NAMES[account.type]} · opened {account.openingDate}{" "}
-        {account.type === "credit_card" ? (
-          <>
-            owing <Money cents={-account.openingBalance} />
-          </>
-        ) : (
-          <>
-            with <Money cents={account.openingBalance} />
-          </>
-        )}
-      </span>
-    </>
+      {/* Read by screen readers; the accounts get the screen space. */}
+      <h1 id="accounts-title" className="visually-hidden">
+        Accounts
+      </h1>
+      {open === null ? (
+        <AccountList page={page} data={data} month={month} userId={userId} desktop={desktop} />
+      ) : (
+        <AccountView
+          // A different account (or All accounts in another month) starts fresh:
+          // 100 rows, splits open, nothing ticked. An open account keeps its
+          // list when the month changes; only the pane follows the month.
+          key={open === "all" ? `all|${month}` : open}
+          budget={budget}
+          data={data}
+          page={page}
+          month={month}
+          accountId={open === "all" ? null : open}
+          userId={userId}
+          desktop={desktop}
+          addRequest={addRequest}
+        />
+      )}
+    </section>
   );
 }
 
 /**
- * Name, opening balance and opening date; used to add and to edit an account.
- * The type is chosen only when adding (chooseType).
+ * The accounts list: All accounts first (with the month's money in and out),
+ * then Checking, Credit cards and Tracking, each row opening its account.
+ * Closed accounts wait behind "Show closed accounts". Accounts are added
+ * with + Add account (a sheet), or on a desktop in the panel on the right.
  */
-function AccountForm({
-  heading,
-  button,
-  initial,
-  chooseType = false,
-  resetAfterSubmit = false,
-  onSubmit,
-  onCancel,
-  children,
+function AccountList({
+  page,
+  data,
+  month,
+  userId,
+  desktop,
 }: {
-  heading: string;
-  button: string;
-  initial: Fields;
-  chooseType?: boolean;
-  resetAfterSubmit?: boolean;
-  onSubmit: (form: Fields) => Promise<void>;
-  onCancel?: () => void;
-  /** Extra controls under the buttons (the edit sheet's Close account). */
-  children?: ReactNode;
+  page: Page;
+  data: BudgetData;
+  month: Month;
+  userId: string;
+  desktop: boolean;
 }) {
-  const [form, setForm] = useState(initial);
-  const action = useAsyncAction(onSubmit);
+  const [adding, setAdding] = useState(false);
+  const [showClosed, setShowClosed] = useState(false);
+  const panel = useSidebar("panel", userId);
+  const { monthTotals } = page;
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if ((await action.run(form)).ok && resetAfterSubmit) setForm(initial);
-  };
-  const card = form.type === "credit_card";
-  const field = (key: "name" | "openingBalance" | "openingDate") => ({
-    value: form[key],
-    onChange: (event: { target: { value: string } }) => {
-      setForm({ ...form, [key]: event.target.value });
-      action.clearError();
-    },
-  });
+  const monthNav = (
+    <div className="budget-month month-nav">
+      <a href={accountsHref(null, addMonths(month, -1))} aria-label="Previous month">
+        ‹
+      </a>
+      <span>{formatMonth(month)}</span>
+      <a href={accountsHref(null, addMonths(month, 1))} aria-label="Next month">
+        ›
+      </a>
+    </div>
+  );
+  const addButton = !desktop && (
+    <button className="band-add" type="button" onClick={() => setAdding(true)}>
+      <PlusIcon />
+      Add account
+    </button>
+  );
+  const groups = (list: typeof page.openGroups, closed = false) =>
+    list.map((group) => {
+      const id = `accounts-${closed ? "closed-" : ""}${group.name.replace(/\W+/g, "-")}`;
+      return (
+        <section key={group.name} aria-labelledby={id}>
+          <div className="group-heading account-group-heading">
+            <h2 id={id}>{group.name}</h2>
+          </div>
+          <ul className="account-rows">
+            {group.accounts.map((account) => (
+              <AccountListRow key={account.id} account={account} month={month} />
+            ))}
+          </ul>
+        </section>
+      );
+    });
 
-  return (
-    <form className="form" onSubmit={submit} aria-label={heading}>
-      <div className="section-heading">
-        <h2>{heading}</h2>
-      </div>
-      {chooseType && (
-        <div className="segmented" role="radiogroup" aria-label="Account type">
-          {(Object.keys(ACCOUNT_TYPE_NAMES) as AccountType[]).map((type) => (
-            <label key={type}>
-              <input
-                type="radio"
-                name="account-type"
-                checked={form.type === type}
-                onChange={() => {
-                  setForm({ ...form, type });
-                  action.clearError();
-                }}
-              />
-              {ACCOUNT_TYPE_NAMES[type]}
-            </label>
-          ))}
-        </div>
-      )}
-      <label className="field">
-        Account name
-        <input {...field("name")} placeholder={card ? "Visa card" : "Everyday checking"} />
-      </label>
-      <label className="field">
-        {card ? "Amount owed on the opening date" : "Opening balance"}
-        <input {...field("openingBalance")} inputMode="decimal" placeholder="0.00" />
-      </label>
-      {card && (
-        <p className="empty-state">
-          The card gets a payment envelope on the Budget page. Purchases move money into it from
-          their envelopes, and what is owed today shows there as Uncovered until you assign money to
-          pay it down. Record a card payment as a Transfer in both the paying account and the card.
+  const list = (
+    <div className="account-list">
+      <a
+        className="account-row all-accounts-row"
+        href={accountsHref("all", month)}
+        aria-label={`Open All accounts, ${formatMonth(month)}: in ${formatCents(monthTotals.moneyIn)}, out ${formatCents(monthTotals.moneyOut)}`}
+      >
+        <span className="account-row-name">
+          All accounts
+          <small>
+            <span className="activity-in">In {formatSignedCents(monthTotals.moneyIn)}</span>
+            {" · "}
+            <span className="activity-out">Out {formatSignedCents(-monthTotals.moneyOut)}</span>
+          </small>
+        </span>
+      </a>
+      {page.openAccounts.length === 0 ? (
+        <p className="activity-empty">
+          No accounts yet. Add your checking account{" "}
+          {desktop ? "on the right" : "with + Add account"}.
         </p>
+      ) : (
+        groups(page.openGroups)
       )}
-      <label className="field">
-        Opening date
-        <input {...field("openingDate")} type="date" />
-      </label>
-      <button className="primary-button" type="submit" disabled={action.pending}>
-        {button}
-      </button>
-      {onCancel && (
-        <button className="secondary-button" type="button" onClick={onCancel}>
-          Cancel
-        </button>
+      {page.closedAccounts.length > 0 && (
+        <>
+          <button
+            className="text-button unused-toggle"
+            type="button"
+            aria-expanded={showClosed}
+            onClick={() => setShowClosed((s) => !s)}
+          >
+            {showClosed ? "Hide" : "Show"} closed accounts ({page.closedAccounts.length})
+          </button>
+          {showClosed && (
+            <div className="closed-accounts" aria-label="Closed accounts" role="group">
+              {groups(page.closedGroups, true)}
+            </div>
+          )}
+        </>
       )}
-      {children}
-      <ErrorMessage error={action.error} />
-    </form>
+    </div>
+  );
+
+  if (desktop) {
+    return (
+      <>
+        <div className="activity-band">{monthNav}</div>
+        <CardDebt data={data} />
+        <div className="activity-work">
+          <div className="activity-table">{list}</div>
+          <SidePanel label="Add an account" collapsed={panel.collapsed} onToggle={panel.toggle}>
+            <AddAccount page={page} />
+          </SidePanel>
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="accounts-band">
+        {monthNav}
+        {addButton}
+      </div>
+      <CardDebt data={data} />
+      {list}
+      <Sheet open={adding} label="Add an account" onClose={() => setAdding(false)}>
+        {() => <AddAccount page={page} onDone={() => setAdding(false)} />}
+      </Sheet>
+    </>
+  );
+}
+
+/** An account: name on the left, balance on the right; the whole row opens it. */
+function AccountListRow({ account, month }: { account: AccountRow; month: Month }) {
+  const balance = formatCents(account.balance);
+  return (
+    <li>
+      <a
+        className="account-row"
+        href={accountsHref(account.id, month)}
+        aria-label={`Open ${account.name}, balance ${balance}`}
+      >
+        <span className="account-row-name">{account.name}</span>
+        <span
+          className={account.balance < 0 ? "account-row-balance negative" : "account-row-balance"}
+        >
+          {balance}
+        </span>
+      </a>
+    </li>
   );
 }

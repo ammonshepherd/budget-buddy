@@ -10,6 +10,7 @@ import { envelopeLeft, type EnvelopeRow } from "../../models/budgetMath";
 import { centsToInput, formatCents, formatSignedCents } from "../../models/money";
 import type { Month } from "../../models/month";
 import type { WatchItem } from "../../models/envelopeDetail";
+import { accountsHref } from "../../models/routes";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
 import { CardDebt } from "../CardDebt";
@@ -158,7 +159,7 @@ export function BudgetPage({
           {view.toReview.count} {view.toReview.count === 1 ? "transaction" : "transactions"} to
           review (<Money cents={view.toReview.inflow} /> in, <Money cents={view.toReview.outflow} />{" "}
           out) {view.toReview.count === 1 ? "is" : "are"} not in Available to Assign yet.{" "}
-          <a href="#activity">Review them on Activity</a>.
+          <a href={accountsHref("all", month)}>Review them in All accounts</a>.
         </p>
       )}
 

@@ -1,13 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { available, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
+import { addAccount, available, goTo, openAddTransaction, signInWithHousehold } from "./helpers";
 
 test("inflows wait for review until marked Income", async ({ page }) => {
   page.on("dialog", (dialog) => dialog.accept());
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("100");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "100" });
 
   // Two inflows left Uncategorized, and Income is only for inflows.
   for (const [payee, amount] of [
@@ -34,7 +31,7 @@ test("inflows wait for review until marked Income", async ({ page }) => {
     ),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: "Review them on Activity" }).click();
+  await page.getByRole("link", { name: "Review them in All accounts" }).click();
   const review = page.getByRole("region", { name: "To review" });
   await expect(review).toContainText(
     "$1,750.00 in and $0.00 out are not in Available to Assign yet.",

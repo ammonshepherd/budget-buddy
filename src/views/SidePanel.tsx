@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { SidebarIcon } from "./icons";
 
 /**
- * The desktop layout's right-hand panel (Budget, Activity, Accounts): it
+ * The desktop layout's right-hand panel (Budget, Accounts): it
  * sits beside the page's list and collapses to a thin rail with one button
  * that opens it again. Whether it is collapsed is the page's to keep
  * (useSidebar("panel", …)), so choosing something can open it.

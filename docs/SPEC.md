@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.28.3.
+Version described: 0.29.0.
 
 ## 1. Purpose
 
@@ -37,8 +37,9 @@ scripts/          test-database seed script and its safety guard
 
 Key model modules: `budgetMath.ts` (all budget math), `money.ts` (parse and
 format cents), `month.ts` (`YYYY-MM` helpers, `formatDay`), `routes.ts`,
-`accounts.ts` (card opening balance sign), `activity.ts` (the Activity page's
-month: rows by day, totals, day nets), `transfers.ts` (linked transfers and
+`accounts.ts` (card opening balance sign, list groups), `activity.ts` (the
+Accounts page's lists: All accounts' month and an open account's history by
+day, day nets, totals, info pane figures, 100 rows at a time), `transfers.ts` (linked transfers and
 matching), `transactionImport.ts` + `csv.ts` (bank CSV, matching typed transactions), `envelopePlan.ts` (plan
 CSV), `incomeRules.ts`, `dataStore.ts` (the store interface), `supabaseStore.ts`,
 `memoryStore.ts`, `store.ts` (picks one), `layoutPrefs.ts` (desktop
@@ -182,20 +183,24 @@ These are implemented in `budgetMath.ts` and the controllers:
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
 - Header: icon + "Budget Buddy" (links to `#budget`), the version (e.g. "v0.24.0"), and
   an Install button when the browser offers installing.
-- Bottom navigation (fixed): Budget, Accounts, Activity, Settings, with icons;
-  the current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
-- Hash routes: `#budget`, `#budget/YYYY-MM`, `#accounts`, `#activity`,
-  `#activity/YYYY-MM`, `#settings`; anything else shows Budget. Without a month,
-  Budget and Activity show the month last shown on either (else the current
-  month), and their nav links carry it (`routeHref`).
-- Floating round + button (bottom right, above the nav) on Budget, Accounts and
-  Activity opens the transaction dialog.
+- Bottom navigation (fixed): Budget, Accounts, Settings, with icons; the
+  current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
+- Hash routes (`src/models/routes.ts`): `#budget`, `#budget/YYYY-MM`,
+  `#accounts` (the list), `#accounts/all` (All accounts open),
+  `#accounts/<account id>` (one account open), each Accounts route with an
+  optional `/YYYY-MM` at the end, and `#settings`; anything else shows
+  Budget. The old `#activity` and `#activity/YYYY-MM` open All accounts, and
+  the address is rewritten (`history.replaceState`). Without a month, Budget
+  and Accounts show the month last shown on either (else the current month),
+  and their nav links carry it (`routeHref`).
+- Floating round + button (bottom right, above the nav) on Budget and
+  Accounts opens the transaction dialog; with an open account on Accounts it
+  starts in that account.
 - Credit card debt: while the cards owe anything today (`cardDebt` in
   `src/models/accounts.ts`, display only), every page shows "CREDIT CARD
   DEBT" (14px) and the amount (26px) in a rounded strip with 12px space
   above and below: under the month band on Budget (above Available to
-  Assign) and Activity (above the account picker), and at the top of
-  Accounts and Settings. Its background is one of 30 reds, pale to deep
+  Assign) and Accounts, and at the top of Settings. Its background is one of 30 reds, pale to deep
   (`SHADES` in `src/models/cardDebtShades.ts`), picked at random once per
   page load, so it changes with every refresh; the text is near-black or
   white, whichever reads better (at least 4.5:1). Hidden at $0.00 or less.
@@ -218,8 +223,8 @@ signed out, everything is as above.
 - Collapsed sidebars are remembered per device and user in localStorage
   (`bb.layout.navCollapsed.<userId>`, `bb.layout.panelCollapsed.<userId>`,
   "1" or "0"; unreadable means expanded), never in Supabase.
-- "+ Add transaction" opens the dialog on Budget and Accounts; on Activity
-  it opens the new transaction row instead.
+- "+ Add transaction" opens the dialog on Budget and the Accounts list; with
+  All accounts or an account open it opens the new transaction row instead.
 - Every page uses the width up to 1600px, centred.
 - A right-hand panel (`SidePanel`, an `aside` named for what it shows) sits
   beside a page's list, sticky under its band. Its top-right button ("Hide
@@ -251,7 +256,7 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   right, "Income this month $X" under the label. Over assigned: red, labelled
   "Over Assigned" with the amount over.
 - Notices: "N transactions to review ($X in, $Y out) are not in Available to
-  Assign yet. Review them on Activity."; no accounts → link to Accounts; no
+  Assign yet. Review them in All accounts."; no accounts → link to Accounts; no
   groups → link to Settings.
 - "No plan for ⟨month⟩ yet" (a dashed purple card under the notices), when the
   month opens with every Planned at $0.00: "Copy ⟨last month⟩’s Planned" and
@@ -334,104 +339,153 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
 
 ### Accounts
 
-- Open accounts: name, balance (red when negative), "Checking · opened DATE with
-  $X" or "Credit card · opened DATE owing $X". Rows have no Edit/Close links:
-  tapping a row opens "Edit ⟨name⟩" in a modal sheet (Save changes, Cancel,
-  and Close account at the bottom: confirm; only at $0.00).
-- "Add an account": Checking / Credit card choice, Account name, "Opening
-  balance" (checking) or "Amount owed on the opening date" (card), Opening date
-  (default today). A card shows a short explanation of its payment envelope.
-- Edit keeps the type; the opening date cannot move past the first transaction.
-- Closed accounts listed separately with their balance.
-- **Desktop:** the lists (open, then closed) on the left; the panel on the
-  right holds "Add an account" ("No accounts yet. Add your checking account
-  on the right.") until an open account is chosen (highlighted,
-  `aria-expanded`), then "Edit ⟨name⟩" with "‹ Back to Add an account", Save
-  changes, Cancel and Close account, each returning to Add an account.
+Accounts and Activity became one page in v0.29.0
+(`src/views/pages/AccountsPage.tsx`, `AccountView.tsx`,
+`src/views/transactions/`). A visually hidden "Accounts" heading; rows run
+edge to edge. What is open lives in the URL (see App shell), so Back closes
+it and a reload keeps it. Opening something starts at the top of the page;
+the list comes back where it was scrolled.
 
-### Activity
+**The list** (nothing open):
 
-Mockup: `docs/mockups/activity-screen.html`. Rows run edge to edge.
+- The month band as on Budget ("OCTOBER 2026", ‹ › links to
+  `#accounts/YYYY-MM`) with "+ Add account" on the right (phone), which opens
+  "Add an account" in a sheet: Checking / Credit card choice, Account name,
+  "Opening balance" (checking) or "Amount owed on the opening date" (card),
+  Opening date (default today); a card shows a short explanation of its
+  payment envelope. Adding closes the sheet. Then the card debt strip.
+- "All accounts" first, with the month's money in and out under it ("In
+  +$X · Out −$Y", transfers left out, as on All accounts).
+- Then groups (`groupAccounts` in `src/models/accounts.ts`): CHECKING,
+  CREDIT CARDS, TRACKING (off-budget accounts; none can be created yet), each
+  a tinted bar like Budget's groups, empty ones left out; accounts by name.
+- An account row is a link ("Open ⟨name⟩, balance $X"), at least 48px tall:
+  name (15px, 800) on the left, balance (20px, 800, tabular; red when
+  negative, so a card shows what it owes as −$X) on the right. Balance =
+  opening balance plus every transaction (`accountBalance`).
+- Closed accounts are hidden behind "Show closed accounts (N)" at the bottom
+  (not remembered); their transactions still show in All accounts.
+- Empty: "No accounts yet. Add your checking account with + Add account."
 
-- Visually hidden "Activity" heading; the month band as on Budget ("OCTOBER
-  2026", ‹ › links to `#activity/YYYY-MM`). No search yet.
-- Account picker (a tinted strip under the month band, shown with two or
-  more budget accounts): "All accounts", then open accounts by name, then
-  closed ones ("Old Checking (closed)"). Choosing one narrows the rows, the
-  totals ("Totals for ⟨month⟩ in ⟨account⟩") and the To review card (its
-  totals, rows and buttons) to that account; a transfer shows (as its
-  money-out row) when either side is in it. The choice lasts across months and
-  pages until the app reloads; an account no longer offered means all.
-  Empty: "No transactions in ⟨account⟩ in ⟨Month YYYY⟩."
-- Totals strip (purple tint, three columns), display figures from
-  `activityMonth` and `activityBalance` (`src/models/activity.ts`), not
-  Available to Assign: IN (green, "+$X") and OUT (red, "−$X") for the month,
-  dated in it, budget accounts only, voided left out, a split once. On All
-  accounts transfers are left out (their sides cancel); with one account
-  chosen they count as that account's money in or out, so In − Out is the
-  change in its balance, like a bank statement. BALANCE TODAY: opening
-  balances plus everything dated today or earlier, whatever month is shown
-  (`accountBalance` with `through`), to compare with the bank. Under it, for
-  one account (or All accounts without a card): "Reconciled $X" (opening
-  balance plus reconciled transactions: what the bank should show once
-  everything it has is ticked off). All accounts with a card: the balance is
-  cash minus card debt (it can be negative), with "Cash $X · Cards owe $Y"
-  under it.
+**An account open** (`#accounts/<id>`):
+
+- The month band (‹ › keep the account open), the card debt strip, then the
+  info pane, pinned to the top while the list scrolls (with the bar of
+  ticked rows under it): an edge-to-edge `#F3EEF8` band, no frame around it.
+  - Line 1: back arrow (44×44, a full arrow, white on a solid purple
+    circle, "Back to accounts", a link to the list), the account name
+    (`<h2>`; "Closed" tag on a closed account), and a pencil (44×44, "Edit
+    ⟨name⟩") on an open account.
+  - Figures (`accountFigures` in `activity.ts`, display only; label 9px
+    uppercase, amount 15px 800), three columns. Row 1: MONEY IN (green) and
+    MONEY OUT (red) for the month shown (the account's inflows and outflows
+    dated in it, transfers (card payments too) left out, a split once at
+    its full amount, inflows to review included), CURRENT BALANCE (every
+    transaction, any date). Row 2: OPENING BALANCE (as entered, signed: a
+    card owing $50 shows −$50.00), MONTH START (every transaction dated
+    before the month's first day: `accountBalance` with `before`),
+    RECONCILED (opening balance plus reconciled transactions). Month start
+    plus the month's net activity is the next month's start. Only the month
+    figures follow the month picker.
+  - "Import CSV" (an open account only) opens the bank import already set to
+    this account (no account picker) in a sheet with Close.
+- The To review card for this account only (as on All accounts).
+- Every transaction in the account, any month, newest first
+  (`accountHistory`): a month divider ("OCTOBER 2026", 12px, purple, an
+  `<h2>`) above each month, then day headings (`<h3>`, "FRI DEC 12, 2025"
+  when not this year) whose net leaves transfers out. Rows as on All
+  accounts without the account line, except a transfer's "From → To"; a
+  transfer is signed by its side in this account and edits its money-out
+  side. Changing the month does not change or reload the list.
+  Empty: "No transactions in ⟨account⟩ yet."
+- The pencil opens "Edit ⟨name⟩" in a sheet (focus returns to the pencil
+  when it closes): Save changes, Cancel, and Close account at the bottom
+  (confirm; only at $0.00), which returns to the list. Edit keeps the type;
+  the opening date cannot move past the first transaction. Saving updates
+  the pane at once.
+
+**All accounts open** (`#accounts/all`, the old Activity page, one month):
+
+Mockup: `docs/mockups/activity-screen.html` (from v0.21.0; the account
+picker it shows is gone).
+
+- The info pane has the back arrow, "All accounts", and the totals strip,
+  display figures from `activityMonth` and `activityBalance`, not Available
+  to Assign: IN (green, "+$X") and OUT (red, "−$X") for the month, dated in
+  it, budget accounts only, voided left out, a split once, transfers left
+  out (their sides cancel). BALANCE TODAY: opening balances plus everything
+  dated today or earlier, whatever month is shown (`accountBalance` with
+  `through`), to compare with the bank. Under it, without a card:
+  "Reconciled $X" (opening balances plus reconciled transactions); with a
+  card the balance is cash minus card debt (it can be negative), with "Cash
+  $X · Cards owe $Y" under it. No pencil or import.
 - "No accounts" notice, then the "To review" card when anything waits (from
   any month): totals in and out, rows (tap to edit), "Mark as Income" on
   non-card inflows, "Apply income rules (N matches)", "Mark all N inflows as
   Income" (confirm), link to Settings income rules.
 - Days with transactions, newest first: a tinted heading ("THU OCT 15", an
-  `<h2>`) with the day's net on the right (signed; transfers counted as in
-  the totals, so $0.00 for a day of only transfers on All accounts). Within a
-  day, newest first.
+  `<h2>`) with the day's net on the right (signed; transfers left out, so
+  $0.00 for a day of only transfers). Within a day, newest first.
+- Empty month: "No transactions in ⟨Month YYYY⟩." with $0.00 totals.
+
+**Both lists:**
+
+- 100 rows at first (`firstRows`); "Show N more (M left)" (full width, 44px)
+  adds 100 more and disappears when everything shows. Everything is already
+  loaded, so a page is a slice of one sorted list: no rows repeat or go
+  missing when one is added between pages. A split is one row (its parts
+  come with it); a day cut short keeps its heading and full net, and the
+  next rows continue under it. Edits keep the rows shown and the scroll
+  position. A different account (or month on All accounts) starts at 100.
 - Row (grid 22px | 16px | payee | envelope | 84px): a checkbox ("Select
   ⟨payee⟩, ⟨amount⟩"); a bank icon (`role="img"`): grey outline "Not
   reconciled", green and filled "Reconciled" (imported or typed makes no
   difference); payee over account (a button, "Edit ⟨payee⟩, ⟨amount⟩,
   ⟨account⟩", that opens the edit dialog; the payee is regular weight, bold
-  only while the row is to review; the amount is always bold); the envelope, Income, Transfer,
-  Card credit, or Uncategorized (amber label); the amount ("−$X" red, "+$X"
-  green, a transfer the same by its side in the account picked, or on All
-  accounts by the side it is shown from, usually "−$X"; a split's parts the
-  same). Closed
-  accounts keep their name.
+  only while the row is to review; the amount is always bold); the envelope,
+  Income, Transfer, Card credit, or Uncategorized (amber label); the amount
+  ("−$X" red, "+$X" green, a transfer the same by its side in the open
+  account, or on All accounts by the side it is shown from, usually "−$X"; a
+  split's parts the same). Closed accounts keep their name.
 - Ticking rows (reconciling): a ticked row is highlighted. While any is
-  ticked, a purple toolbar ("Selected transactions") is pinned to the top
-  (desktop: at the top of the list, under the band): "N selected", their
-  total (signed), "Mark reconciled" (when one is not), "Mark unreconciled"
-  (when one is), and × to clear; the count is announced (`aria-live`).
-  Marking saves in one step (`setReconciled`) and clears the ticks. A split
-  is ticked as a whole. A transfer stands for its side in the account
-  shown, or both sides (adding $0.00) on All accounts; it shows reconciled
-  when every side it stands for is. Changing the month or account clears the
-  ticks. Reconciled is only a mark: it changes no budget math and does not
-  stop editing. To review rows have no checkboxes.
+  ticked, a purple toolbar ("Selected transactions") sits under the info
+  pane: "N selected", their total (signed), "Mark reconciled" (when one is
+  not), "Mark unreconciled" (when one is), and × to clear; the count is
+  announced (`aria-live`). Marking saves in one step (`setReconciled`) and
+  clears the ticks. A split is ticked as a whole. A transfer stands for its
+  side in the open account, or both sides (adding $0.00) on All accounts; it
+  shows reconciled when every side it stands for is. Opening something else
+  (or another month on All accounts) clears the ticks. Reconciled is only a
+  mark: it changes no budget math and does not stop editing. To review rows
+  have no checkboxes.
 - A transfer is one row: its money-out side's date and payee, "From → To".
 - A split shows a "Split (N)" pill (`aria-expanded`, "Close/Open split for
   ⟨payee⟩", chevron) instead of an envelope, and its parts underneath (dashed
   top border, "↳ ⟨envelope⟩", envelope, signed amount). Every split starts
-  open; closing is kept only until the month changes.
-- Empty month: "No transactions in ⟨Month YYYY⟩." with $0.00 totals.
-- **Desktop** (see Desktop layout):
-  - One purple band, pinned to the top, holds only the month picker. The
-    account picker and the totals (two columns, Balance today on a line of
-    its own) sit at the top of the panel, above To review or the edit form,
-    so they are hidden while the panel is collapsed.
-  - The rows sit in a card: checkbox | bank icon | payee over account |
-    envelope | memo (muted, cut short with …) | amount; a split's parts
-    line up below.
-  - The panel shows the To review card (same content and buttons; "Nothing
-    to review…" when empty) until a transaction is chosen, in the list or in
-    To review. Then it holds that transaction's edit form (the row is
-    highlighted); "‹ Back to To review", Save, Cancel and Delete return to To
-    review.
-  - Add transaction opens "New transaction" at the top of the list: the
-    transaction form with its fields side by side in their usual order
-    (wrapping as needed; splits, transfer notes and errors on lines of their
-    own), starting in the account the page is narrowed to, with Payee
-    focused. Save (after any cover prompt, shown in the row),
-    Cancel or Escape closes it.
+  open; closing is kept until something else opens.
+
+**Desktop** (see Desktop layout):
+
+- One purple band, pinned to the top, holds only the month picker; the card
+  debt strip sits under it.
+- The list: in a card on the left; the panel on the right holds "Add an
+  account" ("No accounts yet. Add your checking account on the right."); no
+  - Add account button.
+- Something open: the info pane (pinned under the band), the ticked-rows
+  bar and the rows sit in a card: checkbox | bank icon | payee over account
+  | envelope | memo (muted, cut short with …) | amount; a split's parts line
+  up below.
+- The panel shows the To review card (same content and buttons; "Nothing to
+  review…" when empty) until something is chosen: a transaction (in the
+  list or in To review; the row is highlighted), the pencil ("Edit ⟨name⟩",
+  focus returns to the pencil after), or Import CSV ("Import CSV into
+  ⟨name⟩"). "‹ Back to To review", Save, Cancel and Delete return to To
+  review; closing the account returns to the list.
+- Add transaction opens "New transaction" at the top of the list: the
+  transaction form with its fields side by side in their usual order
+  (wrapping as needed; splits, transfer notes and errors on lines of their
+  own), starting in the open account, with Payee focused. Save (after any
+  cover prompt, shown in the row), Cancel or Escape closes it.
 
 ### Transaction dialog (add and edit)
 
@@ -572,8 +626,8 @@ Envelopes not in the file are left alone.
   `#ffe2a8` on `#6b4500`.
 - Cards: white, 1px border, rounded (1–1.35rem), soft purple shadow; page side
   padding 0.5rem on a phone.
-- Money shows as `$1,234.56` / `-$12.50`; negative amounts in red. Activity
-  uses its own signs instead: "+$X" (green), "−$X" (a true minus sign, ink),
+- Money shows as `$1,234.56` / `-$12.50`; negative amounts in red.
+  Transaction lists on Accounts use their own signs instead: "+$X" (green), "−$X" (a true minus sign, ink),
   transfers too (`formatSignedCents`); the Budget page's Spent cells show
   "−$X" in their own colour.
 - Saved above $0.00: larger, purple, shimmering gradient text with a twinkling
@@ -585,8 +639,8 @@ Envelopes not in the file are left alone.
 Decided or wanted, but not in the app:
 
 - Desktop: keyboard shortcuts; a group's envelopes beside the group list in
-  Settings instead of a sheet; an account's transactions under its details
-  (editing in the panel).
+  Settings instead of a sheet; the accounts list kept as a left column
+  while an account is open.
 
 - Import and matching: matching a transaction typed after its bank row was
   imported (import already matches typed transactions to new rows, and
@@ -597,7 +651,7 @@ Decided or wanted, but not in the app:
   credit). Options: void instead of delete (`transactions.voided` exists but
   nothing sets it), or a per-row skip in the preview
   (`docs/proposals/bulk-actions.md`, problem 1).
-- Bulk actions on ticked Activity rows beyond Mark reconciled: Delete, Mark
+- Bulk actions on ticked rows on Accounts beyond Mark reconciled: Delete, Mark
   as Income, Assign to an envelope, Move to account, and ticking rows in To
   review. Open decisions are in `docs/proposals/bulk-actions.md`.
 - Reconciliation beyond the mark: entering a statement balance and
@@ -609,6 +663,8 @@ Decided or wanted, but not in the app:
 - Budget page: an icon chosen per envelope (every row shows the same
   envelope icon, `EnvelopeIcon`; Settings shows none); "Collapse all" /
   "Expand all" for groups.
-- Activity: search and filters by envelope or status, a "Needs review"
-  queue for transfer matches, running balances, swipe actions (such as marking
-  cleared), and a memo per split part.
+- Accounts lists: search and filters by envelope or status, a "Needs
+  review" queue for transfer matches, running balances on each row, swipe
+  actions (such as marking cleared), a memo per split part, and charts on the
+  info pane. A "Reconcile" button with a statement difference (see
+  reconciliation above).

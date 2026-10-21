@@ -216,13 +216,14 @@ export function checkSpend(current: EnvelopeMonth, additionalSpent: Cents): Spen
 /**
  * Account balance = opening balance + every non-voided transaction. Never stored.
  * `only` narrows the transactions counted: those dated through a day (today's
- * balance leaves out future-dated ones), or only those marked reconciled
+ * balance leaves out future-dated ones), those dated before a day (the
+ * balance at the start of that day), or only those marked reconciled
  * (what the bank should show once everything it has is ticked off).
  */
 export function accountBalance(
   accountId: string,
   data: Pick<BudgetData, "accounts" | "transactions">,
-  only: { through?: IsoDate; reconciled?: boolean } = {},
+  only: { through?: IsoDate; before?: IsoDate; reconciled?: boolean } = {},
 ): Cents {
   const account = data.accounts.find((a) => a.id === accountId);
   if (!account) throw new RangeError(`Unknown account ${accountId}`);
@@ -230,6 +231,7 @@ export function accountBalance(
   for (const tx of data.transactions) {
     if (tx.accountId !== accountId || tx.voided) continue;
     if (only.through !== undefined && tx.date > only.through) continue;
+    if (only.before !== undefined && tx.date >= only.before) continue;
     if (only.reconciled && !tx.reconciled) continue;
     balance += tx.amount;
   }

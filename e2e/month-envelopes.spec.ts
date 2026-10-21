@@ -1,13 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { envelope, editCell, goTo, signInWithHousehold } from "./helpers";
+import { addAccount, envelope, editCell, goTo, signInWithHousehold } from "./helpers";
 
 test("each month shows only the envelopes it uses", async ({ page }) => {
   await signInWithHousehold(page);
   await page.getByRole("link", { name: "adding an account" }).click();
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1000");
-  await page.getByLabel("Opening date").fill("2030-01-01");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "1000", date: "2030-01-01" });
 
   // January's plan has Rent and Trip; February's has only Rent.
   await goTo(page, "Settings");

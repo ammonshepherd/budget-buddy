@@ -6,6 +6,7 @@ import {
   envelope,
   goTo,
   signInWithHousehold,
+  addAccount,
 } from "./helpers";
 
 const group = (page: Page, name: string) => page.getByRole("region", { name, exact: true });
@@ -16,10 +17,7 @@ const stored = (page: Page) =>
 
 test.beforeEach(async ({ page }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("1000");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "1000" });
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
   await addGroupWithEnvelopes(page, "Bills", ["Rent"]);
   await editCell(page, "Groceries", "assigned", "300");

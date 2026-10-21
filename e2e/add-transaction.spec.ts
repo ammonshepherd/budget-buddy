@@ -7,17 +7,21 @@ import {
   goTo,
   openAddTransaction,
   signInWithHousehold,
+  addAccount,
+  openAllAccounts,
 } from "./helpers";
 
 const plus = (page: import("@playwright/test").Page) =>
   page.getByRole("button", { name: "Add transaction", exact: true });
 
-test("the + button is on Budget, Accounts and Activity, not Settings", async ({ page }) => {
+test("the + button is on Budget and Accounts, not Settings", async ({ page }) => {
   await signInWithHousehold(page);
-  for (const name of ["Budget", "Accounts", "Activity"] as const) {
+  for (const name of ["Budget", "Accounts"] as const) {
     await goTo(page, name);
     await expect(plus(page)).toBeVisible();
   }
+  await openAllAccounts(page);
+  await expect(plus(page)).toBeVisible();
   await goTo(page, "Settings");
   await expect(plus(page)).toHaveCount(0);
 });
@@ -30,9 +34,7 @@ test("add a transaction from the Budget page without leaving it", async ({ page 
   await dialog.getByRole("link", { name: "Add an account" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { level: 1, name: "Accounts" })).toBeVisible();
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("500");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "500" });
 
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$500.00");
@@ -57,7 +59,7 @@ test("add a transaction from the Budget page without leaving it", async ({ page 
   await expect(page.getByRole("heading", { level: 1, name: "Budget" })).toBeVisible();
   await expect(available(page)).toContainText("$575.00");
 
-  await goTo(page, "Activity");
+  await openAllAccounts(page);
   await expect(activityRow(page, "Paycheck")).toContainText("Income");
 });
 
@@ -65,10 +67,7 @@ test("envelope pickers show each envelope's Remaining in the transaction's month
   page,
 }) => {
   await signInWithHousehold(page);
-  await goTo(page, "Accounts");
-  await page.getByLabel("Account name").fill("Checking");
-  await page.getByLabel("Opening balance").fill("500");
-  await page.getByRole("button", { name: "Add account" }).click();
+  await addAccount(page, { name: "Checking", balance: "500" });
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries", "Fun"]);
   await editCell(page, "Groceries", "assigned", "120");
 

@@ -1,35 +1,42 @@
 import { useMemo, useState } from "react";
 import {
-  activityAccounts,
+  accountFigures,
+  accountHistory,
   activityBalance,
   activityMonth,
+  daysByMonth,
+  firstRows,
   selectionTotal,
 } from "../models/activity";
 import { isToReview, transactionsToReview } from "../models/budgetMath";
 import { inflowsMatchingRules } from "../models/incomeRules";
 import { addMonths, formatMonth, todayIso, type Month } from "../models/month";
-import { activityHref } from "../models/routes";
+import { accountsHref } from "../models/routes";
 import type { BudgetData, Transaction } from "../models/types";
 import type { Budget } from "./useBudget";
 
 const NOTHING: ReadonlySet<string> = new Set();
 
+/** Rows shown at first, and added by each "Show more". */
+export const ROWS_PER_PAGE = 100;
+
 /**
- * The Activity page for one month: its transactions by day with the month's
- * totals and today's balance, the transactions still to review (from any
- * month), plus delete, "Mark as Income", and ticking rows to mark them
- * reconciled with the bank. With `selectedAccountId`, all of it is narrowed
- * to that account. Adding and editing go through useTransactionEntry.
+ * What the Accounts page shows with something open. All accounts (the old
+ * Activity page): one month's transactions by day, its totals and today's
+ * balance. One account: all its transactions, any month, under month
+ * dividers, plus its info pane figures for the month. Either way: the
+ * transactions still to review (from any month), "Mark as Income", rows
+ * shown 100 at a time, and ticking rows to mark them reconciled with the
+ * bank. Adding and editing go through useTransactionEntry.
  */
-export function useActivityPage(
+export function useAccountView(
   budget: Budget,
   data: BudgetData,
   month: Month,
-  selectedAccountId: string | null,
+  /** The open account's id; null for All accounts. */
+  accountId: string | null,
 ) {
-  const accounts = useMemo(() => activityAccounts(data), [data]);
-  // An account no longer offered (say, taken off budget) means all accounts.
-  const accountId = accounts.some((a) => a.id === selectedAccountId) ? selectedAccountId : null;
+  const account = data.accounts.find((a) => a.id === accountId) ?? null;
   const accountNames = useMemo(() => new Map(data.accounts.map((a) => [a.id, a.name])), [data]);
   const cards = new Set(data.accounts.filter((a) => a.type === "credit_card").map((a) => a.id));
   const reviewRow = (tx: Transaction) => ({
@@ -38,15 +45,30 @@ export function useActivityPage(
     /** An inflow outside a credit card: one tap can mark it Income. */
     canBeIncome: tx.amount > 0 && !cards.has(tx.accountId) && isToReview(tx, false),
   });
-  const activity = useMemo(() => activityMonth(data, month, accountId), [data, month, accountId]);
-  const balance = useMemo(() => activityBalance(data, accountId, todayIso()), [data, accountId]);
+
+  // All accounts follows the month; an open account lists every month.
+  const allDays = useMemo(
+    () => (accountId === null ? activityMonth(data, month).days : accountHistory(data, accountId)),
+    [data, month, accountId],
+  );
+  const monthTotals = useMemo(() => activityMonth(data, month).totals, [data, month]);
+  const balance = useMemo(() => activityBalance(data, null, todayIso()), [data]);
+  const figures = useMemo(
+    () => (account ? accountFigures(data, account.id, month) : null),
+    [data, account, month],
+  );
   const review = transactionsToReview(data, accountId);
 
-  // Ticked rows, by transaction id. They belong to one month and account:
-  // changing either starts empty, so nothing ticked is ever out of sight.
-  const view = `${month}|${accountId ?? ""}`;
+  // Rows shown: 100, then 100 more each time. Edits keep what is loaded.
+  const [limit, setLimit] = useState(ROWS_PER_PAGE);
+  const page = useMemo(() => firstRows(allDays, limit), [allDays, limit]);
+
+  // Ticked rows, by transaction id. They belong to what is open (and on All
+  // accounts to the month): changing it starts empty, so nothing ticked is
+  // ever out of sight.
+  const view = accountId ?? `all|${month}`;
   const [ticked, setTicked] = useState({ view, ids: NOTHING });
-  const rows = activity.days.flatMap((day) => day.rows);
+  const rows = page.days.flatMap((day) => day.rows);
   const selected = new Set(
     ticked.view === view ? rows.filter((r) => ticked.ids.has(r.tx.id)).map((r) => r.tx.id) : [],
   );
@@ -55,18 +77,22 @@ export function useActivityPage(
 
   return {
     monthLabel: formatMonth(month),
-    /** Budget accounts to narrow the page to, and the one chosen (null: all). */
-    accounts,
-    accountId,
-    accountName: accounts.find((a) => a.id === accountId)?.name ?? null,
-    previousHref: activityHref(addMonths(month, -1)),
-    nextHref: activityHref(addMonths(month, 1)),
-    /** Money in and out this month (display only). */
-    totals: activity.totals,
-    /** Today's balance (whatever month is shown), reconciled balance, cash and card debt. */
+    previousHref: accountsHref(accountId ?? "all", addMonths(month, -1)),
+    nextHref: accountsHref(accountId ?? "all", addMonths(month, 1)),
+    /** The open account (null: All accounts). */
+    account,
+    /** All accounts: the month's money in and out, and today's balance (display only). */
+    totals: monthTotals,
     balance,
-    /** This month's transactions by day, newest day first. */
-    days: activity.days,
+    /** An open account's info pane figures; the month ones follow the month picked. */
+    figures,
+    /** The rows shown so far, by day (and by month for an open account), newest first. */
+    days: page.days,
+    months: daysByMonth(page.days),
+    shownCount: page.shown,
+    /** Rows not shown yet. */
+    leftCount: page.total - page.shown,
+    showMore: () => setLimit((n) => n + ROWS_PER_PAGE),
     /** Uncategorized transactions from any month: they count toward nothing until decided. */
     toReview: review.list.map(reviewRow),
     toReviewIn: review.inflow,
