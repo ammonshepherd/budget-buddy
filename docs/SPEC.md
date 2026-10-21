@@ -371,21 +371,22 @@ the list comes back where it was scrolled.
 
 - The month band (‹ › keep the account open), the card debt strip, then the
   info pane, pinned to the top while the list scrolls (with the bar of
-  ticked rows under it): a `#F3EEF8` card, 12px radius and padding.
-  - Line 1: back arrow (44×44, "Back to accounts", a link to the list), the
-    account name (`<h2>`; "Closed" tag on a closed account), and a pencil
-    (44×44, "Edit ⟨name⟩") on an open account.
+  ticked rows under it): an edge-to-edge `#F3EEF8` band, no frame around it.
+  - Line 1: back arrow (44×44, a full arrow, white on a solid purple
+    circle, "Back to accounts", a link to the list), the account name
+    (`<h2>`; "Closed" tag on a closed account), and a pencil (44×44, "Edit
+    ⟨name⟩") on an open account.
   - Figures (`accountFigures` in `activity.ts`, display only; label 9px
-    uppercase, amount 15px 800), three columns: CURRENT BALANCE (every
-    transaction, any date), MONTH START (every transaction dated before the
-    month's first day: `accountBalance` with `before`), OPENING BALANCE (as
-    entered, signed: a card owing $50 shows −$50.00); MONEY IN (green) and
-    MONEY OUT (red) for the month shown: the account's inflows and outflows
+    uppercase, amount 15px 800), three columns. Row 1: MONEY IN (green) and
+    MONEY OUT (red) for the month shown (the account's inflows and outflows
     dated in it, transfers (card payments too) left out, a split once at
-    its full amount, inflows to review included; RECONCILED (opening
-    balance plus reconciled transactions). Month start plus the month's net
-    activity is the next month's start. Only the month figures follow the
-    month picker.
+    its full amount, inflows to review included), CURRENT BALANCE (every
+    transaction, any date). Row 2: OPENING BALANCE (as entered, signed: a
+    card owing $50 shows −$50.00), MONTH START (every transaction dated
+    before the month's first day: `accountBalance` with `before`),
+    RECONCILED (opening balance plus reconciled transactions). Month start
+    plus the month's net activity is the next month's start. Only the month
+    figures follow the month picker.
   - "Import CSV" (an open account only) opens the bank import already set to
     this account (no account picker) in a sheet with Close.
 - The To review card for this account only (as on All accounts).

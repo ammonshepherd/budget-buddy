@@ -11,7 +11,7 @@ import type { BudgetData, Transaction } from "../models/types";
 import { EditAccount } from "./AccountForm";
 import { CardDebt } from "./CardDebt";
 import { Sheet } from "./components";
-import { ChevronLeftIcon, PencilIcon } from "./icons";
+import { ArrowLeftIcon, PencilIcon } from "./icons";
 import { SidePanel } from "./SidePanel";
 import { TransactionDialog, TransactionEntry } from "./TransactionEntry";
 import { TransactionImport } from "./TransactionImport";
@@ -122,8 +122,8 @@ export function AccountView({
   const pane = (
     <section className="account-pane" aria-labelledby="account-pane-title">
       <div className="account-pane-head">
-        <a className="pane-icon-button" href={listHref} aria-label="Back to accounts">
-          <ChevronLeftIcon />
+        <a className="pane-icon-button pane-back" href={listHref} aria-label="Back to accounts">
+          <ArrowLeftIcon />
         </a>
         <h2 id="account-pane-title">
           {title}
@@ -143,11 +143,11 @@ export function AccountView({
       </div>
       {view.figures ? (
         <dl className="account-figures" aria-label={`${title} figures for ${view.monthLabel}`}>
-          <Figure label="Current balance" cents={view.figures.current} />
-          <Figure label="Month start" cents={view.figures.monthStart} />
-          <Figure label="Opening balance" cents={view.figures.opening} />
           <Figure label="Money in" cents={view.figures.moneyIn} signed tone="in" />
           <Figure label="Money out" cents={-view.figures.moneyOut} signed tone="out" />
+          <Figure label="Current balance" cents={view.figures.current} />
+          <Figure label="Opening balance" cents={view.figures.opening} />
+          <Figure label="Month start" cents={view.figures.monthStart} />
           <Figure label="Reconciled" cents={view.figures.reconciled} />
         </dl>
       ) : (

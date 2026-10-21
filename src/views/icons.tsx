@@ -27,6 +27,8 @@ export const BankIcon = () => (
 );
 export const ChevronDownIcon = () => <Icon path="M6 9l6 6 6-6" />;
 export const ChevronLeftIcon = () => <Icon path="M15 6l-6 6 6 6" />;
+/** A full arrow (shaft and head): the info pane's way back to the accounts list. */
+export const ArrowLeftIcon = () => <Icon path="M19 12H5M11 5l-7 7 7 7" />;
 /** A window with a side column: shows or hides a desktop sidebar. */
 export const SidebarIcon = () => <Icon path="M4 5h16v14H4zM9 5v14" />;
 
