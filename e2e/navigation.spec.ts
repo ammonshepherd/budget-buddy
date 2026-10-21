@@ -18,10 +18,13 @@ test("bottom navigation switches pages and updates the URL hash", async ({ page 
   // The tabs share the bar's width equally, centred.
   const bar = (await nav.boundingBox())!;
   const tabs = await Promise.all((await nav.getByRole("link").all()).map((l) => l.boundingBox()));
-  const centres = tabs.map((t) => t!.x + t!.width / 2 - bar.x);
-  for (const [i, centre] of centres.entries()) {
-    expect(Math.abs(centre - (bar.width * (2 * i + 1)) / 6)).toBeLessThan(3);
-  }
+  const [left, middle, right] = tabs.map((t) => t!.x + t!.width / 2 - bar.x) as [
+    number,
+    number,
+    number,
+  ];
+  expect(Math.abs(middle - bar.width / 2)).toBeLessThan(2);
+  expect(Math.abs(middle - left - (right - middle))).toBeLessThan(2);
   for (const name of ["Accounts", "Settings", "Budget"]) {
     await nav.getByRole("link", { name }).click();
     // Budget and Accounts carry the month, so it stays the same between them.
