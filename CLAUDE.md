@@ -276,7 +276,8 @@ spending.
 Later: matching a transaction typed after its bank row was imported (import
 already matches typed transactions, and transfers link to bank rows),
 statement reconciliation (v0.27.0 added only the reconciled mark),
-tithing/fast-offering rules. See
+bulk actions on ticked rows beyond reconciling
+(`docs/proposals/bulk-actions.md`), tithing/fast-offering rules. See
 `docs/SPEC.md` §9 for everything not built yet.
 
 ## Supabase state
