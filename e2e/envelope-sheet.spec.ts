@@ -34,7 +34,7 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
   await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$180.00");
   await expect(sheet.locator(".sheet-hero-parts")).toHaveText("$300.00 assigned − $120.00 spent");
   await expect(sheet.locator(".plan-line")).toHaveText(
-    "Spent $120.00 of $300.00 planned$180.00 under",
+    "Spent −$120.00 of $300.00 planned$180.00 under",
   );
   const activity = sheet.getByRole("region", { name: "Groceries transactions" });
   await expect(activity.getByRole("listitem")).toHaveCount(1);
@@ -47,7 +47,7 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
   await planned.fill("100");
   await planned.press("Enter");
   await expect(sheet.locator(".plan-line")).toHaveText(
-    "Spent $120.00 of $100.00 planned$20.00 over",
+    "Spent −$120.00 of $100.00 planned$20.00 over",
   );
   await expect(sheet.locator(".plan-line")).toHaveClass(/over/);
 

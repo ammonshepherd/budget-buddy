@@ -1,6 +1,6 @@
 import type { BudgetPageState as Page } from "../../controllers/useBudgetPage";
 import type { WatchItem } from "../../models/envelopeDetail";
-import { Money } from "../components";
+import { Money, SpentAmount } from "../components";
 
 /**
  * The desktop panel when no envelope is chosen: this month's income,
@@ -37,7 +37,7 @@ export function MonthSummary({
         <div className="summary-stat">
           <dt>Spent</dt>
           <dd>
-            <Money cents={view.totals.spent} />
+            <SpentAmount cents={view.totals.spent} />
           </dd>
         </div>
         <div className="summary-stat saved">

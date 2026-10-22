@@ -173,7 +173,7 @@ non-card budget balances − all envelope money (P included)`.
   six sparkles and a glow once above $0.00, quiet at $0.00), and what is left
   on the right (muted at $0.00; no visible caption, screen readers hear
   "remaining"). Line 2: Planned, Assigned and Spent
-  cells (Spent with a minus, "−$45.20"; a "Compact rows" switch under the
+  cells (Spent with a minus, "−$45.20", as everywhere Spent shows; a "Compact rows" switch under the
   month, phone only, hides line 2 and below, remembered per device and user in
   localStorage, `src/models/layoutPrefs.ts`). Planned is edited in place (tap; blur or Enter saves,
   Escape cancels; amounts rounded to the cent by `roundMoney`; never

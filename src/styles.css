@@ -1131,7 +1131,7 @@ a:focus-visible {
 
 .envelope-name {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
@@ -1141,7 +1141,7 @@ a:focus-visible {
 }
 
 .envelope.unused small {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .envelope-left {

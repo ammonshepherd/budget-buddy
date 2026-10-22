@@ -7,8 +7,16 @@ import {
   type ReactNode,
 } from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
-import { formatCents, type Cents } from "../models/money";
+import { formatCents, formatSignedCents, type Cents } from "../models/money";
 import { PencilIcon } from "./icons";
+
+/**
+ * A Spent amount: money out of an envelope, so shown with a minus ("−$45.20",
+ * "$0.00" when nothing is spent), in the surrounding colour rather than red.
+ */
+export function SpentAmount({ cents }: { cents: Cents }) {
+  return <span className="money">{formatSignedCents(-cents)}</span>;
+}
 
 /** A formatted amount; negative amounts are shown in red. */
 export function Money({ cents, className = "" }: { cents: Cents; className?: string }) {

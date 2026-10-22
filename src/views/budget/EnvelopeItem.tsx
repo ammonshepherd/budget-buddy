@@ -2,9 +2,9 @@ import { useState } from "react";
 import { messageOf } from "../../controllers/errors";
 import type { BudgetPageState as Page } from "../../controllers/useBudgetPage";
 import { envelopeLeft, type EnvelopeRow } from "../../models/budgetMath";
-import { formatCents, formatSignedCents } from "../../models/money";
+import { formatCents } from "../../models/money";
 import { PadAmount } from "../AssignPad";
-import { ErrorMessage, Money } from "../components";
+import { ErrorMessage, Money, SpentAmount } from "../components";
 import { EnvelopeIcon } from "../icons";
 import { EditableCell } from "./EditableCell";
 import { SavedChip } from "./SavedChip";
@@ -139,8 +139,7 @@ export function EnvelopeItem({
             <span className="cell-label">
               Spent{envelope.overPlan && <span className="visually-hidden"> (over Planned)</span>}
             </span>{" "}
-            {/* Money out of the envelope, so shown with a minus (not red). */}
-            <span className="money">{formatSignedCents(-envelope.outflow)}</span>
+            <SpentAmount cents={envelope.outflow} />
           </span>
         </div>
       )}
