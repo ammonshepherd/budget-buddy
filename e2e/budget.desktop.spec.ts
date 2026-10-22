@@ -125,7 +125,9 @@ test("the panel shows the month, then the chosen envelope", async ({ page }) => 
 
   // Nothing chosen: this month at a glance, with what is over Planned.
   await expect(panel(page)).toContainText("This month at a glance");
-  await expect(panel(page).locator(".summary-stat", { hasText: "Spent" })).toContainText("$150.00");
+  await expect(panel(page).locator(".summary-stat", { hasText: "Spent" })).toContainText(
+    "−$150.00",
+  );
   const over = panel(page).getByRole("region", { name: "Spent over Planned" });
   await expect(over).toContainText("Groceries");
   await expect(over).toContainText("$50.00 over");

@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.33.3.
+Version described: 0.33.4.
 
 ## 1. Purpose
 
@@ -314,7 +314,10 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   switched off (the sheet still shows them). Kept in localStorage under
   `bb.budget.compactRows.<userId>` ("1" or "0"; unreadable means off).
 - Envelope rows as in CLAUDE.md. Spent shows with a minus ("−$45.20", a true
-  minus sign; "$0.00" when nothing is spent), in the cell's usual colour. Planned and Assigned cells are buttons ("Edit
+  minus sign; "$0.00" when nothing is spent), in the cell's usual colour;
+  so does every other Spent amount (the sheet's Spent field and plan line,
+  the desktop month summary; `SpentAmount` in `src/views/components.tsx`).
+  Envelope names are regular weight (not bold). Planned and Assigned cells are buttons ("Edit
   planned amount for Groceries, currently $300.00"). Planned turns into a text
   field in place. On a phone Assigned opens the number pad (`PadAmount`,
   `src/views/AssignPad.tsx`): a dialog along the bottom ("Assigned for
@@ -344,7 +347,7 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   - "Remaining this month" (large) and how it adds up ("$300.00 assigned +
     $20.00 released − $187.06 spent"; released and refunded only when used),
     plus Short if overspent;
-  - the plan line: "Spent $X of $Y planned" with "$Z under", "On plan" or
+  - the plan line: "Spent −$X of $Y planned" with "$Z under", "On plan" or
     "$Z over" (orange), or "nothing planned this month";
   - Planned and Assigned fields (blur or Enter saves, Escape undoes the typing
     without closing; same checks as the cells; on a phone Assigned opens the
@@ -734,8 +737,8 @@ Envelopes not in the file are left alone.
   padding 0.5rem on a phone.
 - Money shows as `$1,234.56` / `-$12.50`; negative amounts in red.
   Transaction lists on Accounts use their own signs instead: "+$X" (green), "−$X" (a true minus sign, ink),
-  transfers too (`formatSignedCents`); the Budget page's Spent cells show
-  "−$X" in their own colour.
+  transfers too (`formatSignedCents`); every Spent amount shows
+  "−$X" in its own colour.
 - Saved above $0.00: larger, purple, shimmering gradient text with a twinkling
   ✨; no animation with "reduce motion".
 - Modal dialogs: centred sheet up to 28rem wide with a dimmed backdrop.

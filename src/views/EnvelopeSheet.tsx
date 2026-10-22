@@ -6,7 +6,7 @@ import type { RemainingPart } from "../models/envelopeDetail";
 import { centsToInput, formatCents } from "../models/money";
 import { formatShortDay } from "../models/month";
 import { PadAmount } from "./AssignPad";
-import { EditableTitle, ErrorMessage, Money, SingleFieldForm } from "./components";
+import { EditableTitle, ErrorMessage, Money, SingleFieldForm, SpentAmount } from "./components";
 
 type Detail = NonNullable<ReturnType<Page["detail"]>>;
 
@@ -178,7 +178,7 @@ export function EnvelopeSheet({
             <div className="sheet-field">
               <span className="sheet-field-label">Spent</span>
               <span className="sheet-field-value">
-                <Money cents={row.outflow} />
+                <SpentAmount cents={row.outflow} />
               </span>
             </div>
           </div>
@@ -263,7 +263,7 @@ function PlanLine({ plan }: { plan: Detail["plan"] }) {
     return (
       <p className="plan-line">
         <span>
-          Spent <Money cents={plan.spent} /> · nothing planned this month
+          Spent <SpentAmount cents={plan.spent} /> · nothing planned this month
         </span>
       </p>
     );
@@ -271,7 +271,7 @@ function PlanLine({ plan }: { plan: Detail["plan"] }) {
   return (
     <p className={plan.status === "over" ? "plan-line over" : "plan-line"}>
       <span>
-        Spent <Money cents={plan.spent} /> of{" "}
+        Spent <SpentAmount cents={plan.spent} /> of{" "}
         <strong>
           <Money cents={plan.planned} />
         </strong>{" "}
