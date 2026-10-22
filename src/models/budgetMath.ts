@@ -525,6 +525,27 @@ export function envelopeLeft(row: EnvelopeRow): Cents {
   return row.card ? row.envelopeMoney : row.remaining;
 }
 
+/**
+ * How much can be moved out of an envelope (to another envelope or back to
+ * Available to Assign) by lowering its Assigned: no more than is left
+ * (Remaining stays at $0.00 or more) and no more than is assigned (Assigned
+ * stays at $0.00 or more; money released from Saved stays put). A card's
+ * payment envelope gives nothing: its money is for the card bill.
+ */
+export function movableFrom(row: EnvelopeRow): Cents {
+  if (row.card) return 0;
+  return Math.max(0, Math.min(row.remaining, row.assigned));
+}
+
+/**
+ * Whether money can be moved between envelopes in `month`: only this month
+ * and later, since a move in a past month changes the Saved carried into
+ * every month after it.
+ */
+export function canMoveIn(month: Month, current: Month): boolean {
+  return month >= current;
+}
+
 /** A group's total left (shown when the group is collapsed): its rows' `envelopeLeft`. */
 export function groupLeft(group: GroupRows): Cents {
   return group.envelopes.reduce((sum, row) => sum + envelopeLeft(row), 0);

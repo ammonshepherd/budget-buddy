@@ -6,9 +6,11 @@ import {
   computeEnvelopeHistory,
   computeEnvelopeMonth,
   envelopeAsOf,
+  canMoveIn,
   envelopeLeft,
   groupLeft,
   isMonth,
+  movableFrom,
   overAssigned,
   spentFromAmounts,
   type EnvelopeMonthInput,
@@ -255,6 +257,21 @@ describe("envelopeLeft and groupLeft", () => {
   it("shows Remaining, or Saved + Remaining for a card's payment envelope", () => {
     expect(envelopeLeft(row("food", { remaining: 2_500, envelopeMoney: 4_000 }))).toBe(2_500);
     expect(envelopeLeft(row("pay", { remaining: 2_500, envelopeMoney: 8_000, card }))).toBe(8_000);
+  });
+
+  it("moves out no more than is left or assigned, and nothing from a card's envelope", () => {
+    expect(movableFrom(row("food", { assigned: 10_000, remaining: 4_000 }))).toBe(4_000);
+    // $10 assigned + $50 released from Saved: only the $10 assigned can move.
+    expect(movableFrom(row("gift", { assigned: 1_000, remaining: 6_000 }))).toBe(1_000);
+    expect(movableFrom(row("short", { assigned: 1_000, remaining: -500 }))).toBe(0);
+    expect(movableFrom(row("pay", { assigned: 5_000, remaining: 5_000, card }))).toBe(0);
+  });
+
+  it("allows moves only in this month and later", () => {
+    expect(canMoveIn("2026-10", "2026-10")).toBe(true);
+    expect(canMoveIn("2026-11", "2026-10")).toBe(true);
+    expect(canMoveIn("2026-09", "2026-10")).toBe(false);
+    expect(canMoveIn("2025-12", "2026-01")).toBe(false);
   });
 
   it("adds up what each row of a group shows", () => {
