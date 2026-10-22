@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.33.0.
+Version described: 0.33.1.
 
 ## 1. Purpose
 
@@ -77,7 +77,13 @@ always show what the store holds.
   `start_url`/`scope`/`id` = base, `display: standalone`, background `#faf8fc`,
   theme `#4b2a68`, icons per CLAUDE.md), `__APP_VERSION__` from `package.json`,
   a build check (no secret-looking `VITE_` variable; production never points
-  at the test project), and the Vitest projects `unit` and `integration`.
+  at the test project), a Content Security Policy `<meta>` added to the built
+  page only (scripts, styles, fonts, workers and the manifest from the app
+  itself, images also as `data:`, connections only to the app and the
+  Supabase project, no plugins, `base-uri`/`form-action` self; the dev
+  server injects inline scripts so it gets none; `e2e/security.spec.ts`
+  checks it blocks nothing the app does), and the Vitest projects `unit`
+  and `integration`.
 
 ### Commands and CI
 
@@ -92,7 +98,9 @@ GitHub Actions: `deploy.yml` runs on pushes to `main` and on pull requests:
 `npm ci`, `format:check`, `lint`, `npm test` (unit), `build`. Only pushes to
 `main` deploy to Pages. `tests.yml` runs on pull requests: the UI tests, and
 the integration and `test:ui:db` tests against the test project using
-repository secrets (skipped without them).
+repository secrets (skipped without them). Every action is pinned to a
+commit hash (release tag in a comment); `.github/dependabot.yml` proposes
+newer releases monthly.
 
 ## 3. Data model
 
@@ -242,8 +250,9 @@ signed out, everything is as above.
 ### Sign in
 
 Email and password, and Sign in. There is no create-account form or link:
-public sign-up is off in Supabase Auth, and the owner adds each household
-member in the dashboard (Authentication → Users → Add user, with a password of
+public sign-up is off in Supabase Auth (so are GitHub and every other
+provider; only email), and the owner adds each household member in the
+dashboard (Authentication → Users → Add user, with a password of
 at least 12 characters and "Auto confirm"). Sign-in uses PKCE so a `?code=` in
 the URL leaves the `#route` alone.
 
@@ -744,6 +753,15 @@ Decided or wanted, but not in the app:
   finishing only when the ticked rows match it, locking reconciled rows,
   a separate cleared status, "Select all" for a day or month.
 - Tithing/fast-offering rules.
+- Security: a domain of the app's own. On `ammonshepherd.github.io` every
+  other GitHub Pages site of the owner shares the app's origin, so its
+  scripts could read the Supabase session in localStorage; the Content
+  Security Policy protects only the app's own pages. Moving changes Vite
+  `base`, the manifest scope, Supabase Auth Site URL and redirect URLs.
+  Also Supabase leaked-password protection (a paid plan).
+- Maintenance: dependency updates (minor releases of React, supabase-js,
+  Vite, Vitest, Playwright, ESLint; TypeScript 7 is a major upgrade for its
+  own branch).
 - Inviting a second household member.
 - Editing an income rule (delete and re-add instead).
 - Budget page: an icon chosen per envelope (every row shows the same
