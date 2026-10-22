@@ -1,4 +1,5 @@
 import { useState, type JSX, type ReactNode } from "react";
+import { useAppUpdate } from "../controllers/useAppUpdate";
 import { useBudget } from "../controllers/useBudget";
 import { useHashRoute } from "../controllers/useHashRoute";
 import { useInstallPrompt } from "../controllers/useInstallPrompt";
@@ -17,6 +18,7 @@ import { BudgetPage } from "./pages/BudgetPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./SignInPage";
 import { AddTransactionButton } from "./TransactionEntry";
+import { UpdateBanner } from "./UpdateBanner";
 
 /** Pages with the Add transaction button. */
 const QUICK_ADD: Route[] = ["budget", "accounts"];
@@ -36,10 +38,12 @@ type Install = (() => Promise<void>) | null;
 export function App() {
   const session = useSession(store);
   const { install } = useInstallPrompt();
+  const update = useAppUpdate();
   const desktop = useDesktop() && session.status === "signedIn";
 
   return (
     <div className={desktop ? "app-shell desktop" : "app-shell"}>
+      {update.ready && <UpdateBanner onRefresh={update.refresh} onDismiss={update.dismiss} />}
       {!desktop && (
         <header className="app-header">
           <Brand />

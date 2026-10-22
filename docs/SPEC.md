@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.31.0.
+Version described: 0.32.0.
 
 ## 1. Purpose
 
@@ -71,7 +71,8 @@ always show what the store holds.
 - `.env.test` — the test project (`--mode test`, seed script, database tests);
   see `docs/testing.md`.
 - `vite.config.ts`: `base: "/budget-buddy/"`, `vite-plugin-pwa` with
-  `registerType: "autoUpdate"`, manifest (name/short name "Budget Buddy",
+  `registerType: "prompt"` (a new build waits for the new version banner,
+  §5 App shell), manifest (name/short name "Budget Buddy",
   `start_url`/`scope`/`id` = base, `display: standalone`, background `#faf8fc`,
   theme `#4b2a68`, icons per CLAUDE.md), `__APP_VERSION__` from `package.json`,
   a build check (no secret-looking `VITE_` variable; production never points
@@ -183,6 +184,12 @@ These are implemented in `budgetMath.ts` and the controllers:
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
 - Header: icon + "Budget Buddy" (links to `#budget`), the version (e.g. "v0.24.0"), and
   an Install button when the browser offers installing.
+- New version banner (`useAppUpdate`, `UpdateBanner`): once a newer deploy
+  has downloaded, a white card floats over the top of the screen, signed in
+  or not: "A new version of Budget Buddy is available." with Later (hides it
+  until the next check) and Refresh (switches to the new version and
+  reloads). The open app checks every hour and whenever it comes back on
+  screen, besides the browser's own check on load; offline it does nothing.
 - Bottom navigation (fixed): Budget, Accounts, Settings, with icons; the
   current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
 - Hash routes (`src/models/routes.ts`): `#budget`, `#budget/YYYY-MM`,
