@@ -413,8 +413,9 @@ the list comes back where it was scrolled.
 **An account open** (`#accounts/<id>`):
 
 - The month band (‹ › keep the account open), the card debt strip, then the
-  info pane, pinned to the top while the list scrolls (with the bar of
-  ticked rows under it): an edge-to-edge `#F3EEF8` band, no frame around it.
+  info pane, pinned to the top while the list scrolls (with the search and
+  sort row, on an open account, and the bar of ticked rows under it): an
+  edge-to-edge `#F3EEF8` band, no frame around it.
   - Line 1: back arrow (44×44, a full arrow, white on a solid purple
     circle, "Back to accounts", a link to the list), the account name
     (`<h2>`; "Closed" tag on a closed account), and a pencil (44×44, "Edit
@@ -529,7 +530,9 @@ picker it shows is gone).
   shows reconciled when every side it stands for is. Opening something else
   (or another month on All accounts) clears the ticks. Reconciled is only a
   mark: it changes no budget math and does not stop editing. To review rows
-  have no checkboxes.
+  have no checkboxes. While a search or chip hides some rows, the count,
+  total and Mark reconciled cover only the ticked rows shown, and ticking
+  then drops hidden ticks, so nothing out of sight is ever marked.
 - A transfer is one row: its money-out side's date and payee, "From → To".
 - A split shows a "Split (N)" pill (`aria-expanded`, "Close/Open split for
   ⟨payee⟩", chevron) instead of an envelope, and its parts underneath (dashed
@@ -543,8 +546,9 @@ picker it shows is gone).
 - The list: in a card on the left; the panel on the right holds "Add an
   account" ("No accounts yet. Add your checking account on the right."); no
   - Add account button.
-- Something open: the info pane (pinned under the band), the ticked-rows
-  bar and the rows sit in a card: checkbox | bank icon | payee over account
+- Something open: the info pane (pinned under the band), on an open
+  account the search and sort row, the ticked-rows bar and the rows sit in a
+  card: checkbox | bank icon | payee over account
   | envelope | memo (muted, cut short with …) | amount; a split's parts line
   up below.
 - The panel shows the To review card (same content and buttons; "Nothing to
@@ -746,8 +750,9 @@ Decided or wanted, but not in the app:
   envelope icon, `EnvelopeIcon`; Settings shows none); "Collapse all" /
   "Expand all" for groups.
 - Accounts lists: search and sort on All accounts (an open account has
-  them), a "Needs
-  review" queue for transfer matches, running balances on each row, swipe
+  them since v0.33.0); a Reconciled chip (only Not reconciled exists);
+  keeping a search in the URL or across accounts; a "Needs review" queue
+  for transfer matches, running balances on each row, swipe
   actions (such as marking cleared), a memo per split part, and charts on the
   info pane. A "Reconcile" button with a statement difference (see
   reconciliation above).

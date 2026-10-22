@@ -134,6 +134,9 @@ asks for confirmation first.
 
 7. **Selection scope.** Clear the selection when the month or account filter
    changes, so nothing selected is ever hidden at the moment you confirm.
+   (Since v0.33.0 an open account can also be searched and filtered by
+   envelope, kind or Not reconciled; the bar then counts and acts on only
+   the ticked rows shown. Bulk actions should do the same.)
    Selection should also work in the "To review" list, because categorizing a
    batch of imported rows is probably the most useful case. A transaction can
    show in both lists, so the two lists should share one selection (by
