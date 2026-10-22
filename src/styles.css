@@ -3732,6 +3732,18 @@ body:has(.app-shell.desktop) {
   color: #b3261e;
 }
 
+/* Assign full width, with Cancel as a text link centred under it. */
+.assign-form-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.assign-form-actions .text-button {
+  font-size: 0.95rem;
+}
+
 /* The number pad: along the bottom of the screen, over everything. */
 .number-pad {
   inline-size: min(100%, 30rem);

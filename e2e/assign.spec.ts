@@ -57,7 +57,13 @@ test("the banner opens a dialog that adds to an envelope's Assigned", async ({ p
   await dialog.getByLabel("Amount to add").fill("2000");
   await dialog.getByRole("button", { name: "Assign", exact: true }).click();
   await expect(dialog.getByRole("alert")).toHaveText(/Only \$850\.00 is available to assign/);
-  await dialog.getByRole("button", { name: "Cancel" }).click();
+  // Cancel is a text link under Assign.
+  const cancel = dialog.getByRole("button", { name: "Cancel" });
+  const assignBox = await dialog.getByRole("button", { name: "Assign", exact: true }).boundingBox();
+  const cancelBox = await cancel.boundingBox();
+  expect(cancelBox!.y).toBeGreaterThan(assignBox!.y + assignBox!.height);
+  await expect(cancel).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await cancel.click();
   await expect(dialog).toBeHidden();
   await expect(available(page)).toContainText("$850.00");
 });

@@ -71,12 +71,12 @@ export function AssignFromAvailable({ page, onDone }: { page: Page; onDone: () =
         />
       </label>
       <ErrorMessage error={save.error} />
-      <div className="form-actions">
-        <button className="secondary-button" type="button" onClick={onDone}>
-          Cancel
-        </button>
+      <div className="assign-form-actions">
         <button className="primary-button" type="submit" disabled={save.pending}>
           {takeBack ? "Take back" : "Assign"}
+        </button>
+        <button className="text-button" type="button" onClick={onDone}>
+          Cancel
         </button>
       </div>
     </form>

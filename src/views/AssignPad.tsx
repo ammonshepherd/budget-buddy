@@ -159,7 +159,10 @@ function NumberPad({
 
   useEffect(() => {
     const element = dialog.current;
-    if (!element) return;
+    // Opened once. No cleanup closes it: unmounting removes it anyway, and
+    // close() there would fire onClose late and shut the pad just reopened
+    // by React's development double run of effects (StrictMode).
+    if (!element || element.open) return;
     element.showModal();
     // Keep the field being edited above the pad. The pad is still sliding
     // up, so its final top is worked out from its height.
@@ -169,7 +172,6 @@ function NumberPad({
       const overlap = field.getBoundingClientRect().bottom - padTop;
       if (overlap > -16) scrollParent(field).scrollBy({ top: overlap + 24 });
     }
-    return () => element.close();
   }, [anchor]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
