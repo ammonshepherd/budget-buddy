@@ -88,7 +88,8 @@ export function AccountsPage({
  * The accounts list: All accounts first (with the month's money in and out),
  * then Checking, Credit cards and Tracking, each row opening its account.
  * Closed accounts wait behind "Show closed accounts". Accounts are added
- * with + Add account (a sheet), or on a desktop in the panel on the right.
+ * with + Add account under the list (a sheet), or on a desktop in the panel
+ * on the right.
  */
 function AccountList({
   page,
@@ -119,8 +120,9 @@ function AccountList({
       </a>
     </div>
   );
+  // Phone: under the open accounts. Desktop: the form is in the panel.
   const addButton = !desktop && (
-    <button className="band-add" type="button" onClick={() => setAdding(true)}>
+    <button className="account-list-add" type="button" onClick={() => setAdding(true)}>
       <PlusIcon />
       Add account
     </button>
@@ -161,11 +163,12 @@ function AccountList({
       {page.openAccounts.length === 0 ? (
         <p className="activity-empty">
           No accounts yet. Add your checking account{" "}
-          {desktop ? "on the right" : "with + Add account"}.
+          {desktop ? "on the right" : "with + Add account below"}.
         </p>
       ) : (
         groups(page.openGroups)
       )}
+      {addButton}
       {page.closedAccounts.length > 0 && (
         <>
           <button
@@ -202,10 +205,7 @@ function AccountList({
   }
   return (
     <>
-      <div className="accounts-band">
-        {monthNav}
-        {addButton}
-      </div>
+      {monthNav}
       <CardDebt data={data} />
       {list}
       <Sheet open={adding} label="Add an account" onClose={() => setAdding(false)}>

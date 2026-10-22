@@ -3335,38 +3335,27 @@ body:has(.app-shell.desktop) {
 
 /* ---- v0.29.0: Accounts and Activity merged into one Accounts page ---- */
 
-/* Phone: the month and + Add account share the purple band. */
-.accounts-band {
+/* Phone: + Add account sits under the open accounts. */
+.account-list-add {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-inline-end: 12px;
-  background: var(--bb-purple);
-}
-
-.accounts-band .budget-month {
-  flex: 1;
-  min-inline-size: 0;
-}
-
-.band-add {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  inline-size: calc(100% - 32px);
   min-block-size: 2.75rem;
+  margin: 12px 16px;
   padding: 0 12px;
-  border: 0;
-  border-radius: 999px;
-  color: var(--bb-purple);
-  background: #fff;
+  border: 1px dashed var(--border);
+  border-radius: 0.9rem;
+  color: var(--brand);
+  background: var(--brand-light);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
 
-.band-add svg {
+.account-list-add svg {
   inline-size: 16px;
   block-size: 16px;
   fill: none;
@@ -4107,4 +4096,15 @@ body:has(.app-shell.desktop) {
 .activity-portion.match .portion-memo {
   color: var(--bb-purple);
   font-weight: 700;
+}
+
+/* Adding inside an open account: its name in place of the Account picker. */
+.fixed-account {
+  margin: 0;
+}
+
+.fixed-account strong {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 750;
 }

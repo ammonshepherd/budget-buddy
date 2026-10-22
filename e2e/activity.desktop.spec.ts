@@ -66,10 +66,9 @@ test("the new row starts in the open account and runs the cover prompt", async (
   await openAccount(page, "Savings");
 
   await addButton(page).click();
-  const account = newRow(page).getByRole("combobox", { name: "Account" });
-  expect(await account.evaluate((s: HTMLSelectElement) => s.selectedOptions[0]?.text)).toBe(
-    "Savings",
-  );
+  // No Account picker inside an account: the row shows its name.
+  await expect(newRow(page).getByRole("combobox", { name: "Account" })).toHaveCount(0);
+  await expect(newRow(page).locator(".fixed-account")).toHaveText("Account Savings");
   await newRow(page).getByLabel("Payee").fill("Big Shop");
   await newRow(page).getByLabel("Amount").fill("150");
   await chooseEnvelope(newRow(page).getByLabel("Envelope"), "Groceries");

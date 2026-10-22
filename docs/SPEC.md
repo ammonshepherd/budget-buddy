@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.33.2.
+Version described: 0.33.3.
 
 ## 1. Purpose
 
@@ -217,7 +217,8 @@ These are implemented in `budgetMath.ts` and the controllers:
   and their nav links carry it (`routeHref`).
 - Floating round + button (bottom right, above the nav) on Budget and
   Accounts opens the transaction dialog; with an open account on Accounts it
-  starts in that account.
+  adds to that account (the form shows its name instead of the Account
+  picker).
 - Credit card debt: while the cards owe anything today (`cardDebt` in
   `src/models/accounts.ts`, display only), every page shows "CREDIT CARD
   DEBT" (14px) and the amount (26px) in a rounded strip with 12px space
@@ -407,8 +408,9 @@ the list comes back where it was scrolled.
 **The list** (nothing open):
 
 - The month band as on Budget ("OCTOBER 2026", ‹ › links to
-  `#accounts/YYYY-MM`) with "+ Add account" on the right (phone), which opens
-  "Add an account" in a sheet: Checking / Credit card choice, Account name,
+  `#accounts/YYYY-MM`). On a phone, "+ Add account" (a full-width button
+  under the open accounts, above "Show closed accounts") opens "Add an
+  account" in a sheet: Checking / Credit card choice, Account name,
   "Opening balance" (checking) or "Amount owed on the opening date" (card),
   Opening date (default today); a card shows a short explanation of its
   payment envelope. Adding closes the sheet. Then the card debt strip.
@@ -423,7 +425,8 @@ the list comes back where it was scrolled.
   opening balance plus every transaction (`accountBalance`).
 - Closed accounts are hidden behind "Show closed accounts (N)" at the bottom
   (not remembered); their transactions still show in All accounts.
-- Empty: "No accounts yet. Add your checking account with + Add account."
+- Empty: "No accounts yet. Add your checking account with + Add account
+  below."
 
 **An account open** (`#accounts/<id>`):
 
@@ -575,13 +578,15 @@ picker it shows is gone).
 - Add transaction opens "New transaction" at the top of the list: the
   transaction form with its fields side by side in their usual order
   (wrapping as needed; splits, transfer notes and errors on lines of their
-  own), starting in the open account, with Payee focused. Save (after any
+  own), in the open account (its name shown, no Account picker), with Payee
+  focused. Save (after any
   cover prompt, shown in the row), Cancel or Escape closes it.
 
 ### Transaction dialog (add and edit)
 
 Fields: Outflow/Inflow, Amount (> 0), Payee, Envelope, Account, Date (default
-today), Memo; then Save (adding) / Save changes, Cancel, and (editing)
+today), Memo; when adding inside an open account, Account is that account's
+name, not a picker (editing always has the picker); then Save (adding) / Save changes, Cancel, and (editing)
 Delete transaction / Delete transfer.
 
 Envelopes are chosen with the envelope picker (`EnvelopePicker`, used for the
