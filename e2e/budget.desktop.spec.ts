@@ -90,6 +90,34 @@ test("envelopes are one-line rows under a band with the month and Available to A
   expect((await available(page).boundingBox())!.y).toBeLessThan(40);
 });
 
+test("Available to Assign is centred in the band and assigns from a dialog", async ({ page }) => {
+  await setUp(page);
+  const band = (await page.locator(".budget-band").boundingBox())!;
+  const card = (await available(page).boundingBox())!;
+  const middle = (box: { x: number; width: number }) => box.x + box.width / 2;
+  expect(Math.abs(middle(card) - middle(band))).toBeLessThan(4);
+
+  await available(page).getByRole("button").click();
+  const dialog = page.getByRole("dialog", { name: "Assign money" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Gas");
+  await dialog.getByLabel("Amount to add").fill("25");
+  await dialog.getByRole("button", { name: "Assign", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(available(page)).toContainText("$675.00");
+});
+
+test("Assigned takes an equation typed in the cell (no number pad)", async ({ page }) => {
+  await setUp(page);
+  await editCell(page, "Groceries", "assigned", "+50");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(available(page)).toContainText("$650.00");
+  await editCell(page, "Groceries", "assigned", "350 - 100");
+  await expect(available(page)).toContainText("$750.00");
+  await expect(
+    envelope(page, "Groceries").getByRole("button", { name: /^Edit assigned amount/ }),
+  ).toContainText("$250.00");
+});
+
 test("the panel shows the month, then the chosen envelope", async ({ page }) => {
   await setUp(page);
   await addTransaction(page, { amount: "150", payee: "Corner Market", envelope: "Groceries" });

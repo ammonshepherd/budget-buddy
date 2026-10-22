@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /** Signs in (the in-memory store accepts any password) and creates a household. */
 export async function signInWithHousehold(page: Page) {
@@ -16,7 +16,13 @@ export const available = (page: Page) => page.getByRole("region", { name: "Avail
 export const envelope = (page: Page, name: string) =>
   page.locator("div.envelope").filter({ has: page.locator(".envelope-name", { hasText: name }) });
 
-/** Types a new amount into an envelope's Planned or Assigned cell and presses Enter. */
+/** True in the phone-width test project (where Assigned uses the number pad). */
+export const onPhone = () => test.info().project.name.startsWith("mobile");
+
+/**
+ * Types a new amount into an envelope's Planned or Assigned cell and presses
+ * Enter. On a phone Assigned opens the number pad, which takes typed keys too.
+ */
 export async function editCell(
   page: Page,
   name: string,
@@ -25,9 +31,32 @@ export async function editCell(
 ) {
   const row = envelope(page, name);
   await row.getByRole("button", { name: new RegExp(`^Edit ${cell} amount`) }).click();
+  if (cell === "assigned" && onPhone()) {
+    const pad = page.getByRole("dialog", { name: `Assigned for ${name}` });
+    await pad.waitFor();
+    await page.keyboard.type(value);
+    await page.keyboard.press("Enter");
+    return;
+  }
   const input = row.getByRole("textbox", { name: new RegExp(`^${cell} amount`, "i") });
   await input.fill(value);
   await input.press("Enter");
+}
+
+/**
+ * Checks the error after editCell(…, "assigned", …): on a phone it shows in
+ * the number pad, which stays open until cancelled (closed here); on a
+ * desktop it shows in the row.
+ */
+export async function expectAssignedError(page: Page, name: string, message: string | RegExp) {
+  if (!onPhone()) {
+    await expect(envelope(page, name).getByRole("alert")).toHaveText(message);
+    return;
+  }
+  const pad = page.getByRole("dialog", { name: `Assigned for ${name}` });
+  await expect(pad.getByRole("alert")).toHaveText(message);
+  await pad.getByRole("button", { name: "Cancel" }).click();
+  await expect(pad).toBeHidden();
 }
 
 /** Opens an envelope's sheet (tap the top line of its row). */
@@ -106,16 +135,22 @@ export async function addTransaction(
 }
 
 /**
- * Picks an option in an Envelope dropdown by envelope name, ignoring the
- * "(has $X)" Remaining after it. Fixed choices ("Uncategorized") work too.
+ * Picks an envelope (or a fixed choice like "Uncategorized") in an envelope
+ * picker by typing its full name and pressing Enter.
  */
-export async function chooseEnvelope(select: Locator, name: string) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const option = select
-    .locator("option")
-    .filter({ hasText: new RegExp(`^${escaped}( \\(has .+\\))?$`) });
-  const value = await option.getAttribute("value");
-  await select.selectOption(value ?? "");
+export async function chooseEnvelope(field: Locator, name: string) {
+  await field.click();
+  await field.fill(name);
+  await field.press("Enter");
+  await expect(field).toHaveValue(name);
+}
+
+/** Opens an envelope picker's list and returns its choices (each "Name has $X"). */
+export async function pickerChoices(field: Locator) {
+  await field.click();
+  const list = field.page().getByRole("listbox", { name: "Matches" });
+  await expect(list).toBeVisible();
+  return list.getByRole("option");
 }
 
 /** Clicks the floating + button and returns the dialog it opens. */

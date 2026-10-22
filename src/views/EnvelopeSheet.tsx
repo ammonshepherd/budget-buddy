@@ -5,6 +5,7 @@ import type { useBudgetPage } from "../controllers/useBudgetPage";
 import type { RemainingPart } from "../models/envelopeDetail";
 import { centsToInput, formatCents } from "../models/money";
 import { formatShortDay } from "../models/month";
+import { PadAmount } from "./AssignPad";
 import { EditableTitle, ErrorMessage, Money, SingleFieldForm } from "./components";
 
 type Page = ReturnType<typeof useBudgetPage>;
@@ -154,13 +155,27 @@ export function EnvelopeSheet({
               cents={row.planned}
               onSave={save(page.setPlanned)}
             />
-            <AmountField
-              className="sheet-field"
-              label="Assigned"
-              envelopeName={row.name}
-              cents={row.assigned}
-              onSave={save(page.setAssigned)}
-            />
+            {docked ? (
+              // Typed; "+50" or "120 + 50" adds to what is there.
+              <AmountField
+                className="sheet-field"
+                label="Assigned"
+                envelopeName={row.name}
+                cents={row.assigned}
+                onSave={save(page.setAssigned)}
+              />
+            ) : (
+              // A phone: the number pad, as in the envelope row.
+              <PadAmount
+                className="sheet-field pad-field"
+                labelClassName="sheet-field-label"
+                valueClassName="sheet-field-value"
+                label="Assigned"
+                envelopeName={row.name}
+                cents={row.assigned}
+                onSave={(text) => page.setAssigned(row.id, text)}
+              />
+            )}
             <div className="sheet-field">
               <span className="sheet-field-label">Spent</span>
               <span className="sheet-field-value">

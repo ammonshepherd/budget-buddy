@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.29.0.
+Version described: 0.30.0.
 
 ## 1. Purpose
 
@@ -160,7 +160,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 - **Cover prompt** (spending into an envelope, or a card payment from its payment
   envelope, that would make Remaining negative): title "⟨Envelope⟩ would be $X
   short in ⟨Month⟩". Step 1 releases this envelope's Saved automatically; for the
-  rest, a "Cover $X from" dropdown offers other envelopes with enough Remaining
+  rest, a "Cover $X from" envelope picker offers other envelopes with enough Remaining
   this month (moved) and Available to Assign (assigned, only if `assignable`
   allows). If neither can cover it, saving is blocked with an explanation (card
   payments never suggest Uncategorized). Cover actions happen in the
@@ -251,10 +251,18 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
 - No page title or totals (the `h1` exists for screen readers only).
 - Month picker (‹ OCTOBER 2026 ›, 44px buttons) in a purple band; changes
   `#budget/YYYY-MM` and scrolls away.
-- Sticky "Available to Assign" card pinned to the top on the purple band
-  (hidden at exactly $0.00): 6px green border, light green background, amount on the
-  right, "Income this month $X" under the label. Over assigned: red, labelled
-  "Over Assigned" with the amount over.
+- Sticky "Available to Assign" banner pinned to the top (hidden at exactly
+  $0.00), styled like the Credit card debt strip (14px uppercase label, 26px
+  amount, rounded) on solid green with white text, no purple behind it. Over
+  assigned: solid red, labelled "Over Assigned" with the amount over. The
+  banner is a button that opens "Assign money" (a dialog): an envelope picker
+  (every envelope, unused and payment envelopes too, each with "has $X", its
+  Remaining) and "Amount to add" (above zero), added on top of the envelope's
+  Assigned (`assignFromAvailable`; refused beyond Available to Assign). When
+  over assigned it is "Take back from an envelope" with "Amount to take back"
+  (starting at the amount over; at most the envelope's Remaining), which
+  returns money to Available to Assign. This month's income is on the desktop
+  month summary only.
 - Notices: "N transactions to review ($X in, $Y out) are not in Available to
   Assign yet. Review them in All accounts."; no accounts → link to Accounts; no
   groups → link to Settings.
@@ -283,8 +291,20 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   `bb.budget.compactRows.<userId>` ("1" or "0"; unreadable means off).
 - Envelope rows as in CLAUDE.md. Spent shows with a minus ("−$45.20", a true
   minus sign; "$0.00" when nothing is spent), in the cell's usual colour. Planned and Assigned cells are buttons ("Edit
-  planned amount for Groceries, currently $300.00") that turn into a text field
-  in place; errors show under the row ("Only $X available to assign.", "Some is
+  planned amount for Groceries, currently $300.00"). Planned turns into a text
+  field in place. On a phone Assigned opens the number pad (`PadAmount`,
+  `src/views/AssignPad.tsx`): a dialog along the bottom ("Assigned for
+  ⟨name⟩") with 0–9, a decimal point, delete, − and + and a green Assign key;
+  the field is scrolled clear of it. Digits first type a new total; + or −
+  builds an equation on the current amount ("120.00 + 50", "120.00 − 20",
+  several terms allowed), shown in the Assigned cell as it is typed and in the
+  pad with its result ("= $170.00"). Assign saves the result (minus returns
+  money to Available to Assign); × or tapping outside cancels; a refused
+  amount keeps the pad open with the reason. A keyboard works in the pad too
+  (digits, ., + and −, Backspace, Enter). On a desktop Assigned is typed in
+  place and takes the same equations ("+50", "350 − 100";
+  `evaluateAmount` in `src/models/amountEquation.ts`). Errors show under the
+  row (in the pad for the pad) ("Only $X available to assign.", "Some is
   already spent: Assigned can go no lower than $X.", "Planned cannot be
   negative."). Edits show at once (an optimistic update) and are undone if the
   save fails. Card payment envelopes show Available to pay and Remaining debt
@@ -303,7 +323,8 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   - the plan line: "Spent $X of $Y planned" with "$Z under", "On plan" or
     "$Z over" (orange), or "nothing planned this month";
   - Planned and Assigned fields (blur or Enter saves, Escape undoes the typing
-    without closing; same checks as the cells) and Spent;
+    without closing; same checks as the cells; on a phone Assigned opens the
+    number pad over the sheet) and Spent;
   - Saved: purple with sparkles and "Move some into Remaining…" (opens "Amount
     to move into Remaining" + Move, i.e. Release from Saved); at $0.00 a quiet
     "Nothing saved yet" panel;
@@ -318,7 +339,7 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
 - "Show N envelopes not used this month" toggle when some are hidden.
 - **Desktop** (see Desktop layout):
   - One purple band, pinned to the top, holds the month picker (left) and
-    Available to Assign (right; same rules).
+    the Available to Assign banner centred across the band (same rules).
   - Envelopes are a table with a sticky column head (Envelope, Planned,
     Assigned, Spent, Remaining): one line per envelope (name and Saved pill,
     then the cells without their labels, then what is left). A card's payment
@@ -493,11 +514,21 @@ Fields: Outflow/Inflow, Amount (> 0), Payee, Envelope, Account, Date (default
 today), Memo; then Save (adding) / Save changes, Cancel, and (editing)
 Delete transaction / Delete transfer.
 
+Envelopes are chosen with the envelope picker (`EnvelopePicker`, used for the
+Envelope field, split lines, the cover prompt and the Assign dialog): a text
+field (a combobox) whose matches drop down under it, grouped under their group
+names, each with "has $X" on the right. Every typed word must start a word of
+the envelope's name or group, in any order ("car ins"; `matchOptions` in
+`src/models/envelopeSearch.ts`). Tap a match, use the arrows and Enter, or type
+the full name (Enter or leaving the field picks it); anything else puts the
+choice back. Escape closes the list only. The chosen envelope shows its "has
+$X" in the field.
+
 Envelope choices: Uncategorized; Income (to Available to Assign) — disabled for
-outflows; each group's envelopes (payment envelopes excluded), each shown as
-"⟨Envelope⟩ (has $X)" with its Remaining in the month of the form's Date as the
-Budget page shows it now (before this save; `useEnvelopeRemaining`); Split
-across envelopes; Transfer — needs two open accounts. The split lines' envelope
+outflows; Split across envelopes; Transfer — needs two open accounts; then each
+group's envelopes (payment envelopes excluded), each with "has $X", its
+Remaining in the month of the form's Date as the
+Budget page shows it now (before this save; `useEnvelopeRemaining`). The split lines' envelope
 choices show the same amounts. On a credit card with Inflow,
 only "Card credit (lowers what you owe)" and Transfer are offered (so card
 purchases can be split, card credits cannot).

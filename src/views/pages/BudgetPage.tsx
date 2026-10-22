@@ -13,6 +13,8 @@ import type { WatchItem } from "../../models/envelopeDetail";
 import { accountsHref } from "../../models/routes";
 import type { BudgetData } from "../../models/types";
 import { ErrorMessage, Money, Sheet, SingleFieldForm } from "../components";
+import { AssignFromAvailable } from "../AssignFromAvailable";
+import { PadAmount } from "../AssignPad";
 import { CardDebt } from "../CardDebt";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
@@ -52,6 +54,7 @@ export function BudgetPage({
   const detail = openId ? page.detail(openId) : null;
   const over = view.overAssigned > 0;
   const [uploading, setUploading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   // A transaction tapped in the envelope sheet; the dialog closes if it goes.
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId ? page.transaction(editingId) : undefined;
@@ -81,15 +84,13 @@ export function BudgetPage({
     </div>
   );
   // Hidden when there is nothing left to assign (but shown when over assigned).
+  // Tapping it opens a dialog to assign to an envelope (or take back, when over).
   const assignCard = view.availableToAssign !== 0 && (
     <section className={over ? "assign-card over" : "assign-card"} aria-label="Available to Assign">
-      <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
-      <strong className="assign-amount">
+      <button type="button" aria-haspopup="dialog" onClick={() => setAssigning(true)}>
+        <span className="assign-label">{over ? "Over Assigned" : "Available to Assign"}</span>
         <Money cents={over ? view.overAssigned : view.availableToAssign} />
-      </strong>
-      <span className="assign-helper">
-        Income this month <Money cents={view.income} />
-      </span>
+      </button>
     </section>
   );
   const groups = page.groups.map((group) => (
@@ -266,6 +267,15 @@ export function BudgetPage({
           if (editing) await page.deleteTransaction(editing.id);
         }}
       />
+
+      <Sheet
+        open={assigning}
+        label="Assign money"
+        className="sheet assign-sheet"
+        onClose={() => setAssigning(false)}
+      >
+        {() => <AssignFromAvailable page={page} onDone={() => setAssigning(false)} />}
+      </Sheet>
 
       <Sheet
         open={uploading}
@@ -458,8 +468,8 @@ function GroupSection({
 }
 
 /**
- * One envelope: name, Saved and what is left; then Planned and Assigned (tap
- * to edit in place) and Spent. Tapping the top line opens its sheet.
+ * One envelope: name, Saved and what is left; then Planned (tap to edit in
+ * place), Assigned (tap for the number pad) and Spent. Tapping the top line opens its sheet.
  * On a desktop it is one table row (name and Saved, Planned, Assigned,
  * Spent, Remaining) and the name shows the envelope in the panel.
  */
@@ -540,14 +550,27 @@ function EnvelopeItem({
             cents={envelope.planned}
             onSave={save(page.setPlanned)}
           />
-          <EditableCell
-            className="cell assigned"
-            label="Assigned"
-            what="assigned"
-            envelopeName={envelope.name}
-            cents={envelope.assigned}
-            onSave={save(page.setAssigned)}
-          />
+          {desktop ? (
+            // Typed in place; "+50" or "120 + 50" adds to what is there.
+            <EditableCell
+              className="cell assigned"
+              label="Assigned"
+              what="assigned"
+              envelopeName={envelope.name}
+              cents={envelope.assigned}
+              onSave={save(page.setAssigned)}
+            />
+          ) : (
+            // A phone: the number pad, with + and − to add to or take from it.
+            <PadAmount
+              className="cell assigned"
+              labelClassName="cell-label"
+              label="Assigned"
+              envelopeName={envelope.name}
+              cents={envelope.assigned}
+              onSave={(text) => page.setAssigned(envelope.id, text)}
+            />
+          )}
           <span className={envelope.overPlan ? "cell spent over" : "cell spent"}>
             {/* Orange when over Planned; screen readers hear it in words. */}
             <span className="cell-label">

@@ -78,9 +78,7 @@ test("the new row starts in the open account and runs the cover prompt", async (
   // Groceries has $100: the cover prompt shows in the row.
   const cover = page.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $50.00 short");
-  const from = cover.getByRole("combobox");
-  const available = from.locator("option", { hasText: "Available to Assign" });
-  await from.selectOption((await available.getAttribute("value"))!);
+  await chooseEnvelope(cover.getByRole("combobox"), "Available to Assign");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(newRow(page)).toHaveCount(0);
   // Saved in Savings: it is in this account's list.

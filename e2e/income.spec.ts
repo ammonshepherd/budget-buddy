@@ -12,10 +12,14 @@ test("inflows wait for review until marked Income", async ({ page }) => {
     ["Side job", "250"],
   ]) {
     const dialog = await openAddTransaction(page);
-    const income = dialog.locator("option", { hasText: "Income (to Available to Assign)" });
-    await expect(income).toHaveAttribute("disabled");
+    const income = dialog.getByRole("option", { name: "Income (to Available to Assign)" });
+    await dialog.getByLabel("Envelope").click();
+    await expect(income).toHaveAttribute("aria-disabled", "true");
+    await dialog.getByLabel("Envelope").press("Escape");
     await dialog.getByRole("radio", { name: "Inflow" }).check();
-    await expect(income).not.toHaveAttribute("disabled");
+    await dialog.getByLabel("Envelope").click();
+    await expect(income).not.toHaveAttribute("aria-disabled");
+    await dialog.getByLabel("Envelope").press("Escape");
     await dialog.getByLabel("Amount").fill(amount);
     await dialog.getByLabel("Payee").fill(payee);
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -24,7 +28,8 @@ test("inflows wait for review until marked Income", async ({ page }) => {
 
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$100.00");
-  await expect(available(page)).toContainText("Income this month $0.00");
+  // The banner shows only what is left to assign (no income line).
+  await expect(available(page)).not.toContainText("Income this month");
   await expect(
     page.getByText(
       "2 transactions to review ($1,750.00 in, $0.00 out) are not in Available to Assign yet.",
@@ -41,6 +46,5 @@ test("inflows wait for review until marked Income", async ({ page }) => {
 
   await goTo(page, "Budget");
   await expect(available(page)).toContainText("$1,850.00");
-  await expect(available(page)).toContainText("Income this month $1,750.00");
   await expect(page.getByText("not in Available to Assign yet")).toHaveCount(0);
 });

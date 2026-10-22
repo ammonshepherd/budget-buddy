@@ -146,9 +146,13 @@ non-card budget balances − all envelope money (P included)`.
 - The Budget page is for envelopes (layout decided in v0.16.0, revised in
   v0.24.0, `docs/mockups/budget-screen.html`): no page title or summary
   totals; the month picker sits in a purple band that scrolls away;
-  Available to Assign is a sticky card pinned to the top, hidden when it is
-  exactly $0.00 (mockups show it only to show its look; green when positive;
-  red "Over Assigned" with the positive amount when over);
+  Available to Assign is a sticky banner pinned to the top, hidden when it is
+  exactly $0.00 (mockups show it only to show its look). Since v0.30.0 it is
+  styled like the Credit card debt strip (same type sizes) on solid green, or
+  solid red "Over Assigned" with the positive amount when over; no purple
+  behind it and no income line. Tapping it opens a dialog that adds an amount
+  to an envelope's Assigned (or, when over, takes it back to Available to
+  Assign; `AssignFromAvailable`);
   groups are full-width bars whose name is a button that collapses the group
   (chevron; open, the bar shows no numbers; collapsed, it shows "N envelopes"
   and the group's total left, `groupLeft` in `budgetMath.ts`) and a + button
@@ -166,9 +170,16 @@ non-card budget balances − all envelope money (P included)`.
   "remaining"). Line 2: Planned, Assigned and Spent
   cells (Spent with a minus, "−$45.20"; a "Compact rows" switch under the
   month, phone only, hides line 2 and below, remembered per device and user in
-  localStorage, `src/models/layoutPrefs.ts`). Planned and Assigned are edited in place (tap; blur or Enter saves,
+  localStorage, `src/models/layoutPrefs.ts`). Planned is edited in place (tap; blur or Enter saves,
   Escape cancels; amounts rounded to the cent by `roundMoney`; never
-  negative). Raising Assigned is blocked beyond Available to Assign, and
+  negative). Assigned (decided in v0.30.0): on a phone, in the row and the
+  sheet, tapping opens a number pad along the bottom (digits, decimal
+  point, delete, −, + and Assign; `PadAmount` in `src/views/AssignPad.tsx`).
+  Digits first set a new total; + or − builds an equation on the current
+  amount, shown in the Assigned field as typed; Assign commits (minus returns
+  money to Available to Assign). On a desktop it is typed in place and takes
+  the same equations ("+50"). `evaluateAmount` in
+  `src/models/amountEquation.ts`; never negative. Raising Assigned is blocked beyond Available to Assign, and
   lowering it below what is spent is blocked. Spent turns orange (no extra
   word, only "Spent"; screen readers hear "over Planned") when above Planned (`overPlan`, a
   hint only: not overspending).
@@ -191,7 +202,7 @@ non-card budget balances − all envelope money (P included)`.
   and bottom bar, content is capped at 1600px, and lists get a collapsible
   right panel instead of sheets (sidebars remembered per device and user in
   localStorage, `src/models/layoutPrefs.ts`). Budget: one-line envelope rows
-  under a band with the month and Available to Assign; the panel shows the
+  under a band with the month (left) and Available to Assign (centred); the panel shows the
   month summary, the chosen envelope, or a transaction being edited.
   Accounts with an account (or All accounts) open edits transactions, the
   account and its CSV import in the panel (the info pane stays above the
@@ -241,6 +252,11 @@ non-card budget balances − all envelope money (P included)`.
   remembered). Tapping the payee opens the same dialog to edit, with Delete
   (Delete transfer for a transfer) at the bottom. Rows have no Edit/Delete
   links. Transactions to review show "Uncategorized" on an amber label.
+- Envelopes are chosen by typing (decided in v0.30.0): every envelope
+  choice (transaction form, split lines, cover prompt, Assign dialog) is
+  `EnvelopePicker`, a text field whose matches drop down with each
+  envelope's "has $X"; tap one or type the full name (`matchOptions` /
+  `exactOption` in `src/models/envelopeSearch.ts`).
 - Categories are applied through `transaction_allocations` (one row for a normal
   transaction, several for a split). Allocations must sum to the transaction amount,
   each has the transaction's sign (no mixed refund lines) and an envelope appears

@@ -54,7 +54,6 @@ test("a rule marks payroll deposits as Income when importing", async ({ page }) 
   // The paycheck is in Available to Assign; the refund still waits for review.
   await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,600.00"); // 100 + 1,500 (the rest waits)
-  await expect(available(page)).toContainText("Income this month $1,500.00");
   await expect(
     page.getByText(
       "2 transactions to review ($20.00 in, $100.00 out) are not in Available to Assign yet.",
