@@ -190,6 +190,7 @@ export function NewTransactionRow({
         initial={initial}
         heading="New transaction"
         layout="row"
+        fixedAccount={accountId !== null}
         onDone={onClose}
         onCancel={onClose}
       />
