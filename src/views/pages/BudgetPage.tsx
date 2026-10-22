@@ -18,6 +18,7 @@ import { PadAmount } from "../AssignPad";
 import { CardDebt } from "../CardDebt";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
+import { MoveFromEnvelope } from "../MoveFromEnvelope";
 import { ChevronDownIcon, EnvelopeIcon } from "../icons";
 import { SidePanel } from "../SidePanel";
 import { TransactionDialog, TransactionEntry } from "../TransactionEntry";
@@ -55,6 +56,9 @@ export function BudgetPage({
   const over = view.overAssigned > 0;
   const [uploading, setUploading] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  // The envelope whose left amount was tapped: the move dialog is open for it.
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const moving = movingId ? (page.detail(movingId)?.row ?? null) : null;
   // A transaction tapped in the envelope sheet; the dialog closes if it goes.
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId ? page.transaction(editingId) : undefined;
@@ -102,6 +106,7 @@ export function BudgetPage({
       onToggle={() => collapse.toggle(group.id)}
       onExpand={() => collapse.expand(group.id)}
       onOpen={openEnvelope}
+      onMove={setMovingId}
       desktop={desktop}
       selectedId={desktop ? openId : null}
     />
@@ -278,6 +283,15 @@ export function BudgetPage({
       </Sheet>
 
       <Sheet
+        open={moving !== null}
+        label="Move money"
+        className="sheet assign-sheet"
+        onClose={() => setMovingId(null)}
+      >
+        {() => <MoveFromEnvelope page={page} from={moving!} onDone={() => setMovingId(null)} />}
+      </Sheet>
+
+      <Sheet
         open={uploading}
         label={`Upload a plan for ${page.monthLabel}`}
         className="sheet bottom"
@@ -366,6 +380,7 @@ function GroupSection({
   onToggle,
   onExpand,
   onOpen,
+  onMove,
   desktop,
   selectedId,
 }: {
@@ -375,6 +390,8 @@ function GroupSection({
   onToggle: () => void;
   onExpand: () => void;
   onOpen: (envelopeId: string) => void;
+  /** Opens the move dialog for an envelope (its left amount was tapped). */
+  onMove: (envelopeId: string) => void;
   desktop: boolean;
   /** The envelope shown in the desktop panel. */
   selectedId: string | null;
@@ -453,6 +470,7 @@ function GroupSection({
                   envelope={envelope}
                   page={page}
                   onOpen={() => onOpen(envelope.id)}
+                  onMove={() => onMove(envelope.id)}
                   desktop={desktop}
                   selected={envelope.id === selectedId}
                 />
@@ -472,17 +490,20 @@ function GroupSection({
  * place), Assigned (tap for the number pad) and Spent. Tapping the top line opens its sheet.
  * On a desktop it is one table row (name and Saved, Planned, Assigned,
  * Spent, Remaining) and the name shows the envelope in the panel.
+ * Tapping what is left opens the move dialog (when some can be moved).
  */
 function EnvelopeItem({
   envelope,
   page,
   onOpen,
+  onMove,
   desktop,
   selected,
 }: {
   envelope: EnvelopeRow;
   page: Page;
   onOpen: () => void;
+  onMove: () => void;
   desktop: boolean;
   selected: boolean;
 }) {
@@ -499,36 +520,54 @@ function EnvelopeItem({
     }
   };
 
-  const leftAmount = (
-    <span className={left === 0 ? "envelope-left zero" : "envelope-left"}>
+  const leftClass = left === 0 ? "envelope-left zero" : "envelope-left";
+  const leftContent = (
+    <>
       <span className="envelope-remaining">
         <Money cents={left} />
       </span>
       <span className="visually-hidden">{card ? " available to pay" : " remaining"}</span>
-    </span>
+    </>
   );
+  // A button when some can be moved out (not a card's envelope, not a past month).
+  const leftAmount =
+    page.movable(envelope.id) > 0 ? (
+      <button
+        className={`${leftClass} movable`}
+        type="button"
+        aria-haspopup="dialog"
+        aria-label={`Move money from ${envelope.name}: ${formatCents(left)} remaining`}
+        onClick={onMove}
+      >
+        {leftContent}
+      </button>
+    ) : (
+      <span className={leftClass}>{leftContent}</span>
+    );
   const classes = ["envelope", envelope.inUse ? "" : "unused", selected ? "selected" : ""];
 
   return (
     <div className={classes.join(" ").trim()}>
-      <button
-        className="envelope-top"
-        type="button"
-        aria-haspopup={desktop ? undefined : "dialog"}
-        aria-expanded={desktop ? selected : undefined}
-        onClick={onOpen}
-      >
-        <EnvelopeIcon />
-        <span className="envelope-title">
-          <span className="envelope-name">
-            {envelope.name}
-            {!envelope.inUse && <small> · not used this month</small>}
+      <div className="envelope-head">
+        <button
+          className="envelope-top"
+          type="button"
+          aria-haspopup={desktop ? undefined : "dialog"}
+          aria-expanded={desktop ? selected : undefined}
+          onClick={onOpen}
+        >
+          <EnvelopeIcon />
+          <span className="envelope-title">
+            <span className="envelope-name">
+              {envelope.name}
+              {!envelope.inUse && <small> · not used this month</small>}
+            </span>
+            {!card && <SavedChip cents={envelope.saved} />}
           </span>
-          {!card && <SavedChip cents={envelope.saved} />}
-        </span>
+        </button>
         {/* On a desktop, what is left is the row's last column instead. */}
         {!desktop && leftAmount}
-      </button>
+      </div>
 
       {card ? (
         <div className="envelope-cells two">

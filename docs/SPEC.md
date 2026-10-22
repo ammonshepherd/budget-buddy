@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.30.0.
+Version described: 0.31.0.
 
 ## 1. Purpose
 
@@ -336,6 +336,20 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
     A card's payment envelope sheet shows Available to pay, "Owed $X · Remaining
     debt $Y", "Assign (negative to take back)", the Saved panel and how it fills,
     and no Delete.
+- Moving money out of an envelope (v0.31.0): what is left on the right of a
+  row (the Remaining column on a desktop) is a button ("Move money from
+  ⟨name⟩: $X remaining") when some can be moved, and opens "Move money" (a
+  dialog): "Move from ⟨name⟩", how much can be moved, a "Move to" picker
+  (Available to Assign first, then every other envelope, payment envelopes
+  included, each with "has $X") and "Amount to move" (starting at all that
+  can be moved). Moving lowers this envelope's Assigned and raises the other
+  envelope's (`move_between_envelopes`), or returns the money to Available to
+  Assign. At most `movableFrom` (`budgetMath.ts`): the smaller of Remaining
+  and Assigned, so neither goes below $0.00 and money released from Saved
+  stays in the envelope ("You can move at most $X."). Only in this month
+  and later (`canMoveIn`; a past move would change the Saved carried into
+  later months) and never out of a card's payment envelope; there, and at
+  $0.00, the amount is not a button.
 - "Show N envelopes not used this month" toggle when some are hidden.
 - **Desktop** (see Desktop layout):
   - One purple band, pinned to the top, holds the month picker (left) and

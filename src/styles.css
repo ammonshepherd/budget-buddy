@@ -1094,10 +1094,19 @@ a:focus-visible {
   background: var(--surface);
 }
 
-.envelope-top {
+/* Line 1: the name (opens the envelope) and what is left (moves money out). */
+.envelope-head {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.envelope-top {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
   inline-size: 100%;
   padding: 0;
   border: 0;
@@ -1144,6 +1153,25 @@ a:focus-visible {
   font-weight: 800;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+/* Tappable when some can be moved to another envelope. */
+button.envelope-left {
+  padding: 4px 6px;
+  margin-block: -4px;
+  margin-inline-end: -6px;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: none;
+  font: inherit;
+  text-align: end;
+  cursor: pointer;
+}
+
+button.envelope-left:hover,
+button.envelope-left:focus-visible {
+  background: #f3edf9;
 }
 
 .envelope-left.zero .envelope-remaining {
@@ -2832,6 +2860,11 @@ body:has(.app-shell.desktop) {
   box-shadow: inset 4px 0 0 var(--bb-purple);
 }
 
+/* On a desktop the name button is the row's first column itself. */
+.desktop .envelope-head {
+  display: contents;
+}
+
 .desktop .envelope-top:hover .envelope-name {
   text-decoration: underline;
   text-decoration-color: #cdb8e6;
@@ -2888,6 +2921,11 @@ body:has(.app-shell.desktop) {
   grid-column: 5;
   margin: 0;
   text-align: end;
+}
+
+.desktop button.envelope-left {
+  justify-self: end;
+  padding: 4px 8px;
 }
 
 .desktop .envelope-remaining {

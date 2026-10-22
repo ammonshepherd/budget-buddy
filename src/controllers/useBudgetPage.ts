@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import {
   buildBudgetMonth,
+  canMoveIn,
   groupLeft,
+  movableFrom,
   visibleGroups,
   withEnvelopeMonth,
   type EnvelopeRow,
@@ -16,7 +18,7 @@ import {
 } from "../models/envelopeDetail";
 import { monthHasPlan, planToCopy, type PlanSource } from "../models/envelopePlan";
 import { formatCents, roundMoney, type Cents } from "../models/money";
-import { addMonths, formatMonth, type Month } from "../models/month";
+import { addMonths, currentMonth, formatMonth, type Month } from "../models/month";
 import { budgetHref } from "../models/routes";
 import type { BudgetData } from "../models/types";
 import { requireCents, requireName } from "./input";
@@ -41,6 +43,9 @@ function assignedTyped(text: string, current: Cents) {
   if (cents < 0) throw new UserFacingError("Assigned cannot be negative.");
   return cents;
 }
+
+/** The move dialog's choice that sends money back to Available to Assign. */
+export const TO_AVAILABLE = "available-to-assign";
 
 /** The Budget page for one month: the numbers to show and what the user can do. */
 export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
@@ -87,6 +92,10 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       (current) => withEnvelopeMonth(current, envelopeId, month, { assigned: amount }),
     );
   };
+
+  // Moves only in this month and later: a past move would change later months' Saved.
+  const canMove = canMoveIn(month, currentMonth());
+  const movable = (envelopeId: string) => (canMove ? movableFrom(envelope(envelopeId)) : 0);
 
   return {
     view,
@@ -175,6 +184,60 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
       const amount = requireCents(text);
       if (amount <= 0) throw new UserFacingError("Enter an amount above zero.");
       await assignBy(envelopeId, takeBack ? -amount : amount);
+    },
+
+    /**
+     * How much can be moved out of an envelope this month (tapping what is
+     * left opens the move dialog); 0 in past months and for card payment envelopes.
+     */
+    movable,
+
+    /**
+     * Where money moved out of an envelope can go: Available to Assign, then
+     * every other envelope (payment envelopes included), in group order.
+     */
+    moveChoices: (fromId: string) =>
+      view.groups.flatMap((group) =>
+        group.envelopes
+          .filter((row) => row.id !== fromId)
+          .map((row) => ({ id: row.id, name: row.name, group: group.name, row })),
+      ),
+
+    /**
+     * Moves an amount out of an envelope by lowering its Assigned, into
+     * another envelope's Assigned or back to Available to Assign. Never
+     * below $0.00 left or assigned.
+     */
+    moveFromEnvelope: async (fromId: string, toId: string, text: string) => {
+      if (!canMove) {
+        throw new UserFacingError("Money can be moved only in this month or a later one.");
+      }
+      if (!toId) throw new UserFacingError("Choose where to move it.");
+      if (toId === fromId) throw new UserFacingError("Choose a different envelope.");
+      const amount = requireCents(text);
+      if (amount <= 0) throw new UserFacingError("Enter an amount above zero.");
+      const most = movable(fromId);
+      if (amount > most) {
+        throw new UserFacingError(`You can move at most ${formatCents(most)}.`);
+      }
+      if (toId === TO_AVAILABLE) {
+        await budget.change(
+          (store) => store.adjustEnvelopeMonth(fromId, month, { assigned: -amount }),
+          (current) => withEnvelopeMonth(current, fromId, month, { assigned: -amount }),
+        );
+        return;
+      }
+      envelope(toId);
+      await budget.change(
+        (store) => store.moveBetweenEnvelopes(fromId, toId, month, amount),
+        (current) =>
+          withEnvelopeMonth(
+            withEnvelopeMonth(current, fromId, month, { assigned: -amount }),
+            toId,
+            month,
+            { assigned: amount },
+          ),
+      );
     },
 
     /** Moves money from this envelope's Saved into Remaining. */

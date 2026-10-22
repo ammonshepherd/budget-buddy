@@ -184,7 +184,12 @@ non-card budget balances − all envelope money (P included)`.
   word, only "Spent"; screen readers hear "over Planned") when above Planned (`overPlan`, a
   hint only: not overspending).
   Refunded (only when above $0.00) and Short (if overspent) sit on a line
-  below. Tapping line 1 opens the envelope sheet (`EnvelopeSheet`, a bottom
+  below. Tapping what is left (decided in v0.31.0) opens "Move money": an
+  amount goes to another envelope's Assigned or back to Available to
+  Assign, lowering this envelope's Assigned; at most the smaller of
+  Remaining and Assigned (`movableFrom`; released Saved stays put), only in
+  this month and later (`canMoveIn`), never from a card's payment envelope
+  (`MoveFromEnvelope`). Tapping line 1 opens the envelope sheet (`EnvelopeSheet`, a bottom
   sheet): group (a picker that moves the envelope to another group) and
   name (renamed with its pencil button), Remaining this month with how it adds up, the plan
   line (under/on/over Planned), Planned and Assigned fields (same rules as the
