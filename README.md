@@ -7,7 +7,8 @@ budgeting rules are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Version
 
-The current application version is **0.17.0** (kept in `package.json`).
+The current application version is **0.33.0** (kept in `package.json`; the app shows it in
+the header, and `docs/SPEC.md` describes that version).
 
 Versions follow:
 
@@ -31,7 +32,7 @@ src/controllers/   React hooks that load data and handle user actions
 src/views/         React components; display only
 public/icons/      App icons
 e2e/               Playwright UI tests (run against the in-memory store)
-integration/       Opt-in tests of the Supabase store against the dev project
+integration/       Tests of the Supabase store and its security rules against the test project
 supabase/          Database migrations
 ```
 
@@ -46,7 +47,9 @@ npm run format       # format with Prettier
 npm run lint         # check with ESLint
 npm test             # unit tests (Vitest)
 npm run test:ui      # UI tests (Playwright; first run `npx playwright install chromium`)
-npm run test:integration  # Supabase store vs. the dev project (needs a test account, below)
+npm run test:integration  # Supabase store vs. the test project (needs .env.test, below)
+npm run test:ui:db   # UI tests against the test project
+npm run db:seed:test # recreate the test users and their households
 ```
 
 ## Local setup
@@ -66,12 +69,12 @@ Controllers talk to a `DataStore` interface (`src/models/dataStore.ts`).
 is used only by the Playwright build (`VITE_DATA_STORE=memory`), so UI tests
 never touch real data. A normal build does not include it.
 
-### Integration test
+### Integration tests
 
-`npm run test:integration` signs in as a dedicated test account and exercises
-every Supabase call. It is skipped unless you set `SUPABASE_TEST_EMAIL` and
-`SUPABASE_TEST_PASSWORD`. Use a separate account: each run leaves one closed
-account in that household, because accounts are never deleted.
+Tests never touch production. `npm run test:integration` reseeds a separate
+Supabase test project and exercises every Supabase call and the security rules.
+It is skipped until `.env.test` is filled in (copy `.env.test.example`). See
+[`docs/testing.md`](docs/testing.md) for the two projects and every command.
 
 ## Deployment
 
@@ -92,11 +95,14 @@ One-time setup:
 ## The Budget page
 
 The Budget page is built to show as many envelopes as possible. **Available to Assign**
-(with this month's income) stays fixed at the top while the envelopes scroll under it.
-It disappears when there is nothing left to assign ($0.00) and comes back as a warning
-when you are over assigned. The month picker sits just above it. Each group has a **+** button to add an
-envelope; groups themselves are added and deleted (when empty) in **Settings →
-Envelope groups**. Tap an envelope to assign, release from Saved or set its plan.
+stays fixed at the top while the envelopes scroll under it; tap it to assign some to an
+envelope. It disappears when there is nothing left to assign ($0.00) and turns red as
+**Over Assigned** when you have assigned more than you have. The month picker sits
+just above it. Each group has a **+** button to add an envelope; groups are added,
+renamed, reordered and deleted in **Settings → Envelope groups**. Tap an envelope's
+name to open it (release from Saved, rename, move, delete), tap Planned or Assigned to
+change them (on a phone Assigned opens a number pad that also takes "+50"), and tap
+what is left to move money to another envelope.
 
 Each envelope shows what is left and, in this order, **Saved**, **Planned**,
 **Assigned**, **Refunded** (when there is one) and **Spent**, with the amounts in bold;
@@ -118,8 +124,8 @@ A transaction left **Uncategorized** (an imported purchase, deposit or refund) i
 envelope takes the money from (or, for a refund, adds it to) that envelope and never
 changes Available to Assign. If the envelope is short, the cover prompt can take the
 rest from Available to Assign, which then goes down by exactly that much. The Budget
-page shows how many transactions wait, and Activity lists them under **To review**
-with **Mark as Income** for inflows.
+page shows how many transactions wait, and Accounts lists them under **To review**
+(All accounts, or each account for its own) with **Mark as Income** for inflows.
 
 ```
 Available to Assign = opening balances + income − assigned
@@ -128,16 +134,34 @@ Available to Assign = opening balances + income − assigned
 **Income rules** (Settings) mark paychecks for you: a deposit whose description contains
 a rule's text (ignoring case), optionally only in one account, is marked Income when you
 import it. The import preview says how many rows a rule marked. A new rule can also mark
-the inflows already waiting for review, and Activity has **Apply income rules**. Rules
+the inflows already waiting for review, and To review has **Apply income rules**. Rules
 never touch outflows, transfers or transactions already in an envelope.
 
 ## Adding and editing transactions
 
-The round **+** button in the bottom-right corner of Budget, Accounts and Activity opens
-the transaction form in a dialog, so you can record spending without leaving the page.
-On Activity, transactions are grouped under date headings (tap a date to fold it away),
-Uncategorized ones are highlighted, and tapping a transaction opens it in the same
-dialog to edit or delete it.
+The round **+** button in the bottom-right corner of Budget and Accounts opens the
+transaction form in a dialog, so you can record spending without leaving the page
+(on a desktop, an open account adds through a new row at the top of its list).
+Envelopes are chosen by typing part of the name. On Accounts, transactions are grouped
+under date headings, Uncategorized ones carry an amber label, and tapping a payee opens
+the transaction in the same dialog to edit or delete it. Tick rows to see their total
+and mark them reconciled with the bank.
+
+## Finding transactions
+
+Open an account on Accounts and use the search box above its transactions:
+
+- **Type** a payee, a word from the memo, or an amount (`45` finds $45.00–$45.99,
+  `45.2` finds $45.20–$45.29, `$45.20` finds exactly that).
+- **Pick from the drop-down** to keep only some transactions: an envelope, or
+  Uncategorized, Income, Transfer, Card credit or **Not reconciled**. Each choice
+  becomes a chip; one envelope (or kind) and Not reconciled can be used together, so
+  "Uncategorized + Not reconciled" is a clean-up list. Picking an envelope counts only
+  its part of a split.
+- **Sort** by date (newest or oldest), amount, payee or envelope.
+
+The matches and their total show under the box. Search starts over when you open
+another account.
 
 ## Credit cards
 
@@ -178,8 +202,8 @@ Uncategorized bank row.
 
 ## Transaction import
 
-Settings → **Import transactions**: choose an account and a CSV downloaded from the bank
-or card website. Banks format these differently, so the app:
+Settings → **Import transactions** (or **Import CSV** on an open account): choose an
+account and a CSV downloaded from the bank or card website. Banks format these differently, so the app:
 
 1. **Detects** the columns from the header names (Date / Posted Date, Description / Payee,
    Amount or separate Debit and Credit columns, Transaction ID) and the date style
@@ -217,5 +241,12 @@ assignment or imported row for the month, spending that month, or money still in
 
 ## Planned next steps
 
-1. Rename and reorder envelopes and groups; "copy last month's spending into Planned".
-2. Inviting a second household member.
+Everything decided but not built yet is listed in [`docs/SPEC.md`](docs/SPEC.md) §9.
+The main ones:
+
+1. Bulk actions on ticked transactions (delete, mark as Income, assign an envelope);
+   see [`docs/proposals/bulk-actions.md`](docs/proposals/bulk-actions.md).
+2. Statement reconciliation (a statement balance to match), beyond the reconciled mark.
+3. Search and sort on All accounts.
+4. Tithing/fast-offering rules.
+5. Inviting a second household member.

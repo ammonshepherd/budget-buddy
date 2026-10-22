@@ -153,8 +153,8 @@ The screen that gains the most. Mockup: `docs/mockups/budget-desktop.html`.
 ## Keyboard shortcuts (optional, for discussion)
 
 - `N`: add transaction. `←` / `→` (or `[` / `]`): previous / next month on
-  Budget and Activity. `Esc`: close a panel or dialog. `/`: focus a search
-  box later, when search exists.
+  Budget and Activity. `Esc`: close a panel or dialog. `/`: focus the search
+  box (an open account has one since v0.33.0; the shortcut is not built).
 - Show them in a small "Keyboard shortcuts" list (e.g. under `?`).
 
 ## Decisions (owner, 2026-10-17)
