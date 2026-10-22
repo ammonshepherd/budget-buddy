@@ -1,4 +1,5 @@
 import type { ActivityDay, ActivityRow } from "../../models/activity";
+import type { FoundRow } from "../../models/transactionSearch";
 import { formatSignedCents } from "../../models/money";
 import { formatDay, formatMonth, todayIso, type Month } from "../../models/month";
 import type { Transaction } from "../../models/types";
@@ -6,13 +7,16 @@ import { BankIcon, ChevronDownIcon } from "../icons";
 
 /**
  * Transactions under day headings (newest first), and for an open account
- * under month dividers too, then "Show 100 more". Each row has a checkbox, the
+ * under month dividers too, then "Show 100 more"; or, sorted other than by
+ * date, one list with each row's date. Each row has a checkbox, the
  * bank icon (colored once reconciled), payee (tap to edit), envelope or split
  * pill, and amount.
  */
 export function TransactionList({
   days,
   months,
+  flatRows = null,
+  highlightEnvelopeId = null,
   leftCount,
   pageSize,
   onShowMore,
@@ -29,6 +33,10 @@ export function TransactionList({
   days: ActivityDay[];
   /** With months, the days sit under month dividers (an open account's list crosses months). */
   months?: { month: Month; days: ActivityDay[] }[];
+  /** Sorted by amount, payee or envelope: one list, no headings; each row shows its date. */
+  flatRows?: FoundRow[] | null;
+  /** The envelope searched for: its part of a split stands out. */
+  highlightEnvelopeId?: string | null;
   /** Rows not shown yet; "Show more" disappears at 0. */
   leftCount: number;
   pageSize: number;
@@ -50,34 +58,43 @@ export function TransactionList({
   const today = months ? todayIso() : undefined;
   // Under month dividers, days are one level down.
   const DayHeading = months ? "h3" : "h2";
+  const item = (row: ActivityRow, date?: string) => (
+    <TransactionItem
+      key={row.tx.id}
+      row={row}
+      date={date}
+      showAccount={showAccount}
+      checked={selected.has(row.tx.id)}
+      onCheck={() => onToggleSelected(row.tx.id)}
+      open={!closedSplits.has(row.tx.id)}
+      onEdit={() => onEdit(row.tx)}
+      onToggleSplit={() => onToggleSplit(row.tx.id)}
+      desktop={desktop}
+      selected={desktop && editingId === row.tx.id}
+      highlightEnvelopeId={highlightEnvelopeId}
+    />
+  );
   const dayGroup = (day: ActivityDay) => (
     <section key={day.date} aria-labelledby={`day-${day.date}`}>
       <div className="activity-day-head">
         <DayHeading id={`day-${day.date}`}>{formatDay(day.date, today)}</DayHeading>
         <span>{formatSignedCents(day.net)}</span>
       </div>
-      <ul className="activity-rows">
-        {day.rows.map((row) => (
-          <TransactionItem
-            key={row.tx.id}
-            row={row}
-            showAccount={showAccount}
-            checked={selected.has(row.tx.id)}
-            onCheck={() => onToggleSelected(row.tx.id)}
-            open={!closedSplits.has(row.tx.id)}
-            onEdit={() => onEdit(row.tx)}
-            onToggleSplit={() => onToggleSplit(row.tx.id)}
-            desktop={desktop}
-            selected={desktop && editingId === row.tx.id}
-          />
-        ))}
-      </ul>
+      <ul className="activity-rows">{day.rows.map((row) => item(row))}</ul>
     </section>
   );
 
   return (
     <section className="activity-list" aria-label="Transactions">
-      {days.length === 0 ? (
+      {flatRows ? (
+        flatRows.length === 0 ? (
+          <p className="activity-empty">{emptyText}</p>
+        ) : (
+          <ul className="activity-rows flat-rows">
+            {flatRows.map(({ row, date }) => item(row, formatDay(date, todayIso())))}
+          </ul>
+        )
+      ) : days.length === 0 ? (
         <p className="activity-empty">{emptyText}</p>
       ) : months ? (
         months.map(({ month, days: monthDays }) => (
@@ -103,6 +120,7 @@ export function TransactionList({
 /** One transaction, with a split's parts below it. */
 function TransactionItem({
   row,
+  date,
   showAccount,
   checked,
   onCheck,
@@ -111,8 +129,11 @@ function TransactionItem({
   onToggleSplit,
   desktop,
   selected,
+  highlightEnvelopeId,
 }: {
   row: ActivityRow;
+  /** Shown under the payee when the list has no day headings. */
+  date?: string;
   showAccount: boolean;
   /** Ticked: highlighted, and counted in the selection total. */
   checked: boolean;
@@ -124,13 +145,16 @@ function TransactionItem({
   desktop: boolean;
   /** Open in the desktop panel. */
   selected: boolean;
+  highlightEnvelopeId: string | null;
 }) {
   const payee = row.tx.payee || "(no payee)";
   const amount = formatSignedCents(row.amount);
   const portionsId = `split-${row.tx.id}`;
   const isSplit = row.portions.length > 0;
   // An open account's rows are all in it, so only a transfer names accounts.
-  const accountLine = showAccount || row.kind === "transfer" ? row.accountLine : "";
+  const accountLine = [date, showAccount || row.kind === "transfer" ? row.accountLine : ""]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <li
@@ -192,7 +216,14 @@ function TransactionItem({
       {isSplit && (
         <div className="activity-portions" id={portionsId} hidden={!open}>
           {row.portions.map((portion) => (
-            <div className="activity-grid activity-portion" key={portion.envelopeId}>
+            <div
+              className={
+                portion.envelopeId === highlightEnvelopeId
+                  ? "activity-grid activity-portion match"
+                  : "activity-grid activity-portion"
+              }
+              key={portion.envelopeId}
+            >
               <span />
               <span />
               <span className="portion-memo">↳ {portion.envelopeName}</span>

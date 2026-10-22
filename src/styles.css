@@ -3961,3 +3961,150 @@ body:has(.app-shell.desktop) {
   color: #ffffff;
   background: var(--brand);
 }
+
+/* ---- v0.33.0: search and sort an open account ---- */
+
+/* The search field and sort menu: pinned with the info pane, tinted like it. */
+.tx-search {
+  padding: 10px 16px 0;
+  border-block-end: 1px solid var(--bb-purple-line);
+  background: var(--bb-purple-tint);
+}
+
+.tx-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.tx-search-field {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* Looks like one field: the glyph, a chip, the text and a clear button. */
+/* Chips stack; past the width they wrap and the text goes on its own line. */
+.tx-search-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-block-size: 2.75rem;
+  padding: 4px 8px 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+.tx-search-box:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-light);
+}
+
+.tx-search-glyph {
+  display: flex;
+  flex: none;
+  color: var(--bb-muted);
+}
+
+.tx-search-glyph svg {
+  inline-size: 18px;
+  block-size: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.tx-search-field input {
+  flex: 1;
+  min-inline-size: 7rem;
+  padding: 0.5rem 0;
+  border: 0;
+  outline: none;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+}
+
+/* The browser's own clear button: ours clears the chip too. */
+.tx-search-field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.tx-search-chip {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+  max-inline-size: 100%;
+  padding: 4px 10px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--bb-purple);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.tx-search-clear {
+  flex: none;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--bb-muted);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tx-search-clear:hover {
+  background: var(--bb-grey-cell);
+}
+
+.tx-search-text .picker-name {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.tx-sort select {
+  block-size: 2.75rem;
+  max-inline-size: 9.5rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.tx-search-summary {
+  margin: 0;
+  padding: 6px 2px 8px;
+  color: var(--bb-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tx-search-summary:empty {
+  padding: 0 0 10px;
+}
+
+/* A split's part for the envelope searched for. */
+.activity-portion.match {
+  background: var(--bb-purple-tint);
+}
+
+.activity-portion.match .portion-envelope,
+.activity-portion.match .portion-memo {
+  color: var(--bb-purple);
+  font-weight: 700;
+}

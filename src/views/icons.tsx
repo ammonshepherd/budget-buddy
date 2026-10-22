@@ -25,6 +25,10 @@ export const PencilIcon = () => <Icon path="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4
 export const BankIcon = () => (
   <Icon path="M3 9.5 12 4l9 5.5zM5.5 10.5v7M10 10.5v7M14 10.5v7M18.5 10.5v7M3.5 20h17" />
 );
+/** A magnifying glass: the search field on an open account. */
+export const SearchIcon = () => (
+  <Icon path="M17.5 17.5 21 21M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z" />
+);
 export const ChevronDownIcon = () => <Icon path="M6 9l6 6 6-6" />;
 export const ChevronLeftIcon = () => <Icon path="M15 6l-6 6 6 6" />;
 /** A full arrow (shaft and head): the info pane's way back to the accounts list. */

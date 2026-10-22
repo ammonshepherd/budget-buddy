@@ -16,6 +16,7 @@ import { SidePanel } from "./SidePanel";
 import { TransactionDialog, TransactionEntry } from "./TransactionEntry";
 import { TransactionImport } from "./TransactionImport";
 import { TransactionList } from "./transactions/TransactionList";
+import { TransactionSearch } from "./transactions/TransactionSearch";
 import { NewTransactionRow, ReviewCard, SelectionBar } from "./transactions/TransactionTools";
 
 type Page = ReturnType<typeof useAccountsPage>;
@@ -28,6 +29,9 @@ type Tool = "review" | "edit" | "import";
  * Activity page) or one account (all its transactions). An info pane pinned
  * to the top holds the back arrow, the figures, and for an open account the
  * pencil (edit) and Import CSV; To review and the transaction list follow.
+ * An open account adds a search field and sort menu, pinned between the
+ * pane and the ticked-rows bar; while a search is on, To review steps
+ * aside so only the matches show.
  * On a desktop, editing (a transaction or the account), importing and To
  * review sit in the panel on the right, and Add transaction opens a new row
  * at the top of the list.
@@ -167,13 +171,17 @@ export function AccountView({
     <TransactionList
       days={view.days}
       months={account ? view.months : undefined}
+      flatRows={view.flatRows}
+      highlightEnvelopeId={view.search.envelopeId}
       leftCount={view.leftCount}
       pageSize={ROWS_PER_PAGE}
       onShowMore={view.showMore}
       emptyText={
-        account
-          ? `No transactions in ${account.name} yet.`
-          : `No transactions in ${view.monthLabel}.`
+        view.search.searching
+          ? "No transactions match."
+          : account
+            ? `No transactions in ${account.name} yet.`
+            : `No transactions in ${view.monthLabel}.`
       }
       showAccount={!account}
       selected={view.selected}
@@ -186,6 +194,7 @@ export function AccountView({
     />
   );
   const review = <ReviewCard view={view} onEdit={edit} />;
+  const search = account && <TransactionSearch search={view.search} />;
   const notice = !view.hasOpenAccounts && (
     <p className="notice activity-notice">
       <a href={listHref}>Add an account</a> before entering transactions.
@@ -268,6 +277,7 @@ export function AccountView({
             <div className="activity-table">
               <div className="account-sticky">
                 {pane}
+                {search}
                 <SelectionBar view={view} />
               </div>
               {adding && view.hasOpenAccounts && (
@@ -291,10 +301,11 @@ export function AccountView({
           <CardDebt data={data} />
           <div className="account-sticky">
             {pane}
+            {search}
             <SelectionBar view={view} />
           </div>
           {notice}
-          {review}
+          {!view.search.searching && review}
           {list}
           <TransactionDialog
             budget={budget}
