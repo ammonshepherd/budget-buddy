@@ -3973,7 +3973,7 @@ body:has(.app-shell.desktop) {
 .tx-search-row {
   display: flex;
   gap: 8px;
-  align-items: stretch;
+  align-items: flex-start;
 }
 
 .tx-search-field {
@@ -3982,12 +3982,14 @@ body:has(.app-shell.desktop) {
 }
 
 /* Looks like one field: the glyph, a chip, the text and a clear button. */
+/* Chips stack; past the width they wrap and the text goes on its own line. */
 .tx-search-box {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-block-size: 2.75rem;
-  padding: 0 8px 0 10px;
+  padding: 4px 8px 4px 10px;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   background: var(--surface);
@@ -4015,7 +4017,7 @@ body:has(.app-shell.desktop) {
 
 .tx-search-field input {
   flex: 1;
-  min-inline-size: 0;
+  min-inline-size: 7rem;
   padding: 0.5rem 0;
   border: 0;
   outline: none;
@@ -4034,7 +4036,7 @@ body:has(.app-shell.desktop) {
   flex: none;
   gap: 4px;
   align-items: center;
-  max-inline-size: 55%;
+  max-inline-size: 100%;
   padding: 4px 10px;
   overflow: hidden;
   border: 0;
@@ -4071,8 +4073,7 @@ body:has(.app-shell.desktop) {
 }
 
 .tx-sort select {
-  block-size: 100%;
-  min-block-size: 2.75rem;
+  block-size: 2.75rem;
   max-inline-size: 9.5rem;
   padding: 0 0.5rem;
   border: 1px solid var(--border);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { accountHistory } from "./activity";
 import {
+  addFilter,
   amountQuery,
   filterFromValue,
   filterLabel,
@@ -115,12 +116,12 @@ const ids = (found: FoundRow[]) => found.map((f) => f.row.tx.id);
 describe("findRows", () => {
   it("keeps everything with no choice and nothing typed", () => {
     const { days } = sample();
-    expect(findRows(days, null, "")).toHaveLength(7);
+    expect(findRows(days, [], "")).toHaveLength(7);
   });
 
   it("an envelope keeps only its transactions, counting only its part of a split", () => {
     const { days } = sample();
-    const found = findRows(days, { envelopeId: "groceries" }, "");
+    const found = findRows(days, [{ envelopeId: "groceries" }], "");
     expect(ids(found).sort()).toEqual(["costco", "kroger", "refund"]);
     expect(found.find((f) => f.row.tx.id === "costco")!.amount).toBe(-1_000);
     expect(foundTotal(found)).toBe(-4_520 - 1_000 + 500);
@@ -128,9 +129,9 @@ describe("findRows", () => {
 
   it("kinds keep uncategorized, income and transfers", () => {
     const { days } = sample();
-    expect(ids(findRows(days, { kind: "uncategorized" }, ""))).toEqual(["mystery"]);
-    expect(ids(findRows(days, { kind: "income" }, ""))).toEqual(["pay"]);
-    const transfers = findRows(days, { kind: "transfer" }, "");
+    expect(ids(findRows(days, [{ kind: "uncategorized" }], ""))).toEqual(["mystery"]);
+    expect(ids(findRows(days, [{ kind: "income" }], ""))).toEqual(["pay"]);
+    const transfers = findRows(days, [{ kind: "transfer" }], "");
     expect(transfers).toHaveLength(1);
     expect(transfers[0]!.amount).toBe(-30_000);
   });
@@ -140,30 +141,30 @@ describe("findRows", () => {
       tx({ id: "cashback", accountId: "card", amount: 2_500, payee: "Cashback" }),
       tx({ id: "buy", accountId: "card", amount: -2_500 }),
     ]);
-    const found = findRows(accountHistory(data, "card"), { kind: "card-credit" }, "");
+    const found = findRows(accountHistory(data, "card"), [{ kind: "card-credit" }], "");
     expect(ids(found)).toEqual(["cashback"]);
   });
 
   it("typed words match payee, memo and a transfer's accounts, any case, all words", () => {
     const { days } = sample();
-    expect(ids(findRows(days, null, "kroger")).sort()).toEqual(["kroger", "refund"]);
-    expect(ids(findRows(days, null, "WEEKLY"))).toEqual(["kroger"]);
-    expect(ids(findRows(days, null, "kroger weekly"))).toEqual(["kroger"]);
-    expect(findRows(days, null, "discover")).toHaveLength(1);
-    expect(findRows(days, null, "nothing like this")).toHaveLength(0);
+    expect(ids(findRows(days, [], "kroger")).sort()).toEqual(["kroger", "refund"]);
+    expect(ids(findRows(days, [], "WEEKLY"))).toEqual(["kroger"]);
+    expect(ids(findRows(days, [], "kroger weekly"))).toEqual(["kroger"]);
+    expect(findRows(days, [], "discover")).toHaveLength(1);
+    expect(findRows(days, [], "nothing like this")).toHaveLength(0);
   });
 
   it("combines a choice with typed text", () => {
     const { days } = sample();
-    expect(ids(findRows(days, { envelopeId: "groceries" }, "costco"))).toEqual(["costco"]);
+    expect(ids(findRows(days, [{ envelopeId: "groceries" }], "costco"))).toEqual(["costco"]);
   });
 
   it("matches amounts, in or out, including a split's parts", () => {
     const { days } = sample();
-    expect(ids(findRows(days, null, "45.20"))).toEqual(["kroger"]);
-    expect(ids(findRows(days, null, "$45.2"))).toEqual(["kroger"]);
-    expect(ids(findRows(days, null, "2000"))).toEqual(["pay"]);
-    expect(ids(findRows(days, null, "20"))).toEqual(["costco"]);
+    expect(ids(findRows(days, [], "45.20"))).toEqual(["kroger"]);
+    expect(ids(findRows(days, [], "$45.2"))).toEqual(["kroger"]);
+    expect(ids(findRows(days, [], "2000"))).toEqual(["pay"]);
+    expect(ids(findRows(days, [], "20"))).toEqual(["costco"]);
   });
 });
 
@@ -188,7 +189,7 @@ describe("amountQuery", () => {
 });
 
 describe("sortRows", () => {
-  const found = () => findRows(sample().days, null, "");
+  const found = () => findRows(sample().days, [], "");
 
   it("orders by date either way", () => {
     const newest = sortRows(found(), "newest");
@@ -229,7 +230,7 @@ describe("sortRows", () => {
 
 describe("regroupDays", () => {
   it("puts rows back under their days, nets from the matched parts without transfers", () => {
-    const days = regroupDays(findRows(sample().days, null, ""));
+    const days = regroupDays(findRows(sample().days, [], ""));
     expect(days.map((d) => d.date)).toEqual([
       "2026-10-20",
       "2026-10-15",
@@ -239,7 +240,7 @@ describe("regroupDays", () => {
       "2026-09-28",
     ]);
     expect(days.find((d) => d.date === "2026-10-10")!.net).toBe(0);
-    const groceries = regroupDays(findRows(sample().days, { envelopeId: "groceries" }, ""));
+    const groceries = regroupDays(findRows(sample().days, [{ envelopeId: "groceries" }], ""));
     expect(groceries.find((d) => d.date === "2026-10-03")!.net).toBe(-4_520 - 1_000);
   });
 });
@@ -251,6 +252,7 @@ describe("searchChoices", () => {
       { value: "kind:uncategorized", label: "Uncategorized", detail: "1 transaction" },
       { value: "kind:income", label: "Income", detail: "1 transaction" },
       { value: "kind:transfer", label: "Transfer", detail: "1 transaction" },
+      { value: "kind:not-reconciled", label: "Not reconciled", detail: "7 transactions" },
       {
         value: "envelope:groceries",
         label: "Groceries",
@@ -259,6 +261,55 @@ describe("searchChoices", () => {
       },
       { value: "envelope:dining", label: "Dining out", group: "Food", detail: "1 transaction" },
       { value: "envelope:power", label: "Power", group: "Bills", detail: "1 transaction" },
+    ]);
+  });
+});
+
+describe("stacking chips", () => {
+  /** The sample with Kroger, Zelle and the transfer marked reconciled. */
+  const reconciledSample = () => {
+    const { data } = sample();
+    const marked = new Set(["kroger", "mystery"]);
+    const transactions = data.transactions.map((t) =>
+      marked.has(t.id) || t.isTransfer ? { ...t, reconciled: true } : t,
+    );
+    const next = { ...data, transactions };
+    return { data: next, days: accountHistory(next, "checking") };
+  };
+
+  it("Not reconciled keeps rows not marked, and stacks with an envelope or kind", () => {
+    const { days } = reconciledSample();
+    expect(ids(findRows(days, [{ kind: "not-reconciled" }], "")).sort()).toEqual([
+      "costco",
+      "electric",
+      "pay",
+      "refund",
+    ]);
+    const groceries = findRows(days, [{ envelopeId: "groceries" }, { kind: "not-reconciled" }], "");
+    expect(ids(groceries).sort()).toEqual(["costco", "refund"]);
+    expect(foundTotal(groceries)).toBe(-1_000 + 500);
+    expect(findRows(days, [{ kind: "uncategorized" }, { kind: "not-reconciled" }], "")).toEqual([]);
+  });
+
+  it("a new choice replaces the chip of its group, what a row is first", () => {
+    const groceries = { envelopeId: "groceries" };
+    const notReconciled = { kind: "not-reconciled" as const };
+    expect(addFilter([notReconciled], groceries)).toEqual([groceries, notReconciled]);
+    expect(addFilter([groceries, notReconciled], { kind: "uncategorized" })).toEqual([
+      { kind: "uncategorized" },
+      notReconciled,
+    ]);
+    expect(addFilter([groceries], notReconciled)).toEqual([groceries, notReconciled]);
+  });
+
+  it("choices count alongside the other group's chip and leave out the chosen", () => {
+    const { data, days } = reconciledSample();
+    const choices = searchChoices(days, data, [{ kind: "not-reconciled" }]);
+    expect(choices.map((c) => `${c.label}: ${c.detail}`)).toEqual([
+      "Income: 1 transaction",
+      "Groceries: 2 transactions",
+      "Dining out: 1 transaction",
+      "Power: 1 transaction",
     ]);
   });
 });

@@ -141,3 +141,40 @@ test("sorting by amount or payee lists rows with their dates", async ({ page }) 
   await openAccount(page, "Checking");
   await expect(sort).toHaveValue("newest");
 });
+
+test("chips stack: Uncategorized and Not reconciled", async ({ page }) => {
+  await add(page, { payee: "Venmo", amount: "15", date: "2030-01-08" });
+  // Zelle is matched with the bank; Venmo is not.
+  await activityRow(page, "Zelle").getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Mark reconciled" }).click();
+
+  const search = page.getByRole("combobox", { name: "Search transactions" });
+  await search.click();
+  await page.getByRole("option", { name: /Uncategorized/ }).click();
+  await expect(payees(page)).toHaveText(["Venmo", "Zelle"]);
+
+  await search.click();
+  const notReconciled = page.getByRole("option", { name: /Not reconciled/ });
+  await expect(notReconciled).toContainText("1 transaction");
+  await notReconciled.click();
+  await expect(page.getByRole("button", { name: /^Remove .* filter$/ })).toHaveText([
+    "Uncategorized ✕",
+    "Not reconciled ✕",
+  ]);
+  await expect(payees(page)).toHaveText(["Venmo"]);
+
+  // Picking an envelope replaces Uncategorized and keeps Not reconciled.
+  await search.click();
+  await page.getByRole("option", { name: /Groceries/ }).click();
+  await expect(page.getByRole("button", { name: /^Remove .* filter$/ })).toHaveText([
+    "Groceries ✕",
+    "Not reconciled ✕",
+  ]);
+  await expect(payees(page)).toHaveText(["Costco", "Aldi", "Kroger"]);
+
+  // Backspace removes the last chip.
+  await search.press("Backspace");
+  await expect(page.getByRole("button", { name: /^Remove .* filter$/ })).toHaveText([
+    "Groceries ✕",
+  ]);
+});

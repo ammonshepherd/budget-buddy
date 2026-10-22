@@ -13,6 +13,7 @@ import { inflowsMatchingRules } from "../models/incomeRules";
 import { addMonths, formatMonth, todayIso, type Month } from "../models/month";
 import { accountsHref } from "../models/routes";
 import {
+  addFilter,
   filterFromValue,
   filterLabel,
   filterValue,
@@ -33,10 +34,11 @@ const NOTHING: ReadonlySet<string> = new Set();
 interface SearchState {
   accountId: string | null;
   text: string;
-  filter: SearchFilter | null;
+  /** The chips, "what" first (see addFilter). */
+  filters: SearchFilter[];
   sort: SortOrder;
 }
-const NO_SEARCH: SearchState = { accountId: null, text: "", filter: null, sort: "newest" };
+const NO_SEARCH: SearchState = { accountId: null, text: "", filters: [], sort: "newest" };
 
 /** Rows shown at first, and added by each "Show more". */
 export const ROWS_PER_PAGE = 100;
@@ -93,17 +95,17 @@ export function useAccountView(
     setSearchState({ ...search, ...change, accountId });
     setLimit(ROWS_PER_PAGE);
   };
-  const searching = search.text.trim() !== "" || search.filter !== null;
+  const searching = search.text.trim() !== "" || search.filters.length > 0;
   const choices = useMemo(
-    () => (accountId === null ? [] : searchChoices(allDays, data)),
-    [allDays, data, accountId],
+    () => (accountId === null ? [] : searchChoices(allDays, data, search.filters)),
+    [allDays, data, accountId, search.filters],
   );
   const found = useMemo(
     () =>
       searching || search.sort !== "newest"
-        ? sortRows(findRows(allDays, search.filter, search.text), search.sort)
+        ? sortRows(findRows(allDays, search.filters, search.text), search.sort)
         : null,
-    [allDays, searching, search.filter, search.text, search.sort],
+    [allDays, searching, search.filters, search.text, search.sort],
   );
   /** Sorted other than by date: one list, each row with its date. */
   const flat = found && !sortsByDate(search.sort) ? found : null;
@@ -159,11 +161,11 @@ export function useAccountView(
     /** Searching an open account: what is typed, the chosen envelope or kind, and the order. */
     search: {
       text: search.text,
-      /** The drop-down value of the choice, or null. */
-      choice: search.filter ? filterValue(search.filter) : null,
-      choiceLabel: search.filter ? filterLabel(search.filter, data) : null,
+      /** The chips: each choice's drop-down value and name. */
+      chips: search.filters.map((f) => ({ value: filterValue(f), label: filterLabel(f, data) })),
       /** The envelope chosen, so a split's matching part can stand out. */
-      envelopeId: search.filter && "envelopeId" in search.filter ? search.filter.envelopeId : null,
+      envelopeId:
+        search.filters.flatMap((f) => ("envelopeId" in f ? [f.envelopeId] : []))[0] ?? null,
       sort: search.sort,
       /** Envelopes and kinds this account has, with counts. */
       choices,
@@ -173,11 +175,16 @@ export function useAccountView(
       /** The matches added up, signed; a split counts only the chosen envelope's part. */
       matchTotal: found ? foundTotal(found) : 0,
       setText: (text: string) => updateSearch({ text }),
-      /** Chooses an envelope or kind (by drop-down value), or none. */
-      choose: (value: string | null) =>
-        updateSearch({ filter: value === null ? null : filterFromValue(value), text: "" }),
+      /** Adds a chip (by drop-down value), replacing one of its group. */
+      choose: (value: string) => {
+        const filter = filterFromValue(value);
+        if (filter) updateSearch({ filters: addFilter(search.filters, filter), text: "" });
+      },
+      /** Removes a chip (by drop-down value). */
+      remove: (value: string) =>
+        updateSearch({ filters: search.filters.filter((f) => filterValue(f) !== value) }),
       setSort: (sort: SortOrder) => updateSearch({ sort }),
-      clear: () => updateSearch({ text: "", filter: null }),
+      clear: () => updateSearch({ text: "", filters: [] }),
     },
 
     /** Ticked rows (by transaction id), their count and their total, signed. */

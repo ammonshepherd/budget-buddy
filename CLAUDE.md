@@ -250,8 +250,9 @@ non-card budget balances − all envelope money (P included)`.
   in v0.33.0, `src/models/transactionSearch.ts`, display only): typing
   matches payee, memo or an amount; its drop-down offers envelopes (as
   `EnvelopePicker`) and kinds (Uncategorized, Income, Transfer, Card
-  credit), and a choice becomes a chip keeping only those transactions (a
-  split counts only the chosen envelope's part). Searching hides To review.
+  credit, Not reconciled); a choice becomes a chip, and rows must match
+  every chip (one envelope or kind, plus Not reconciled; a split counts
+  only the chosen envelope's part). Searching hides To review.
   Sorts: date either way (headings kept), amount, payee, envelope (one
   list, each row dated). Reset when another account opens. Each row: a checkbox, a bank icon (grey = not reconciled,
   green = reconciled), payee (over the account on All accounts), envelope,

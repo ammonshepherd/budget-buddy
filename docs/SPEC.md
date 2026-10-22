@@ -439,16 +439,21 @@ the list comes back where it was scrolled.
   a transfer's "From → To" accounts, or an amount in or out ("45" is
   $45.00–$45.99, "45.2" is $45.20–$45.29, "45.20" or "$45" exactly; a
   split's parts count). It also drops down, like the envelope picker, the
-  kinds (Uncategorized, Income, Transfer, Card credit) and then envelopes
-  by group that this account has, each with "N transactions" (only choices
-  that keep a row), and last "Search “…” in payee and memo". Enter takes
-  the highlighted line: an envelope whose full name was typed, else the
-  text search. Choosing an envelope or kind makes a purple chip ("Remove ⟨name⟩
-  filter"; Backspace in the empty field also removes it) and keeps only
-  those transactions; typing then searches within them. While searching,
+  kinds (Uncategorized, Income, Transfer, Card credit, Not reconciled) and
+  then envelopes by group that this account has, each with "N
+  transactions" (counted alongside the other chip; only choices that keep
+  a row and are not chosen), and last "Search “…” in payee and memo".
+  Enter takes the highlighted line: an envelope whose full name was typed,
+  else the text search. Choosing makes a purple chip ("Remove ⟨name⟩
+  filter"; Backspace in the empty field removes the last one) and keeps
+  only transactions matching every chip; typing then searches within them.
+  Chips stack across two groups (`addFilter`): what a row is (one envelope,
+  or Uncategorized, Income, Transfer or Card credit; a new one replaces the
+  old) and Not reconciled (`ActivityRow.reconciled` false). Chips wrap
+  inside the field when they do not fit. While searching,
   "N matches · ±$X" shows under the field (a split counts only the chosen
   envelope's part, which is highlighted in its open split), the To review
-  card steps aside (the desktop panel keeps it), an ✕ clears both, and an
+  card steps aside (the desktop panel keeps it), an ✕ clears text and chips, and an
   empty result reads "No transactions match.". Sort: Newest (the default),
   Oldest (month and day headings kept, day nets from the matches), Largest,
   Smallest (by size, sign ignored), Payee A–Z, Envelope A–Z (one list

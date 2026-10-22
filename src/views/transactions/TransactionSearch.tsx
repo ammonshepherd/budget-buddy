@@ -14,8 +14,9 @@ const TEXT = "__text__";
  * Searching an open account's transactions, with a sort menu. One field:
  * typing filters by payee, memo or amount as you go, and drops down the
  * envelopes and kinds that match (like the envelope picker). Choosing one
- * becomes a chip, so only its transactions show; Backspace in the empty
- * field or the chip's ✕ removes it. Enter keeps the typed text, unless it
+ * becomes a chip, so only its transactions show; chips stack (an envelope
+ * or kind, plus Not reconciled). Backspace in the empty field removes the
+ * last chip, a chip's ✕ removes it. Enter keeps the typed text, unless it
  * is exactly an envelope's name.
  */
 export function TransactionSearch({ search }: { search: Search }) {
@@ -58,8 +59,8 @@ export function TransactionSearch({ search }: { search: Search }) {
       event.preventDefault();
       event.stopPropagation();
       setOpen(false);
-    } else if (event.key === "Backspace" && typed === "" && search.choice) {
-      search.choose(null);
+    } else if (event.key === "Backspace" && typed === "" && search.chips.length > 0) {
+      search.remove(search.chips[search.chips.length - 1]!.value);
     }
   };
 
@@ -74,19 +75,20 @@ export function TransactionSearch({ search }: { search: Search }) {
             <span className="tx-search-glyph" aria-hidden="true">
               <SearchIcon />
             </span>
-            {search.choice && (
+            {search.chips.map((chip) => (
               <button
+                key={chip.value}
                 className="tx-search-chip"
                 type="button"
-                aria-label={`Remove ${search.choiceLabel} filter`}
+                aria-label={`Remove ${chip.label} filter`}
                 onClick={() => {
-                  search.choose(null);
+                  search.remove(chip.value);
                   input.current?.focus();
                 }}
               >
-                {search.choiceLabel} <span aria-hidden="true">✕</span>
+                {chip.label} <span aria-hidden="true">✕</span>
               </button>
-            )}
+            ))}
             <input
               ref={input}
               id={id}
@@ -99,7 +101,7 @@ export function TransactionSearch({ search }: { search: Search }) {
               autoComplete="off"
               spellCheck={false}
               enterKeyHint="search"
-              placeholder={search.choice ? "Search within" : "Search or pick an envelope"}
+              placeholder={search.chips.length > 0 ? "Search within" : "Search or pick an envelope"}
               value={typed}
               onFocus={() => {
                 setOpen(true);
@@ -146,11 +148,7 @@ export function TransactionSearch({ search }: { search: Search }) {
                     role="option"
                     aria-selected={index === active}
                     className={
-                      option.value === TEXT
-                        ? "picker-option tx-search-text"
-                        : option.value === search.choice
-                          ? "picker-option chosen"
-                          : "picker-option"
+                      option.value === TEXT ? "picker-option tx-search-text" : "picker-option"
                     }
                     onMouseDown={(event) => event.preventDefault()}
                     onMouseEnter={() => setActive(index)}
