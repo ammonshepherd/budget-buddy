@@ -48,6 +48,9 @@ function assignedTyped(text: string, current: Cents) {
 export const TO_AVAILABLE = "available-to-assign";
 
 /** The Budget page for one month: the numbers to show and what the user can do. */
+/** What the Budget page and its parts read and call. */
+export type BudgetPageState = ReturnType<typeof useBudgetPage>;
+
 export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
   const view = useMemo(() => buildBudgetMonth(data, month), [data, month]);
   const [showUnused, setShowUnused] = useState(false);

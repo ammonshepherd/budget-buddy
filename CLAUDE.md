@@ -363,7 +363,8 @@ Never commit or ask for the service_role key or database password. The app
 uses only the project URL and publishable/anon key: `VITE_SUPABASE_URL` and
 `VITE_SUPABASE_ANON_KEY`, in `.env.local` and as repository Actions variables.
 UI tests build with `VITE_DATA_STORE=memory`, an in-memory store
-(`src/models/memoryStore.ts`) that must enforce the same rules as the database. Do not
+(`src/models/memoryStore.ts`) that must enforce the same rules as the database
+(`src/models/storeRules.shared.ts` tests both; add a test there for a new rule). Do not
 create test users by writing to `auth.users`/`auth.identities` with SQL.
 
 Tests never touch production. The test project's settings live in `.env.test`

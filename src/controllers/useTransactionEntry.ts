@@ -174,6 +174,9 @@ export function useEnvelopeRemaining(data: BudgetData, date: string): Map<string
  * transaction dialog, or a new row on Accounts): saves it, or returns the cover
  * prompt when its envelope would go negative.
  */
+/** What the transaction form and cover prompt read and call. */
+export type TransactionEntryState = ReturnType<typeof useTransactionEntry>;
+
 export function useTransactionEntry(budget: Budget, data: BudgetData) {
   const envelopeNames = useMemo(() => new Map(data.envelopes.map((e) => [e.id, e.name])), [data]);
   const householdId = data.household.id;

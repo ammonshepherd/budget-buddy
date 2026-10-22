@@ -1,11 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
-import type { useBudgetPage } from "../controllers/useBudgetPage";
+import type { BudgetPageState as Page } from "../controllers/useBudgetPage";
 import { centsToInput, formatCents } from "../models/money";
 import { ErrorMessage, Money } from "./components";
 import { EnvelopePicker, type PickerOption } from "./EnvelopePicker";
-
-type Page = ReturnType<typeof useBudgetPage>;
 
 /**
  * Opened from the Available to Assign banner: add an amount to one

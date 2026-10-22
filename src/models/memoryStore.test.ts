@@ -56,53 +56,7 @@ describe("memory store splits", () => {
     const data = (await store.load())!;
     expect(data.transactions.map((t) => t.allocations.length)).toEqual([2, 2, 2]);
   });
-
-  it("rejects what the database rejects", async () => {
-    const { id, visaPayment, save } = await setUp();
-    const rejects = async (promise: Promise<void>, message: RegExp) => {
-      const error: unknown = await promise.then(
-        () => null,
-        (e: unknown) => e,
-      );
-      expect(error).toBeInstanceOf(UserFacingError);
-      expect((error as Error).message).toMatch(message);
-    };
-    await rejects(
-      save(id("Checking"), -5_000, [
-        [id("A"), -2_000],
-        [id("A"), -3_000],
-      ]),
-      /only once/,
-    );
-    await rejects(
-      save(id("Checking"), -5_000, [
-        [id("A"), 1_000],
-        [id("B"), -6_000],
-      ]),
-      /same way/,
-    );
-    await rejects(
-      save(id("Checking"), -5_000, [
-        [id("A"), -1_000],
-        [id("B"), -1_000],
-      ]),
-      /must sum/,
-    );
-    await rejects(
-      save(id("Visa"), 1_000, [
-        [id("A"), 400],
-        [id("B"), 600],
-      ]),
-      /card credit/,
-    );
-    await rejects(
-      save(id("Checking"), -5_000, [
-        [id("A"), -1_000],
-        [visaPayment, -4_000],
-      ]),
-      /payment envelope/,
-    );
-  });
+  // What the database rejects is in storeRules.shared.ts (both stores run it).
 });
 
 describe("memory store rename and reorder", () => {

@@ -1,12 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { useAsyncAction } from "../controllers/useAsyncAction";
-import { TO_AVAILABLE, type useBudgetPage } from "../controllers/useBudgetPage";
+import { TO_AVAILABLE, type BudgetPageState as Page } from "../controllers/useBudgetPage";
 import type { EnvelopeRow } from "../models/budgetMath";
 import { centsToInput, formatCents } from "../models/money";
 import { ErrorMessage, Money } from "./components";
 import { EnvelopePicker, type PickerOption } from "./EnvelopePicker";
-
-type Page = ReturnType<typeof useBudgetPage>;
 
 /**
  * Opened by tapping what is left in an envelope row: moves some of it to
