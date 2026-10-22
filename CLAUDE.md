@@ -13,7 +13,9 @@ always describes the app as of that version (including §9, not built yet).
 
 ## Stack (decided)
 
-- Vite + React + TypeScript, `vite-plugin-pwa` for installability.
+- Vite + React + TypeScript, `vite-plugin-pwa` for installability, with
+  `registerType: "prompt"`: a new deploy never reloads the app by itself; a
+  banner offers Refresh (`src/controllers/useAppUpdate.ts`, decided in v0.32.0).
 - Supabase (Postgres + email auth + Row Level Security). Production project
   ref: `lkaurrcarzzkbqdwqfge` ("budget-buddy"). Test project ref:
   `kiqbgjgvptgknmboazaq` ("budget-buddy-test"), used only by tests; see

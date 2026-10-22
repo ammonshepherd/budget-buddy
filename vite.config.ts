@@ -42,7 +42,10 @@ export default defineConfig(({ command, mode }) => {
       VitePWA({
         // Generates the service worker and manifest that sw.js and
         // manifest.webmanifest used to provide by hand.
-        registerType: "autoUpdate",
+        // "prompt": a new build waits until the user taps Refresh on the
+        // new version banner (src/controllers/useAppUpdate.ts), so the app
+        // never reloads in the middle of an edit.
+        registerType: "prompt",
         // Cached by the service worker so the icons work offline.
         includeAssets: [
           "icons/favicon.svg",

@@ -1,7 +1,7 @@
 {
   "name": "budget-buddy",
   "private": true,
-  "version": "0.31.0",
+  "version": "0.32.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -43,6 +43,7 @@
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "workbox-window": "^7.4.1"
   }
 }
