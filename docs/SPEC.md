@@ -433,7 +433,8 @@ the list comes back where it was scrolled.
   - "Import CSV" (an open account only) opens the bank import already set to
     this account (no account picker) in a sheet with Close.
 - Search and sort (since v0.33.0, `TransactionSearch.tsx`,
-  `transactionSearch.ts`, display only), under the pane and not pinned: one
+  `transactionSearch.ts`, display only), pinned with the pane, between it
+  and the ticked-rows bar, on the pane's tint: one
   field ("Search transactions", a magnifying glass) and a "Sort by" menu.
   Typing filters at once by payee, memo (every word, any case, any order),
   a transfer's "From → To" accounts, or an amount in or out ("45" is

@@ -3964,10 +3964,11 @@ body:has(.app-shell.desktop) {
 
 /* ---- v0.33.0: search and sort an open account ---- */
 
-/* The search field and sort menu, under the info pane (not pinned). */
+/* The search field and sort menu: pinned with the info pane, tinted like it. */
 .tx-search {
   padding: 10px 16px 0;
-  border-block-end: 1px solid var(--bb-row-line);
+  border-block-end: 1px solid var(--bb-purple-line);
+  background: var(--bb-purple-tint);
 }
 
 .tx-search-row {

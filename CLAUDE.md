@@ -246,7 +246,8 @@ non-card budget balances − all envelope money (P included)`.
   review, rows with the account line. Both lists show 100 rows at a time
   ("Show N more (M left)", `firstRows`; everything is already loaded, no
   paging in Supabase). Day headings newest first, with the day's net, not
-  collapsible. An open account has a search field and sort menu (decided
+  collapsible. An open account has a search field and sort menu, pinned between
+  the info pane and the ticked-rows bar (decided
   in v0.33.0, `src/models/transactionSearch.ts`, display only): typing
   matches payee, memo or an amount; its drop-down offers envelopes (as
   `EnvelopePicker`) and kinds (Uncategorized, Income, Transfer, Card

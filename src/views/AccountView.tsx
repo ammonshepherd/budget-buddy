@@ -29,8 +29,9 @@ type Tool = "review" | "edit" | "import";
  * Activity page) or one account (all its transactions). An info pane pinned
  * to the top holds the back arrow, the figures, and for an open account the
  * pencil (edit) and Import CSV; To review and the transaction list follow.
- * An open account adds a search field and sort menu above them; while a
- * search is on, To review steps aside so only the matches show.
+ * An open account adds a search field and sort menu, pinned between the
+ * pane and the ticked-rows bar; while a search is on, To review steps
+ * aside so only the matches show.
  * On a desktop, editing (a transaction or the account), importing and To
  * review sit in the panel on the right, and Add transaction opens a new row
  * at the top of the list.
@@ -276,9 +277,9 @@ export function AccountView({
             <div className="activity-table">
               <div className="account-sticky">
                 {pane}
+                {search}
                 <SelectionBar view={view} />
               </div>
-              {search}
               {adding && view.hasOpenAccounts && (
                 <NewTransactionRow
                   budget={budget}
@@ -300,10 +301,10 @@ export function AccountView({
           <CardDebt data={data} />
           <div className="account-sticky">
             {pane}
+            {search}
             <SelectionBar view={view} />
           </div>
           {notice}
-          {search}
           {!view.search.searching && review}
           {list}
           <TransactionDialog
