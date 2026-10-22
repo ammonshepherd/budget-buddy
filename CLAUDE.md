@@ -246,7 +246,14 @@ non-card budget balances − all envelope money (P included)`.
   review, rows with the account line. Both lists show 100 rows at a time
   ("Show N more (M left)", `firstRows`; everything is already loaded, no
   paging in Supabase). Day headings newest first, with the day's net, not
-  collapsible. Each row: a checkbox, a bank icon (grey = not reconciled,
+  collapsible. An open account has a search field and sort menu (decided
+  in v0.33.0, `src/models/transactionSearch.ts`, display only): typing
+  matches payee, memo or an amount; its drop-down offers envelopes (as
+  `EnvelopePicker`) and kinds (Uncategorized, Income, Transfer, Card
+  credit), and a choice becomes a chip keeping only those transactions (a
+  split counts only the chosen envelope's part). Searching hides To review.
+  Sorts: date either way (headings kept), amount, payee, envelope (one
+  list, each row dated). Reset when another account opens. Each row: a checkbox, a bank icon (grey = not reconciled,
   green = reconciled), payee (over the account on All accounts), envelope,
   signed amount (outflows red, inflows green, always bold; the payee is bold
   only while to review). Ticked rows are highlighted; a bar under the pane

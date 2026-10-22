@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.32.0.
+Version described: 0.33.0.
 
 ## 1. Purpose
 
@@ -39,7 +39,8 @@ Key model modules: `budgetMath.ts` (all budget math), `money.ts` (parse and
 format cents), `month.ts` (`YYYY-MM` helpers, `formatDay`), `routes.ts`,
 `accounts.ts` (card opening balance sign, list groups), `activity.ts` (the
 Accounts page's lists: All accounts' month and an open account's history by
-day, day nets, totals, info pane figures, 100 rows at a time), `transfers.ts` (linked transfers and
+day, day nets, totals, info pane figures, 100 rows at a time),
+`transactionSearch.ts` (searching and sorting an open account), `transfers.ts` (linked transfers and
 matching), `transactionImport.ts` + `csv.ts` (bank CSV, matching typed transactions), `envelopePlan.ts` (plan
 CSV), `incomeRules.ts`, `dataStore.ts` (the store interface), `supabaseStore.ts`,
 `memoryStore.ts`, `store.ts` (picks one), `layoutPrefs.ts` (desktop
@@ -431,6 +432,29 @@ the list comes back where it was scrolled.
     figures follow the month picker.
   - "Import CSV" (an open account only) opens the bank import already set to
     this account (no account picker) in a sheet with Close.
+- Search and sort (since v0.33.0, `TransactionSearch.tsx`,
+  `transactionSearch.ts`, display only), under the pane and not pinned: one
+  field ("Search transactions", a magnifying glass) and a "Sort by" menu.
+  Typing filters at once by payee, memo (every word, any case, any order),
+  a transfer's "From → To" accounts, or an amount in or out ("45" is
+  $45.00–$45.99, "45.2" is $45.20–$45.29, "45.20" or "$45" exactly; a
+  split's parts count). It also drops down, like the envelope picker, the
+  kinds (Uncategorized, Income, Transfer, Card credit) and then envelopes
+  by group that this account has, each with "N transactions" (only choices
+  that keep a row), and last "Search “…” in payee and memo". Enter takes
+  the highlighted line: an envelope whose full name was typed, else the
+  text search. Choosing an envelope or kind makes a purple chip ("Remove ⟨name⟩
+  filter"; Backspace in the empty field also removes it) and keeps only
+  those transactions; typing then searches within them. While searching,
+  "N matches · ±$X" shows under the field (a split counts only the chosen
+  envelope's part, which is highlighted in its open split), the To review
+  card steps aside (the desktop panel keeps it), an ✕ clears both, and an
+  empty result reads "No transactions match.". Sort: Newest (the default),
+  Oldest (month and day headings kept, day nets from the matches), Largest,
+  Smallest (by size, sign ignored), Payee A–Z, Envelope A–Z (one list
+  without headings, each row's date under its payee). Ties stay newest
+  first. Search and sort start over when another account opens and stay
+  when the month changes; they are not in the URL. All accounts has none.
 - The To review card for this account only (as on All accounts).
 - Every transaction in the account, any month, newest first
   (`accountHistory`): a month divider ("OCTOBER 2026", 12px, purple, an
@@ -715,7 +739,8 @@ Decided or wanted, but not in the app:
 - Budget page: an icon chosen per envelope (every row shows the same
   envelope icon, `EnvelopeIcon`; Settings shows none); "Collapse all" /
   "Expand all" for groups.
-- Accounts lists: search and filters by envelope or status, a "Needs
+- Accounts lists: search and sort on All accounts (an open account has
+  them), a "Needs
   review" queue for transfer matches, running balances on each row, swipe
   actions (such as marking cleared), a memo per split part, and charts on the
   info pane. A "Reconcile" button with a statement difference (see
