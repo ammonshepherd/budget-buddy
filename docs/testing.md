@@ -78,6 +78,10 @@ npm run test:ui:db                      # UI test signed in as user A
   their own accounts, transactions and envelopes, get no rows from the other
   household, and cannot add, change or delete its rows.
 - `integration/supabaseStore.test.ts` runs the app's real data store as user A.
+- `integration/storeRules.test.ts` runs the shared rule tests
+  (`src/models/storeRules.shared.ts`) against the database as user A; the
+  unit tests run the same ones against the in-memory store, so the two
+  stay alike.
 - `e2e-db/` holds UI tests against the test database
   (`playwright.db.config.ts`); the everyday UI tests in `e2e/` use the
   in-memory store.

@@ -1,14 +1,13 @@
 import { useState, type KeyboardEvent } from "react";
 import { messageOf } from "../controllers/errors";
 import { useAsyncAction } from "../controllers/useAsyncAction";
-import type { useBudgetPage } from "../controllers/useBudgetPage";
+import type { BudgetPageState as Page } from "../controllers/useBudgetPage";
 import type { RemainingPart } from "../models/envelopeDetail";
 import { centsToInput, formatCents } from "../models/money";
 import { formatShortDay } from "../models/month";
 import { PadAmount } from "./AssignPad";
 import { EditableTitle, ErrorMessage, Money, SingleFieldForm } from "./components";
 
-type Page = ReturnType<typeof useBudgetPage>;
 type Detail = NonNullable<ReturnType<Page["detail"]>>;
 
 const STAR = "M12 1l2.6 8.4L23 12l-8.4 2.6L12 23l-2.6-8.4L1 12l8.4-2.6z";

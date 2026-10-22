@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.33.1.
+Version described: 0.33.2.
 
 ## 1. Purpose
 
@@ -24,7 +24,10 @@ hosted on GitHub Pages with Supabase as the back end.
 ```
 src/models/       types, pure functions, data stores (no React)
 src/controllers/  React hooks: load data, handle actions, call models
-src/views/        React components (pages in src/views/pages/)
+src/views/        React components (pages in src/views/pages/; the Budget
+                  page's groups, rows and panel parts in src/views/budget/;
+                  transaction lists, search, form and cover prompt in
+                  src/views/transactions/)
 src/styles.css    all styling
 public/icons/     app icons (see CLAUDE.md "App icons")
 supabase/migrations/  every schema change, applied in order
@@ -60,6 +63,9 @@ Two implementations:
 - `memoryStore` — in-memory, any password signs in. Used when the build sets
   `VITE_DATA_STORE=memory` (the Playwright build). It must enforce the same rules
   as the database (card credits, transfers, payment envelopes, income).
+  `storeRules.shared.ts` holds rule tests that run against both stores:
+  `memoryStore.rules.test.ts` (unit) and `integration/storeRules.test.ts`
+  (the test project). A rule added to the database gets a test there.
 
 After every change the controller reloads all data (`budget.change`), so pages
 always show what the store holds.
