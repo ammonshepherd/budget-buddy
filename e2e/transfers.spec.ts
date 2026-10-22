@@ -7,6 +7,7 @@ import {
   signInWithHousehold,
   addAccount,
   openAllAccounts,
+  chooseEnvelope,
 } from "./helpers";
 
 const file = (name: string, text: string) => ({
@@ -78,7 +79,7 @@ test("marking an imported row as a Transfer links the other account's bank row",
   const out = activityRow(page, "TRANSFER TO SAVINGS");
   await editActivityRow(page, "TRANSFER TO SAVINGS");
   const form = page.getByRole("form", { name: "Edit transaction" });
-  await form.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await chooseEnvelope(form.getByLabel("Envelope"), "Transfer (not spending or income)");
   await expect(form.getByLabel("To account")).toHaveValue(/.+/);
   await expect(form.getByRole("note")).toHaveText(
     "Links to the Savings transaction on 2030-01-06 (TRANSFER FROM CHECKING), so it is not added twice.",
@@ -121,7 +122,7 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
   await dialog.getByLabel("Account").selectOption({ label: "Savings" });
   await dialog.getByLabel("Amount").fill("75");
   await dialog.getByLabel("Payee").fill("Move");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Transfer (not spending or income)");
   await expect(dialog.getByLabel("From account")).toHaveValue(/.+/);
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
@@ -138,7 +139,7 @@ test("a typed transfer edits and deletes as one", async ({ page }) => {
 
   // Making one side ordinary spending removes the typed-in other side.
   await editActivityRow(page, "Move");
-  await form.getByLabel("Envelope").selectOption({ label: "Uncategorized" });
+  await chooseEnvelope(form.getByLabel("Envelope"), "Uncategorized");
   await form.getByRole("button", { name: "Save changes" }).click();
   await expect(items(page)).toHaveCount(1);
   await expect(move.locator(".activity-account")).toHaveText("Checking");
@@ -168,7 +169,7 @@ test("pick a different bank row, or a new transaction, as the other side", async
   const out = activityRow(page, "TO SAVINGS");
   await editActivityRow(page, "TO SAVINGS");
   const form = page.getByRole("form", { name: "Edit transaction" });
-  await form.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await chooseEnvelope(form.getByLabel("Envelope"), "Transfer (not spending or income)");
   const otherSide = form.getByLabel("Other side");
   // The closest row is chosen first; the later one and "new" are offered.
   await expect(otherSide.locator("option:checked")).toHaveText(
@@ -214,7 +215,7 @@ async function typeTransferToSavings(page: Page) {
   await dialog.getByLabel("Amount").fill("50");
   await dialog.getByLabel("Payee").fill("Typed move");
   await dialog.getByLabel("Date").fill("2030-01-10");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Transfer (not spending or income)");
   await expect(dialog.getByLabel("Other side")).toHaveCount(0); // nothing to choose yet
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
 }

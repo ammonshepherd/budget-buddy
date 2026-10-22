@@ -12,6 +12,7 @@ import {
   signInWithHousehold,
   chooseEnvelope,
   openAllAccounts,
+  pickerChoices,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -34,7 +35,7 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   await dialog.getByLabel("Amount").first().fill("75");
   await dialog.getByLabel("Payee").fill("Superstore");
   await chooseEnvelope(dialog.getByLabel("Envelope").first(), "Groceries");
-  await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
+  await chooseEnvelope(dialog.getByLabel("Envelope").first(), "Split across envelopes");
   // The envelope already chosen starts the first line.
   await expect(dialog.getByLabel("Envelope 1")).toHaveValue(/.+/);
   await dialog.getByLabel("Amount 1").fill("50");
@@ -66,7 +67,7 @@ test("split a transaction across envelopes, edit it, and undo the split", async 
   ]);
   await editActivityRow(page, "Superstore");
   const form = page.getByRole("form", { name: "Edit transaction" });
-  await expect(form.getByLabel("Envelope").first()).toHaveValue("split");
+  await expect(form.getByLabel("Envelope").first()).toHaveValue("Split across envelopes");
   await expect(form.getByLabel("Amount 1")).toHaveValue("50.00");
   await expect(form.getByLabel("Amount 2")).toHaveValue("25.00");
   // A third line, then removed again (a split keeps at least two lines).
@@ -104,7 +105,7 @@ test("a split that overdraws two envelopes covers them one at a time", async ({ 
   const dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").first().fill("260");
   await dialog.getByLabel("Payee").fill("Party");
-  await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
+  await chooseEnvelope(dialog.getByLabel("Envelope").first(), "Split across envelopes");
   await chooseEnvelope(dialog.getByLabel("Envelope 1"), "Groceries");
   await dialog.getByLabel("Amount 1").fill("130");
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Fun");
@@ -115,16 +116,19 @@ test("a split that overdraws two envelopes covers them one at a time", async ({ 
   await expect(cover).toContainText("Envelope 1 of 2 to cover");
   await expect(cover).toContainText("Groceries would be $30.00 short");
   // Fun is spent by this same split, so it has nothing to give.
-  await expect(cover.getByRole("option", { name: /Fun/ })).toHaveCount(0);
   await expect(cover.getByLabel(/cover .* from/i)).toHaveValue(/.+/);
-  await expect(cover.getByRole("option", { name: "Gifts (has $200.00)" })).toBeAttached();
+  let choices = await pickerChoices(cover.getByLabel(/cover .* from/i));
+  await expect(choices.filter({ hasText: "Fun" })).toHaveCount(0);
+  await expect(choices.filter({ hasText: "Gifts has $200.00" })).toHaveCount(1);
+  await cover.getByLabel(/cover .* from/i).press("Escape");
   await cover.getByRole("button", { name: "Cover and continue" }).click();
 
   await expect(cover).toContainText("Envelope 2 of 2 to cover");
   await expect(cover).toContainText("Fun would be $30.00 short");
   // Gifts already gave $30 to Groceries.
-  await expect(cover.getByRole("option", { name: "Gifts (has $170.00)" })).toBeAttached();
-  await cover.getByLabel(/cover .* from/i).selectOption("available");
+  choices = await pickerChoices(cover.getByLabel(/cover .* from/i));
+  await expect(choices.filter({ hasText: "Gifts has $170.00" })).toHaveCount(1);
+  await chooseEnvelope(cover.getByLabel(/cover .* from/i), "Available to Assign");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(dialog).toBeHidden();
 
@@ -146,7 +150,7 @@ test("a card purchase can be split; money into a card cannot", async ({ page }) 
   await dialog.getByLabel("Account").selectOption({ label: "Visa" });
   await dialog.getByLabel("Amount").first().fill("70");
   await dialog.getByLabel("Payee").fill("Card shop");
-  await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
+  await chooseEnvelope(dialog.getByLabel("Envelope").first(), "Split across envelopes");
   await chooseEnvelope(dialog.getByLabel("Envelope 1"), "Groceries");
   await dialog.getByLabel("Amount 1").fill("50");
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), "Fun");
@@ -163,5 +167,7 @@ test("a card purchase can be split; money into a card cannot", async ({ page }) 
   const credit = await openAddTransaction(page);
   await credit.getByLabel("Account").selectOption({ label: "Visa" });
   await credit.getByRole("radio", { name: "Inflow" }).check();
-  await expect(credit.getByRole("option", { name: "Split across envelopes" })).toHaveCount(0);
+  const creditChoices = await pickerChoices(credit.getByLabel("Envelope"));
+  await expect(creditChoices.filter({ hasText: "Split across envelopes" })).toHaveCount(0);
+  await expect(creditChoices.filter({ hasText: "Card credit" })).toHaveCount(1);
 });

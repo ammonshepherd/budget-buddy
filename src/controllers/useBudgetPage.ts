@@ -6,6 +6,7 @@ import {
   withEnvelopeMonth,
   type EnvelopeRow,
 } from "../models/budgetMath";
+import { evaluateAmount } from "../models/amountEquation";
 import { UserFacingError } from "../models/dataStore";
 import {
   envelopeActivity,
@@ -14,7 +15,7 @@ import {
   remainingParts,
 } from "../models/envelopeDetail";
 import { monthHasPlan, planToCopy, type PlanSource } from "../models/envelopePlan";
-import { formatCents, roundMoney } from "../models/money";
+import { formatCents, roundMoney, type Cents } from "../models/money";
 import { addMonths, formatMonth, type Month } from "../models/month";
 import { budgetHref } from "../models/routes";
 import type { BudgetData } from "../models/types";
@@ -27,6 +28,17 @@ function amountTyped(text: string, label: string) {
   const cents = roundMoney(text);
   if (cents === null) throw new UserFacingError(`${label}: enter an amount like 12.34`);
   if (cents < 0) throw new UserFacingError(`${label} cannot be negative.`);
+  return cents;
+}
+
+/**
+ * A typed Assigned: a new total ("250") or an equation on the current one
+ * ("120.00 + 50", "+50", "− 20"); zero or more, rounded to the cent.
+ */
+function assignedTyped(text: string, current: Cents) {
+  const cents = evaluateAmount(text, current);
+  if (cents === null) throw new UserFacingError("Assigned: enter an amount like 12.34 or + 5.00");
+  if (cents < 0) throw new UserFacingError("Assigned cannot be negative.");
   return cents;
 }
 
@@ -57,6 +69,23 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     const row = view.groups.flatMap((g) => g.envelopes).find((e) => e.id === id);
     if (!row) throw new UserFacingError("Envelope not found");
     return row;
+  };
+
+  /** Adds to an envelope's Assigned (negative takes back), within what is available and left. */
+  const assignBy = async (envelopeId: string, amount: Cents) => {
+    if (amount > view.assignable) {
+      throw new UserFacingError(
+        `Only ${formatCents(Math.max(0, view.assignable))} is available to assign in ${formatMonth(month)}.`,
+      );
+    }
+    const remaining = Math.max(0, envelope(envelopeId).remaining);
+    if (-amount > remaining) {
+      throw new UserFacingError(`You can take back at most ${formatCents(remaining)}.`);
+    }
+    await budget.change(
+      (store) => store.adjustEnvelopeMonth(envelopeId, month, { assigned: amount }),
+      (current) => withEnvelopeMonth(current, envelopeId, month, { assigned: amount }),
+    );
   };
 
   return {
@@ -126,18 +155,26 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     assign: async (envelopeId: string, text: string) => {
       const amount = requireCents(text);
       if (amount === 0) return;
-      if (amount > view.assignable) {
-        throw new UserFacingError(
-          `Only ${formatCents(view.assignable)} is available to assign in ${formatMonth(month)}.`,
-        );
-      }
-      const remaining = Math.max(0, envelope(envelopeId).remaining);
-      if (-amount > remaining) {
-        throw new UserFacingError(`You can take back at most ${formatCents(remaining)}.`);
-      }
-      await budget.change((store) =>
-        store.adjustEnvelopeMonth(envelopeId, month, { assigned: amount }),
-      );
+      await assignBy(envelopeId, amount);
+    },
+
+    /**
+     * Every envelope (unused ones too, payment envelopes included), in group
+     * order, for the Available to Assign dialog's picker.
+     */
+    assignChoices: view.groups.flatMap((group) =>
+      group.envelopes.map((row) => ({ id: row.id, name: row.name, group: group.name, row })),
+    ),
+
+    /**
+     * From the Available to Assign card: adds an amount (above zero) to an
+     * envelope's Assigned, or with `takeBack` returns it to Available to Assign.
+     */
+    assignFromAvailable: async (envelopeId: string, text: string, takeBack: boolean) => {
+      if (!envelopeId) throw new UserFacingError("Choose an envelope.");
+      const amount = requireCents(text);
+      if (amount <= 0) throw new UserFacingError("Enter an amount above zero.");
+      await assignBy(envelopeId, takeBack ? -amount : amount);
     },
 
     /** Moves money from this envelope's Saved into Remaining. */
@@ -165,12 +202,13 @@ export function useBudgetPage(budget: Budget, data: BudgetData, month: Month) {
     },
 
     /**
-     * Sets this month's Assigned to a new total (typed in the row). The
-     * difference comes from, or goes back to, Available to Assign.
+     * Sets this month's Assigned to a new total, typed or worked out on the
+     * number pad ("250", or "120.00 + 50" to add). The difference comes
+     * from, or goes back to, Available to Assign.
      */
     setAssigned: async (envelopeId: string, text: string) => {
       const row = envelope(envelopeId);
-      const change = amountTyped(text, "Assigned") - row.assigned;
+      const change = assignedTyped(text, row.assigned) - row.assigned;
       if (change === 0) return;
       if (change > view.assignable) {
         throw new UserFacingError(

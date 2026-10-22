@@ -11,6 +11,7 @@ import {
   chooseEnvelope,
   addAccount,
   accountRow,
+  pickerChoices,
 } from "./helpers";
 
 test("a credit card account owes money and gets a payment envelope", async ({ page }) => {
@@ -93,9 +94,10 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await goTo(page, "Budget");
   let dialog = await openAddTransaction(page);
   // The payment envelope fills itself, so it is not an envelope choice.
-  await expect(
-    dialog.getByLabel("Envelope").locator("option", { hasText: "Visa payment" }),
-  ).toHaveCount(0);
+  const choices = await pickerChoices(dialog.getByLabel("Envelope"));
+  await expect(choices.filter({ hasText: "Groceries" })).toHaveCount(1);
+  await expect(choices.filter({ hasText: "Visa payment" })).toHaveCount(0);
+  await dialog.getByLabel("Envelope").press("Escape");
   await dialog.getByLabel("Account").selectOption({ label: "Visa" });
   await dialog.getByLabel("Amount").fill("40");
   await dialog.getByLabel("Payee").fill("Market");
@@ -111,7 +113,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").fill("140");
   await dialog.getByLabel("Payee").fill("Visa payment");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Transfer (not spending or income)");
   await expect(dialog.getByLabel("To account")).toHaveValue(/.+/);
   await expect(dialog.getByRole("note")).toHaveText("Also adds the matching inflow in Visa.");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
@@ -119,7 +121,7 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   // Visa payment holds only $40, so the other $100 must be covered.
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Visa payment would be $100.00 short");
-  await cover.getByLabel(/cover .* from/i).selectOption("available");
+  await chooseEnvelope(cover.getByLabel(/cover .* from/i), "Available to Assign");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(dialog).toBeHidden();
 
@@ -140,7 +142,7 @@ test("a payment nothing can cover is not suggested as Uncategorized", async ({ p
   // Checking holds $0, so nothing can cover an extra $300 payment.
   const dialog = await openAddTransaction(page);
   await dialog.getByLabel("Amount").fill("300");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Transfer (not spending or income)" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Transfer (not spending or income)");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText(

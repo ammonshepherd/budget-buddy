@@ -9,6 +9,7 @@ import {
   signInWithHousehold,
   addAccount,
   openAllAccounts,
+  chooseEnvelope,
 } from "./helpers";
 
 const plus = (page: import("@playwright/test").Page) =>
@@ -53,7 +54,7 @@ test("add a transaction from the Budget page without leaving it", async ({ page 
   await dialog.getByRole("radio", { name: "Inflow" }).check();
   await dialog.getByLabel("Amount").fill("75");
   await dialog.getByLabel("Payee").fill("Paycheck");
-  await dialog.getByLabel("Envelope").selectOption({ label: "Income (to Available to Assign)" });
+  await chooseEnvelope(dialog.getByLabel("Envelope"), "Income (to Available to Assign)");
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { level: 1, name: "Budget" })).toBeVisible();
@@ -72,24 +73,37 @@ test("envelope pickers show each envelope's Remaining in the transaction's month
   await editCell(page, "Groceries", "assigned", "120");
 
   const dialog = await openAddTransaction(page);
-  const picker = dialog.getByLabel("Envelope");
-  await expect(picker.locator("option", { hasText: "Groceries" })).toHaveText(
-    "Groceries (has $120.00)",
+  const picker = dialog.getByLabel("Envelope", { exact: true });
+  const matches = dialog.getByRole("listbox", { name: "Matches" });
+  await picker.click();
+  await expect(matches.getByRole("option", { name: /^Groceries/ })).toHaveText(
+    "Groceries has $120.00",
   );
-  await expect(picker.locator("option", { hasText: "Fun" })).toHaveText("Fun (has $0.00)");
+  await expect(matches.getByRole("option", { name: /^Fun/ })).toHaveText("Fun has $0.00");
   // Fixed choices keep their plain names.
-  await expect(picker.locator("option").first()).toHaveText("Uncategorized");
+  await expect(matches.getByRole("option").first()).toHaveText("Uncategorized");
+
+  // Typing narrows the matches; tapping one picks it.
+  await picker.fill("gro");
+  await expect(matches.getByRole("option")).toHaveText(["Groceries has $120.00"]);
+  await matches.getByRole("option", { name: /^Groceries/ }).click();
+  await expect(picker).toHaveValue("Groceries");
+  await expect(matches).toBeHidden();
 
   // Split lines show the same amounts.
   await dialog.getByLabel("Amount").fill("30");
-  await picker.selectOption({ label: "Split across envelopes" });
-  await expect(
-    dialog.getByLabel("Envelope 1").locator("option", { hasText: "Groceries" }),
-  ).toHaveText("Groceries (has $120.00)");
+  await chooseEnvelope(picker, "Split across envelopes");
+  const line = dialog.getByLabel("Envelope 1");
+  await line.click();
+  await expect(matches.getByRole("option", { name: /^Groceries/ })).toHaveText(
+    "Groceries has $120.00",
+  );
+  await line.press("Escape");
 
   // Another month shows that month's Remaining (this month's moves to Saved).
   await dialog.getByLabel("Date").fill("2099-06-15");
-  await expect(
-    dialog.getByLabel("Envelope 1").locator("option", { hasText: "Groceries" }),
-  ).toHaveText("Groceries (has $0.00)");
+  await line.click();
+  await expect(matches.getByRole("option", { name: /^Groceries/ })).toHaveText(
+    "Groceries has $0.00",
+  );
 });

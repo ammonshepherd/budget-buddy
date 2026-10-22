@@ -17,6 +17,7 @@ import { formatMonth } from "../models/month";
 import { MAX_SPLIT_LINES, type SplitLine } from "../models/splits";
 import type { BudgetData } from "../models/types";
 import { ErrorMessage, Money, Sheet } from "./components";
+import { EnvelopePicker, type PickerOption } from "./EnvelopePicker";
 import { PlusIcon } from "./icons";
 
 type Entry = ReturnType<typeof useTransactionEntry>;
@@ -265,40 +266,27 @@ function TransactionEditor({
         Payee
         <input value={form.payee} onChange={(e) => update({ payee: e.target.value })} />
       </label>
-      <label className="field field-envelope">
-        Envelope
-        <select value={form.category} onChange={(e) => update({ category: e.target.value })}>
-          {cardCredit ? (
-            // Money into a card only lowers what is owed (or is a payment).
-            <option value="">Card credit (lowers what you owe)</option>
-          ) : (
-            <>
-              <option value="">Uncategorized</option>
-              <option value={INCOME} disabled={form.direction === "outflow"}>
-                Income (to Available to Assign)
-              </option>
-              <EnvelopeOptions entry={entry} remaining={remaining} />
-              <option value={SPLIT}>Split across envelopes</option>
-            </>
-          )}
-          <option value={TRANSFER} disabled={entry.openAccounts.length < 2}>
-            Transfer (not spending or income)
-          </option>
-        </select>
-      </label>
+      <EnvelopePicker
+        label="Envelope"
+        className="field field-envelope"
+        value={form.category}
+        options={categoryChoices(entry, form, cardCredit, remaining)}
+        onChange={(category) => update({ category })}
+      />
       {form.category === SPLIT && (
         <fieldset className="split">
           <legend>Split</legend>
           {form.split.map((line, index) => (
             <div className="split-line" key={index}>
-              <select
-                aria-label={`Envelope ${index + 1}`}
+              <EnvelopePicker
+                label={`Envelope ${index + 1}`}
+                hideLabel
+                className="split-envelope"
+                placeholder="Choose an envelope"
                 value={line.envelopeId}
-                onChange={(e) => updateLine(index, { envelopeId: e.target.value })}
-              >
-                <option value="">Choose an envelope</option>
-                <EnvelopeOptions entry={entry} remaining={remaining} />
-              </select>
+                options={envelopeChoices(entry, remaining)}
+                onChange={(envelopeId) => updateLine(index, { envelopeId })}
+              />
               <input
                 aria-label={`Amount ${index + 1}`}
                 value={line.amount}
@@ -441,25 +429,46 @@ function TransactionEditor({
  * The envelopes a transaction can go in, under their groups, each with what
  * it has Remaining in the transaction's month.
  */
-function EnvelopeOptions({
-  entry,
-  remaining,
-}: {
-  entry: Entry;
-  remaining: Map<string, Cents> | null;
-}) {
-  return entry.groups.map((group) => (
-    <optgroup key={group.id} label={group.name}>
-      {group.envelopes.map((envelope) => {
-        const left = remaining?.get(envelope.id);
-        return (
-          <option key={envelope.id} value={envelope.id}>
-            {left === undefined ? envelope.name : `${envelope.name} (has ${formatCents(left)})`}
-          </option>
-        );
-      })}
-    </optgroup>
-  ));
+/** Every envelope, by group, with what it has this month (when the date is valid). */
+function envelopeChoices(entry: Entry, remaining: Map<string, Cents> | null): PickerOption[] {
+  return entry.groups.flatMap((group) =>
+    group.envelopes.map((envelope) => {
+      const left = remaining?.get(envelope.id);
+      return {
+        value: envelope.id,
+        label: envelope.name,
+        group: group.name,
+        detail: left === undefined ? undefined : `has ${formatCents(left)}`,
+      };
+    }),
+  );
+}
+
+/** The form's Envelope choices: the fixed ones first, then every envelope. */
+function categoryChoices(
+  entry: Entry,
+  form: TransactionForm,
+  cardCredit: boolean,
+  remaining: Map<string, Cents> | null,
+): PickerOption[] {
+  const transfer = {
+    value: TRANSFER,
+    label: "Transfer (not spending or income)",
+    disabled: entry.openAccounts.length < 2,
+  };
+  // Money into a card only lowers what is owed (or is a payment).
+  if (cardCredit) return [{ value: "", label: "Card credit (lowers what you owe)" }, transfer];
+  return [
+    { value: "", label: "Uncategorized" },
+    {
+      value: INCOME,
+      label: "Income (to Available to Assign)",
+      disabled: form.direction === "outflow",
+    },
+    { value: SPLIT, label: "Split across envelopes" },
+    transfer,
+    ...envelopeChoices(entry, remaining),
+  ];
 }
 
 /** The CoverChoice a "Cover from" option stands for. */
@@ -513,28 +522,26 @@ function CoverCard({
         )}
         {plan.stillShort > 0 && !noWayToCover && (
           <li>
-            <label className="field">
-              <span>
-                {plan.fromSaved > 0 ? "Then cover" : "Cover"} <Money cents={plan.stillShort} /> from
-              </span>
-              <select
-                value={choice === AVAILABLE ? AVAILABLE : (choice?.fromEnvelopeId ?? "")}
-                onChange={(e) =>
-                  setChoice(
-                    e.target.value === AVAILABLE ? AVAILABLE : { fromEnvelopeId: e.target.value },
-                  )
-                }
-              >
-                {plan.sources.map((source) => (
-                  <option key={source.id} value={source.id}>
-                    {source.name} (has {formatCents(source.remaining)})
-                  </option>
-                ))}
-                <option value={AVAILABLE} disabled={!plan.canUseAvailable}>
-                  Available to Assign ({formatCents(plan.available)} free)
-                </option>
-              </select>
-            </label>
+            <EnvelopePicker
+              label={`${plan.fromSaved > 0 ? "Then cover" : "Cover"} ${formatCents(plan.stillShort)} from`}
+              value={choice === AVAILABLE ? AVAILABLE : (choice?.fromEnvelopeId ?? "")}
+              options={[
+                ...plan.sources.map((source) => ({
+                  value: source.id,
+                  label: source.name,
+                  detail: `has ${formatCents(source.remaining)}`,
+                })),
+                {
+                  value: AVAILABLE,
+                  label: "Available to Assign",
+                  detail: `${formatCents(plan.available)} free`,
+                  disabled: !plan.canUseAvailable,
+                },
+              ]}
+              onChange={(value) =>
+                setChoice(value === AVAILABLE ? AVAILABLE : { fromEnvelopeId: value })
+              }
+            />
           </li>
         )}
       </ol>

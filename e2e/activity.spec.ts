@@ -38,7 +38,7 @@ async function addSplit(page: Page, payee: string, date: string, first: string, 
   await dialog.getByLabel("Payee").fill(payee);
   await dialog.getByLabel("Date").fill(date);
   await chooseEnvelope(dialog.getByLabel("Envelope").first(), first);
-  await dialog.getByLabel("Envelope").first().selectOption({ label: "Split across envelopes" });
+  await chooseEnvelope(dialog.getByLabel("Envelope").first(), "Split across envelopes");
   await dialog.getByLabel("Amount 1").fill("10");
   await chooseEnvelope(dialog.getByLabel("Envelope 2"), second);
   await dialog.getByRole("button", { name: "Put the rest in the last line" }).click();

@@ -50,7 +50,7 @@ test("giving envelopes, covering and refunds move Available to Assign as expecte
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   const cover = dialog.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $80.00 short");
-  await cover.getByLabel(/cover .* from/i).selectOption("available");
+  await chooseEnvelope(cover.getByLabel(/cover .* from/i), "Available to Assign");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(available(page)).toContainText("$320.00");
   await expect(groceries).toContainText("Assigned $180.00");
@@ -88,7 +88,8 @@ test("money into a credit card is a card credit that only lowers what is owed", 
   await dialog.getByLabel("Account").selectOption({ label: "Visa" });
   await dialog.getByRole("radio", { name: "Inflow" }).check();
   // Only a card credit or a payment (Transfer) is offered.
-  await expect(dialog.getByLabel("Envelope").locator("option")).toHaveText([
+  await dialog.getByLabel("Envelope").click();
+  await expect(dialog.getByRole("listbox", { name: "Matches" }).getByRole("option")).toHaveText([
     "Card credit (lowers what you owe)",
     "Transfer (not spending or income)",
   ]);

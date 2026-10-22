@@ -57,15 +57,27 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
   await expect(planned).toHaveValue("100.00");
   await expect(sheet).toBeVisible();
 
-  // Assigned is checked as on the row: refused, the amount goes back.
-  const assigned = sheet.getByLabel("Assigned amount for Groceries");
-  await assigned.fill("5000");
-  await assigned.press("Enter");
-  await expect(sheet.getByRole("alert")).toHaveText("Only $700.00 available to assign.");
-  await expect(assigned).toHaveValue("300.00");
-  // Leaving the field saves.
-  await assigned.fill("350");
-  await sheet.getByRole("heading", { name: "Groceries" }).click();
+  // Assigned opens the number pad over the sheet, checked as on the row:
+  // refused, the pad says why, and cancelling keeps the amount.
+  const assigned = sheet.getByRole("button", { name: /^Edit assigned amount for Groceries/ });
+  const pad = page.getByRole("dialog", { name: "Assigned for Groceries" });
+  const press = async (...keys: string[]) => {
+    for (const key of keys) await pad.getByRole("button", { name: key, exact: true }).click();
+  };
+  await assigned.click();
+  await press("5", "0", "0", "0", "Assign");
+  await expect(pad.getByRole("alert")).toHaveText("Only $700.00 available to assign.");
+  await pad.getByRole("button", { name: "Cancel" }).click();
+  await expect(pad).toBeHidden();
+  await expect(assigned).toContainText("$300.00");
+  await expect(sheet).toBeVisible();
+  // + adds to what is there; the equation shows in the field as it is typed.
+  await assigned.click();
+  await press("Plus", "5", "0");
+  await expect(assigned).toContainText("300.00 + 50");
+  await expect(pad).toContainText("= $350.00");
+  await press("Assign");
+  await expect(pad).toBeHidden();
   await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$230.00");
 
   await sheet.getByRole("button", { name: "Close" }).click();

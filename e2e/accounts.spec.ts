@@ -10,6 +10,7 @@ import {
   openAccount,
   openAddTransaction,
   signInWithHousehold,
+  chooseEnvelope,
 } from "./helpers";
 
 const iso = (date: Date) =>
@@ -28,9 +29,7 @@ async function add(
   await dialog.getByLabel("Date").fill(tx.date);
   await dialog.locator(".field-account select").selectOption({ label: tx.account });
   if (transferTo) {
-    await dialog
-      .getByLabel("Envelope")
-      .selectOption({ label: "Transfer (not spending or income)" });
+    await chooseEnvelope(dialog.getByLabel("Envelope"), "Transfer (not spending or income)");
     await dialog.getByLabel("To account").selectOption({ label: transferTo });
   }
   await dialog.getByRole("button", { name: "Save", exact: true }).click();

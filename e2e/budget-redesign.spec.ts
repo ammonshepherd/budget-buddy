@@ -8,6 +8,7 @@ import {
   goTo,
   signInWithHousehold,
   addAccount,
+  expectAssignedError,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -32,7 +33,7 @@ test("Planned is edited in place and changes nothing else", async ({ page }) => 
 
   // Tapping anywhere else saves.
   await input.fill("300");
-  await available(page).click();
+  await page.locator(".budget-month span").click();
   await expect(cell(page, "Groceries", "planned")).toHaveAccessibleName(
     "Edit planned amount for Groceries, currently $300.00",
   );
@@ -73,16 +74,16 @@ test("Assigned is edited in place and moves Available to Assign", async ({ page 
 
   // More than is available: blocked, and the amount stays.
   await editCell(page, "Groceries", "assigned", "1500");
-  await expect(envelope(page, "Groceries").getByRole("alert")).toHaveText(
-    "Only $700.00 available to assign.",
-  );
+  await expectAssignedError(page, "Groceries", "Only $700.00 available to assign.");
   await expect(cell(page, "Groceries", "assigned")).toContainText("$300.00");
 
   // Lower than what is already spent: blocked too.
   await addTransaction(page, { amount: "120", payee: "Market", envelope: "Groceries" });
   await goTo(page, "Budget");
   await editCell(page, "Groceries", "assigned", "100");
-  await expect(envelope(page, "Groceries").getByRole("alert")).toHaveText(
+  await expectAssignedError(
+    page,
+    "Groceries",
     "Some is already spent: Assigned can go no lower than $120.00.",
   );
 
@@ -99,9 +100,9 @@ test("tapping another cell saves the one being edited", async ({ page }) => {
   await field(page, "Groceries", "Planned").fill("50");
   await cell(page, "Fun", "assigned").click();
   await expect(cell(page, "Groceries", "planned")).toContainText("$50.00");
-  // Only one field is open: Fun's Assigned.
-  await expect(field(page, "Fun", "Assigned")).toBeFocused();
-  await expect(page.getByRole("textbox", { name: /amount for/ })).toHaveCount(1);
+  // No field is left open: Fun's Assigned opened the number pad instead.
+  await expect(page.getByRole("dialog", { name: "Assigned for Fun" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /amount for/ })).toHaveCount(0);
 });
 
 test("Spent shows whether the month kept to Planned; groups show no totals", async ({ page }) => {

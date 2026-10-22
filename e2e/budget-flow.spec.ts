@@ -13,6 +13,9 @@ import {
   signInWithHousehold,
   addAccount,
   accountRow,
+  chooseEnvelope,
+  pickerChoices,
+  expectAssignedError,
 } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
@@ -36,9 +39,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await expect(available(page)).toContainText("$700.00");
   await expect(envelope(page, "Groceries").locator(".envelope-remaining")).toHaveText("$300.00");
   await editCell(page, "Fun", "assigned", "2000");
-  await expect(envelope(page, "Fun").getByRole("alert")).toHaveText(
-    /Only \$700\.00 available to assign/,
-  );
+  await expectAssignedError(page, "Fun", /Only \$700\.00 available to assign/);
   await editCell(page, "Fun", "assigned", "100");
   await expect(available(page)).toContainText("$600.00");
 
@@ -50,8 +51,10 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await addTransaction(page, { amount: "400", payee: "Big shop", envelope: "Groceries" });
   const cover = page.getByRole("alertdialog");
   await expect(cover).toContainText("Groceries would be $150.00 short");
-  await expect(cover.getByRole("option", { name: /Fun/ })).toHaveCount(0); // Fun has only $100
-  await cover.getByLabel(/cover .* from/i).selectOption("available");
+  const choices = await pickerChoices(cover.getByLabel(/cover .* from/i));
+  await expect(choices.filter({ hasText: "Available to Assign" })).toHaveCount(1);
+  await expect(choices.filter({ hasText: "Fun" })).toHaveCount(0); // Fun has only $100
+  await chooseEnvelope(cover.getByLabel(/cover .* from/i), "Available to Assign");
   await cover.getByRole("button", { name: "Cover and save" }).click();
   await expect(activityRow(page, "Big shop")).toContainText("−$400.00");
 

@@ -82,7 +82,6 @@ test("import a bank CSV, skipping invalid, early and duplicate rows", async ({ p
   await expect(activityRow(page, "Deposit ACH PAYROLL")).toContainText("Income");
   await page.goto("./#budget/2030-01");
   await expect(available(page)).toContainText("$1,800.00");
-  await expect(available(page)).toContainText("Income this month $500.00");
   await goTo(page, "Accounts");
   await expect(accountRow(page, "Checking")).toContainText("$1,481.38");
 

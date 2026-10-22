@@ -924,55 +924,57 @@ a:focus-visible {
   position: sticky;
   inset-block-start: 0;
   z-index: 5;
-  padding: max(4px, env(safe-area-inset-top)) 12px 10px;
-  background: var(--bb-purple);
+  padding: max(8px, env(safe-area-inset-top)) 16px 8px;
+  background: var(--app-background);
 }
 
+/* Available to Assign: a banner like Credit card debt (same type sizes) on
+   solid green, or solid red when over assigned. The whole banner is a button
+   that opens the Assign dialog. */
 .assign-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0 0.75rem;
-  padding: 3px 12px;
-  border: 6px solid #2e8b57;
-  border-radius: 12px;
-  background: #eef8f2;
-}
-
-.assign-label {
-  color: #1f5e3b;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.assign-amount {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  color: #1f6b42;
-  font-size: 20px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.assign-helper {
-  grid-column: 1;
-  grid-row: 2;
-  color: #1f5e3b;
-  font-size: 0.75rem;
+  border-radius: 0.875rem;
+  color: #fff;
+  background: #1f7a45;
+  box-shadow: 0 4px 14px rgba(20, 90, 50, 0.2);
 }
 
 .assign-card.over {
-  border-color: #b3261e;
-  background: #fdeceb;
+  background: #b3261e;
+  box-shadow: 0 4px 14px rgba(120, 20, 20, 0.18);
 }
 
-.assign-card.over .assign-label,
-.assign-card.over .assign-helper {
-  color: #8c1d18;
+.assign-card button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  inline-size: 100%;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: inherit;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  text-align: start;
+  cursor: pointer;
 }
 
-.assign-card.over .assign-amount {
-  color: #b3261e;
+.assign-card button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.assign-label {
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.assign-card .money {
+  color: inherit;
+  font-size: 26px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 /* Groups: a full-width bar. The name collapses the group (no numbers while
@@ -2702,9 +2704,10 @@ body:has(.app-shell.desktop) {
   position: sticky;
   inset-block-start: 0;
   z-index: 6;
-  display: flex;
+  /* The month on the left; Available to Assign centred across the band. */
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   min-block-size: var(--desktop-band);
   padding: 0 1rem;
@@ -2727,9 +2730,17 @@ body:has(.app-shell.desktop) {
   background: rgba(255, 255, 255, 0.12);
 }
 
+.budget-band .budget-month {
+  justify-self: start;
+}
+
 .budget-band .assign-card {
-  gap: 0 1.5rem;
-  min-inline-size: 18rem;
+  grid-column: 2;
+  min-inline-size: 22rem;
+}
+
+.budget-band .assign-card button {
+  padding-block: 9px;
 }
 
 .budget-work {
@@ -3594,4 +3605,253 @@ body:has(.app-shell.desktop) {
 /* Desktop: the pane sits under the band, which is pinned too. */
 .desktop .account-sticky {
   inset-block-start: var(--desktop-band);
+}
+
+/* ---- v0.30.0: assign from Available, the number pad, envelope search ---- */
+
+/* Envelope picker: type to find an envelope; matches drop down under it. */
+.envelope-picker {
+  position: relative;
+}
+
+.picker-box {
+  position: relative;
+}
+
+.envelope-picker input {
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.picker-box > .picker-detail {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0.7rem;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.picker-detail {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.picker-list {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: calc(100% + 4px);
+  z-index: 20;
+  max-block-size: 16rem;
+  margin: 0;
+  padding: 0.3rem 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  list-style: none;
+}
+
+/* Split lines and narrow rows: the list may be wider than the field. */
+.split-envelope .picker-list,
+.row-layout .picker-list {
+  min-inline-size: 16rem;
+}
+
+.picker-group {
+  padding: 0.45rem 0.8rem 0.2rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-block-size: 2.5rem;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.picker-option[aria-selected="true"] {
+  background: var(--brand-light);
+}
+
+.picker-option.chosen .picker-name {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.picker-option[aria-disabled="true"] {
+  color: var(--text-muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.picker-empty {
+  padding: 0.6rem 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.split-envelope input {
+  min-block-size: 2.6rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  font: inherit;
+}
+
+/* The Assign dialog from the Available to Assign banner. */
+.assign-sheet {
+  overflow: visible;
+}
+
+.assign-form-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.assign-form-note .money {
+  color: #1f6b42;
+  font-weight: 800;
+}
+
+.assign-form-note.over .money {
+  color: #b3261e;
+}
+
+/* The number pad: along the bottom of the screen, over everything. */
+.number-pad {
+  inline-size: min(100%, 30rem);
+  max-inline-size: 100%;
+  margin: auto auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: 1.25rem 1.25rem 0 0;
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 -8px 30px rgba(40, 26, 53, 0.2);
+  animation: sheet-rise 0.15s ease-out;
+}
+
+/* Light, so the field with the equation stays readable behind it. */
+.number-pad::backdrop {
+  background: rgba(40, 26, 53, 0.12);
+}
+
+.pad-inner {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom));
+}
+
+.pad-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pad-title {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pad-display {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--bb-purple-tint);
+  font-variant-numeric: tabular-nums;
+}
+
+.pad-typed {
+  font-size: 1.5rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.pad-result {
+  color: var(--bb-purple);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.pad-keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.pad-key {
+  min-block-size: 3.25rem;
+  border: 0;
+  border-radius: 0.75rem;
+  color: var(--bb-ink);
+  background: var(--bb-grey-cell);
+  font: inherit;
+  font-size: 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pad-key:active {
+  filter: brightness(0.92);
+}
+
+.pad-key.op {
+  color: var(--bb-purple);
+  background: var(--bb-purple-tint);
+  font-size: 1.5rem;
+}
+
+.pad-key.assign {
+  grid-column: span 2;
+  color: #fff;
+  background: #1f7a45;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.pad-key.assign:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* The equation in the Assigned cell while the pad is open. */
+.pad-equation {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* The envelope sheet's Assigned on a phone: a button that opens the pad. */
+.pad-field {
+  border: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.pad-field.editing {
+  box-shadow: inset 0 0 0 2px var(--bb-purple);
 }

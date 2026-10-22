@@ -89,21 +89,27 @@ test("collapsing or tapping another cell saves the open field first", async ({ p
   const row = envelope(page, "Groceries");
   await row.getByRole("button", { name: /^Edit planned amount/ }).click();
   await row.getByRole("textbox", { name: "Planned amount for Groceries" }).fill("250");
-  // Another editable cell: the first saves, the second opens.
+  // Another cell: the first saves, and Assigned opens the number pad.
   await envelope(page, "Fun")
     .getByRole("button", { name: /^Edit assigned amount/ })
     .click();
   await expect(row.getByRole("button", { name: /^Edit planned amount/ })).toContainText("$250.00");
-  const funAssigned = envelope(page, "Fun").getByRole("textbox", {
-    name: "Assigned amount for Fun",
-  });
-  await expect(funAssigned).toBeFocused();
-  await funAssigned.fill("60");
-
-  // Collapsing its group saves it too.
-  await toggle(page, "Everyday").click();
+  const pad = page.getByRole("dialog", { name: "Assigned for Fun" });
+  for (const key of ["6", "0", "Assign"]) await pad.getByRole("button", { name: key }).click();
+  await expect(pad).toBeHidden();
   await expect(available(page)).toContainText("$640.00");
+
+  // Collapsing its group saves an open field too.
+  await envelope(page, "Fun")
+    .getByRole("button", { name: /^Edit planned amount/ })
+    .click();
+  await envelope(page, "Fun").getByRole("textbox", { name: "Planned amount for Fun" }).fill("75");
+  await toggle(page, "Everyday").click();
   await expect(group(page, "Everyday").locator(".group-total")).toHaveText("$360.00 remaining");
+  await toggle(page, "Everyday").click();
+  await expect(
+    envelope(page, "Fun").getByRole("button", { name: /^Edit planned amount/ }),
+  ).toContainText("$75.00");
 });
 
 test("rows show the envelope icon, and Remaining without a caption", async ({ page }) => {
