@@ -27,7 +27,10 @@ always describes the app as of that version (including §9, not built yet).
   `main` (Pages source = GitHub Actions). Vite `base` is `/budget-buddy/`; the PWA
   manifest scope/start_url must match. Supabase URL and anon key are injected at
   build time from repository Actions variables. Supabase Auth Site URL and
-  redirect URL must include the Pages URL.
+  redirect URL must include the Pages URL. Public sign-up and every provider
+  but email stay off. The built page carries a Content Security Policy
+  (`vite.config.ts`); a new outside resource must be added to it. Actions
+  are pinned to commit hashes.
 
 ## Architecture: keep MVC
 

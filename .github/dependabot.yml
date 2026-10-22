@@ -1,0 +1,9 @@
+# The workflows pin each action to an exact commit (a tag can be moved to
+# different code; a commit cannot). Dependabot opens a PR once a month when a
+# pinned action has a newer release, so the pins do not go stale.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

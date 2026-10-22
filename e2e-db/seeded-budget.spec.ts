@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { missingForTests, readTestEnv } from "../scripts/testEnv";
+import { watchCsp } from "../e2e/cspWatch";
 
 // Signs in to the real app against the test database as test user A and
 // checks the seeded data shows up (data written by scripts/seed-test-db.ts).
@@ -9,6 +10,8 @@ const skipReason = missingForTests(env);
 test.skip(!!skipReason, skipReason ?? "");
 
 test("user A sees Test Household A's budget, accounts and transactions", async ({ page }) => {
+  // The Content Security Policy lets the app reach the test project.
+  const violations = await watchCsp(page);
   await page.goto("./");
   await page.getByLabel("Email").fill(env.users.a.email);
   await page.getByLabel("Password").fill(env.users.a.password);
@@ -30,4 +33,5 @@ test("user A sees Test Household A's budget, accounts and transactions", async (
   await page.getByRole("link", { name: /^Open All accounts/ }).click();
   const review = page.getByRole("region", { name: "To review" });
   await expect(review.getByText("Mystery Charge")).toBeVisible();
+  expect(await violations()).toEqual([]);
 });
