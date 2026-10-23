@@ -89,3 +89,17 @@ export function groupAccounts<A extends Pick<Account, "name" | "type" | "onBudge
     }))
     .filter((group) => group.accounts.length > 0);
 }
+
+/**
+ * The desktop sidebar's account links: open budget accounts (Checking, then
+ * Credit cards) and, kept apart, open tracking accounts; each by name.
+ */
+export function sidebarAccounts<A extends Pick<Account, "name" | "type" | "onBudget" | "closedAt">>(
+  accounts: A[],
+): { budget: A[]; tracking: A[] } {
+  const groups = groupAccounts(accounts.filter((a) => !a.closedAt));
+  return {
+    budget: groups.filter((g) => g.name !== "Tracking").flatMap((g) => g.accounts),
+    tracking: groups.find((g) => g.name === "Tracking")?.accounts ?? [],
+  };
+}

@@ -7,6 +7,7 @@ import {
   isTracking,
   openingBalanceFromEntry,
   openingBalanceToEntry,
+  sidebarAccounts,
 } from "./accounts";
 import type { Account, Transaction } from "./types";
 
@@ -124,5 +125,36 @@ describe("groupAccounts", () => {
       ["Tracking", ["Brokerage"]],
     ]);
     expect(groupAccounts([a("Visa", "credit_card")]).map((g) => g.name)).toEqual(["Credit cards"]);
+  });
+});
+
+describe("sidebarAccounts", () => {
+  const a = (
+    name: string,
+    type: "checking" | "credit_card",
+    onBudget = true,
+    closedAt: string | null = null,
+  ) => ({
+    name,
+    type,
+    onBudget,
+    closedAt,
+  });
+
+  it("lists open budget accounts (checking, then cards) apart from tracking accounts", () => {
+    const { budget, tracking } = sidebarAccounts([
+      a("Visa", "credit_card"),
+      a("Savings", "checking"),
+      a("Old", "checking", true, "2026-01-01T00:00:00Z"),
+      a("Mortgage", "checking", false),
+      a("Brokerage", "checking", false),
+      a("Main", "checking"),
+    ]);
+    expect(budget.map((x) => x.name)).toEqual(["Main", "Savings", "Visa"]);
+    expect(tracking.map((x) => x.name)).toEqual(["Brokerage", "Mortgage"]);
+  });
+
+  it("gives empty lists when there are no accounts", () => {
+    expect(sidebarAccounts([])).toEqual({ budget: [], tracking: [] });
   });
 });

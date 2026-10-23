@@ -218,7 +218,8 @@ non-card budget balances − all envelope money (P included)`.
   take back) and the Saved panel, and no Delete.
 - Desktop layout (decided in v0.26.0, `docs/proposals/desktop-layout.md`):
   from 1000px wide, signed in, a collapsible left sidebar replaces the header
-  and bottom bar, content is capped at 1600px, and lists get a collapsible
+  and bottom bar (listing every open account under Accounts, tracking
+  accounts apart after a gap; `sidebarAccounts`, v0.35.1), content is capped at 1600px, and lists get a collapsible
   right panel instead of sheets (sidebars remembered per device and user in
   localStorage, `src/models/layoutPrefs.ts`). Budget: one-line envelope rows
   under a band with the month (left) and Available to Assign (centred); the panel shows the
