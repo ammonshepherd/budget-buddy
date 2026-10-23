@@ -21,11 +21,15 @@ import {
   foundTotal,
   regroupDays,
   searchChoices,
-  SORT_ORDERS,
+  DEFAULT_SORT,
+  SORT_KEYS,
+  sortBy,
   sortRows,
   sortsByDate,
   type SearchFilter,
-  type SortOrder,
+  type Sort,
+  type SortDirection,
+  type SortKey,
 } from "../models/transactionSearch";
 import type { BudgetData, Transaction } from "../models/types";
 import type { Budget } from "./useBudget";
@@ -37,9 +41,9 @@ interface SearchState {
   text: string;
   /** The chips, "what" first (see addFilter). */
   filters: SearchFilter[];
-  sort: SortOrder;
+  sort: Sort;
 }
-const NO_SEARCH: SearchState = { accountId: null, text: "", filters: [], sort: "newest" };
+const NO_SEARCH: SearchState = { accountId: null, text: "", filters: [], sort: DEFAULT_SORT };
 
 /** Rows shown at first, and added by each "Show more". */
 export const ROWS_PER_PAGE = 100;
@@ -103,7 +107,7 @@ export function useAccountView(
   );
   const found = useMemo(
     () =>
-      searching || search.sort !== "newest"
+      searching || !(sortsByDate(search.sort) && search.sort.direction === "desc")
         ? sortRows(findRows(allDays, search.filters, search.text), search.sort)
         : null,
     [allDays, searching, search.filters, search.text, search.sort],
@@ -143,7 +147,7 @@ export function useAccountView(
     /** The rows shown so far, by day (and by month for an open account), newest first. */
     days: page.days,
     months: daysByMonth(page.days),
-    /** Sorted by amount, payee or envelope: the rows shown so far, each with its date (else null). */
+    /** Sorted other than by date: the rows shown so far, each with its date (else null). */
     flatRows,
     shownCount: flatRows ? flatRows.length : page.shown,
     /** Rows not shown yet. */
@@ -167,13 +171,13 @@ export function useAccountView(
       /** The envelope chosen, so a split's matching part can stand out. */
       envelopeId:
         search.filters.flatMap((f) => ("envelopeId" in f ? [f.envelopeId] : []))[0] ?? null,
+      /** The order: what the rows are sorted by, and which way. */
       sort: search.sort,
       /** False in a tracking account: no envelopes to pick or sort by. */
       hasEnvelopes: account?.onBudget !== false,
-      sortOrders:
-        account?.onBudget === false
-          ? SORT_ORDERS.filter((o) => o.value !== "envelope")
-          : SORT_ORDERS,
+      /** The sorts this account offers (no Envelope in a tracking account). */
+      sortKeys:
+        account?.onBudget === false ? SORT_KEYS.filter((k) => k.value !== "envelope") : SORT_KEYS,
       /** Envelopes and kinds this account has, with counts. */
       choices,
       /** Something typed or chosen: To review steps aside and the matches add up. */
@@ -190,7 +194,10 @@ export function useAccountView(
       /** Removes a chip (by drop-down value). */
       remove: (value: string) =>
         updateSearch({ filters: search.filters.filter((f) => filterValue(f) !== value) }),
-      setSort: (sort: SortOrder) => updateSearch({ sort }),
+      /** Sorts by this, in its own starting direction (Name A–Z, Amount largest first). */
+      setSortKey: (key: SortKey) => updateSearch({ sort: sortBy(key) }),
+      setSortDirection: (direction: SortDirection) =>
+        updateSearch({ sort: { ...search.sort, direction } }),
       clear: () => updateSearch({ text: "", filters: [] }),
     },
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { KeyValueStorage } from "./collapsedGroups";
 import {
+  accountPaneKey,
   compactRowsKey,
+  loadAccountPaneCollapsed,
+  saveAccountPaneCollapsed,
   loadCompactRows,
   loadSidebarCollapsed,
   saveCompactRows,
@@ -73,5 +76,21 @@ describe("compact rows preference", () => {
     expect(loadCompactRows(fakeStorage({ [compactRowsKey("u1")]: "yes" }), "u1")).toBe(false);
     expect(loadCompactRows(throwing, "u1")).toBe(false);
     expect(() => saveCompactRows(throwing, "u1", true)).not.toThrow();
+  });
+});
+
+describe("account info pane preference", () => {
+  it("is remembered per user, and expanded when unknown or blocked", () => {
+    const storage = fakeStorage();
+    expect(loadAccountPaneCollapsed(storage, "u1")).toBe(false);
+    saveAccountPaneCollapsed(storage, "u1", true);
+    expect(storage.items.get(accountPaneKey("u1"))).toBe("1");
+    expect(loadAccountPaneCollapsed(storage, "u1")).toBe(true);
+    expect(loadAccountPaneCollapsed(storage, "u2")).toBe(false);
+    saveAccountPaneCollapsed(storage, "u1", false);
+    expect(loadAccountPaneCollapsed(storage, "u1")).toBe(false);
+    expect(loadAccountPaneCollapsed(throwing, "u1")).toBe(false);
+    expect(() => saveAccountPaneCollapsed(throwing, "u1", true)).not.toThrow();
+    expect(loadAccountPaneCollapsed(null, "u1")).toBe(false);
   });
 });

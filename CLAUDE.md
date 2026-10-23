@@ -180,9 +180,9 @@ non-card budget balances − all envelope money (P included)`.
   six sparkles and a glow once above $0.00, quiet at $0.00), and what is left
   on the right (muted at $0.00; no visible caption, screen readers hear
   "remaining"). Line 2: Planned, Assigned and Spent
-  cells (Spent with a minus, "−$45.20", as everywhere Spent shows; a "Compact rows" switch under the
-  month, phone only, hides line 2 and below, remembered per device and user in
-  localStorage, `src/models/layoutPrefs.ts`). Planned is edited in place (tap; blur or Enter saves,
+  cells (Spent with a minus, "−$45.20", as everywhere Spent shows; "Compact
+  rows" in the page menu, phone only, hides line 2 and below, remembered per
+  device and user in localStorage, `src/models/layoutPrefs.ts`). Planned is edited in place (tap; blur or Enter saves,
   Escape cancels; amounts rounded to the cent by `roundMoney`; never
   negative). Assigned (decided in v0.30.0): on a phone, in the row and the
   sheet, tapping opens a number pad along the bottom (digits, decimal
@@ -231,6 +231,17 @@ non-card budget balances − all envelope money (P included)`.
   accounts list add through the dialog, and the list adds accounts in the
   panel. Settings shows its sections in two columns.
   Below 1000px nothing changes.
+- Page menu (decided in v0.36.0, phone only, `src/views/PageMenu.tsx`):
+  the header's top right holds a three-bar menu button instead of the
+  version (Settings → About shows it). Its options follow the page; an
+  option that is on shows a green tick, and tapping one turns it on or off.
+  Budget: Compact rows, Collapse/Expand all groups, Go to this month (in
+  another month), Edit groups (`#settings/groups`). Accounts list: Add
+  account. An account or All accounts open: Collapse/Expand all dates,
+  Collapse info pane (only Current balance, or Balance today, stays;
+  remembered per device and user, `layoutPrefs.ts`); an open account also
+  sorts: Date, Name, Amount, Envelope, Income/expense, Ascending or
+  Descending. Settings: Sign out. A desktop keeps its own controls.
 - Credit card debt (what the cards owe today, `cardDebt` in
   `src/models/accounts.ts`, display only) shows on every page while above
   $0.00: under the month band on Budget and Accounts, at the top of
@@ -244,7 +255,7 @@ non-card budget balances − all envelope money (P included)`.
   Budget, Accounts, Settings. What is open is in the URL (`#accounts`,
   `#accounts/all`, `#accounts/<id>`, each with `/YYYY-MM`; old `#activity`
   links open All accounts), so Back closes it; the month is shared with
-  Budget. The list: a purple month band with + Add account (a sheet), "All
+  Budget. The list: a purple month band (Add account, a sheet, is in the page menu), "All
   accounts" (the month's In / Out) first, then Checking, Credit cards and
   Tracking groups (`groupAccounts`), each row a link with name and balance;
   closed accounts behind "Show closed accounts". Opening one replaces the
@@ -260,8 +271,8 @@ non-card budget balances − all envelope money (P included)`.
   the reconciled balance under it, or cash and card debt with a card), To
   review, rows with the account line. Both lists show 100 rows at a time
   ("Show N more (M left)", `firstRows`; everything is already loaded, no
-  paging in Supabase). Day headings newest first, with the day's net, not
-  collapsible. An open account has a search field and sort menu, pinned
+  paging in Supabase). Day headings newest first, with the day's net; tapping
+  one folds its day (v0.36.0; not remembered). An open account has a search field and sort menu, pinned
   between the info pane and the ticked-rows bar (decided in v0.33.0,
   `src/models/transactionSearch.ts`, display only): typing
   matches payee, memo or an amount; its drop-down offers envelopes (as
@@ -269,8 +280,9 @@ non-card budget balances − all envelope money (P included)`.
   credit, Not reconciled); a choice becomes a chip, and rows must match
   every chip (one envelope or kind, plus Not reconciled; a split counts
   only the chosen envelope's part). Searching hides To review.
-  Sorts: date either way (headings kept), amount, payee, envelope (one
-  list, each row dated). Reset when another account opens. Ticked rows a
+  Sorts (v0.36.0, in the page menu on a phone): Date (headings kept), Name,
+  Amount, Envelope, Income/expense (one list, each row dated), each
+  ascending or descending. Reset when another account opens. Ticked rows a
   search hides are not counted or marked. Each row: a checkbox, a bank
   icon (grey = not reconciled,
   green = reconciled), payee (over the account on All accounts), envelope,

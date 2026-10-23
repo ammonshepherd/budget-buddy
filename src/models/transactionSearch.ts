@@ -17,20 +17,33 @@ export type SearchKind = "uncategorized" | "income" | "transfer" | "card-credit"
 /** A drop-down choice: one envelope, or one kind. */
 export type SearchFilter = { envelopeId: string } | { kind: SearchKind };
 
-export type SortOrder =
-  "newest" | "oldest" | "amount-large" | "amount-small" | "payee" | "envelope";
+/** What the rows are sorted by. "kind" is Income/expense: money in, then money out. */
+export type SortKey = "date" | "name" | "amount" | "envelope" | "kind";
+export type SortDirection = "asc" | "desc";
+export interface Sort {
+  key: SortKey;
+  direction: SortDirection;
+}
 
-export const SORT_ORDERS: { value: SortOrder; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "amount-large", label: "Largest" },
-  { value: "amount-small", label: "Smallest" },
-  { value: "payee", label: "Payee A–Z" },
-  { value: "envelope", label: "Envelope A–Z" },
+/** The sorts offered, each with the direction it starts in when chosen. */
+export const SORT_KEYS: { value: SortKey; label: string; first: SortDirection }[] = [
+  { value: "date", label: "Date", first: "desc" },
+  { value: "name", label: "Name", first: "asc" },
+  { value: "amount", label: "Amount", first: "desc" },
+  { value: "envelope", label: "Envelope", first: "asc" },
+  { value: "kind", label: "Income/expense", first: "asc" },
 ];
 
-/** Whether the order keeps the day headings (dates) or lists rows with their date. */
-export const sortsByDate = (order: SortOrder) => order === "newest" || order === "oldest";
+/** Newest first, under day headings: how an account opens. */
+export const DEFAULT_SORT: Sort = { key: "date", direction: "desc" };
+
+/** A newly chosen sort, in its own starting direction (Name A–Z, Amount largest first). */
+export function sortBy(key: SortKey): Sort {
+  return { key, direction: SORT_KEYS.find((k) => k.value === key)?.first ?? "asc" };
+}
+
+/** Whether the sort keeps the day headings (dates) or lists rows with their date. */
+export const sortsByDate = (sort: Sort) => sort.key === "date";
 
 const KINDS: { kind: SearchKind; label: string }[] = [
   { kind: "uncategorized", label: "Uncategorized" },
@@ -177,23 +190,24 @@ const envelopeOf = (row: ActivityRow) => row.category || row.portions[0]?.envelo
 const compareText = (a: string, b: string) =>
   a.localeCompare(b, undefined, { sensitivity: "base" });
 
-/** The rows in the order chosen. Ties keep the order given (newest first). */
-export function sortRows(found: FoundRow[], order: SortOrder): FoundRow[] {
+/** How two rows compare in ascending order, per sort (date is handled apart). */
+const ASCENDING: Record<Exclude<SortKey, "date">, (a: FoundRow, b: FoundRow) => number> = {
+  name: (a, b) => compareText(a.row.tx.payee, b.row.tx.payee),
+  amount: (a, b) => Math.abs(a.amount) - Math.abs(b.amount),
+  envelope: (a, b) => compareText(envelopeOf(a.row), envelopeOf(b.row)),
+  // Money in before money out.
+  kind: (a, b) => Number(a.amount < 0) - Number(b.amount < 0),
+};
+
+/**
+ * The rows in the order chosen. Amounts sort by size, ignoring sign.
+ * Ties keep the order given (newest first), either direction.
+ */
+export function sortRows(found: FoundRow[], sort: Sort): FoundRow[] {
   const rows = [...found];
-  switch (order) {
-    case "newest":
-      return rows;
-    case "oldest":
-      return rows.reverse();
-    case "amount-large":
-      return rows.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-    case "amount-small":
-      return rows.sort((a, b) => Math.abs(a.amount) - Math.abs(b.amount));
-    case "payee":
-      return rows.sort((a, b) => compareText(a.row.tx.payee, b.row.tx.payee));
-    case "envelope":
-      return rows.sort((a, b) => compareText(envelopeOf(a.row), envelopeOf(b.row)));
-  }
+  if (sort.key === "date") return sort.direction === "desc" ? rows : rows.reverse();
+  const compare = ASCENDING[sort.key];
+  return rows.sort((a, b) => (sort.direction === "asc" ? compare(a, b) : compare(b, a)));
 }
 
 /**

@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { goTo, signInWithHousehold, openAllAccounts } from "./helpers";
+import { choosePageMenu, goTo, signInWithHousehold, openAllAccounts } from "./helpers";
 
-test("shows sign-in first, with the app version", async ({ page }) => {
+test("shows sign-in first, with no version or menu in the header", async ({ page }) => {
   await page.goto("./");
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
-  await expect(page.getByLabel("Application version")).toHaveText(/^v\d+\.\d+\.\d+$/);
+  // The version is on Settings; signed out there is no page menu either.
+  await expect(page.getByLabel("Application version")).toHaveCount(0);
+  await expect(page.locator(".app-header").getByRole("button", { name: / menu$/ })).toHaveCount(0);
   // Public sign-up is off: no way to create an account here.
   await expect(page.getByText(/create an account|create account/i)).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
@@ -73,7 +75,10 @@ test("signing out returns to the sign-in page", async ({ page }) => {
   await signInWithHousehold(page);
   await goTo(page, "Settings");
   await expect(page.getByText("Signed in as test@example.com")).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByText(/^Version \d+\.\d+\.\d+$/)).toBeVisible();
+  // Sign out is in the page menu, not on the page.
+  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  await choosePageMenu(page, "Sign out");
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
 });
 

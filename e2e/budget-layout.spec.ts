@@ -10,6 +10,9 @@ import {
   signInWithHousehold,
   chooseEnvelope,
   addAccount,
+  choosePageMenu,
+  menuOption,
+  openPageMenu,
 } from "./helpers";
 
 test("the Budget page is envelopes under a sticky Available to Assign", async ({ page }) => {
@@ -123,12 +126,18 @@ test("Compact rows shows only name, Saved and what is left, and is remembered", 
   await signInWithHousehold(page);
   await addGroupWithEnvelopes(page, "Everyday", ["Groceries"]);
   const row = envelope(page, "Groceries");
-  const toggle = page.getByRole("button", { name: "Compact rows" });
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  let menu = await openPageMenu(page);
+  await expect(menuOption(menu, "Compact rows")).toHaveAttribute("aria-checked", "false");
+  await expect(menu.locator(".page-menu-check svg")).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await expect(row.locator(".cell.planned")).toBeVisible();
 
-  await toggle.click();
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await choosePageMenu(page, "Compact rows");
+  menu = await openPageMenu(page);
+  // On: a green tick.
+  await expect(menuOption(menu, "Compact rows")).toHaveAttribute("aria-checked", "true");
+  await expect(menuOption(menu, "Compact rows").locator("svg")).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(row.locator(".cell.planned")).toBeHidden();
   await expect(row.locator(".cell.spent")).toBeHidden();
   await expect(row.locator(".saved-chip")).toBeVisible();
@@ -141,6 +150,6 @@ test("Compact rows shows only name, Saved and what is left, and is remembered", 
   await goTo(page, "Settings");
   await goTo(page, "Budget");
   await expect(row.locator(".cell.planned")).toBeHidden();
-  await toggle.click();
+  await choosePageMenu(page, "Compact rows");
   await expect(row.locator(".cell.planned")).toBeVisible();
 });

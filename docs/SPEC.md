@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.35.1.
+Version described: 0.36.0.
 
 ## 1. Purpose
 
@@ -203,8 +203,27 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), the version (e.g. "v0.24.0"), and
-  an Install button when the browser offers installing.
+- Header: icon + "Budget Buddy" (links to `#budget`), an Install button when
+  the browser offers installing, and, signed in, the page menu at the top
+  right. Since v0.36.0 the header shows no version (Settings → About does;
+  the desktop sidebar still shows it).
+- Page menu (v0.36.0, phone only, `src/views/PageMenu.tsx`): a round button
+  with three bars ("⟨Page⟩ menu", `aria-haspopup="menu"`) opens a list under
+  it, right-aligned, with options for the page showing (each page renders
+  its own `<PageMenu>`, drawn into the header through a React portal). An
+  option that is on or chosen shows a green tick on its left; tapping one
+  does its job and closes the list, as do Escape (focus back on the button)
+  and a tap outside. Arrow keys move between options. Options: Budget —
+  Compact rows (on/off), Collapse all groups / Expand all groups (Expand
+  once every group is collapsed), Go to this month (only in another month),
+  Edit groups (opens `#settings/groups`, scrolled to Envelope groups).
+  Accounts list — Add account. An account or All accounts open — View:
+  Collapse all dates / Expand all dates (only with day headings), Collapse
+  info pane (on/off); an open account also Sort by (Date, Name, Amount,
+  Envelope, Income/expense) and Order (Ascending, Descending). Settings —
+  Sign out. A desktop has no page menu: those pages keep their own controls
+  (the sort menus beside the search, Sign out on Settings, Add account in
+  the panel).
 - New version banner (`useAppUpdate`, `UpdateBanner`): once a newer deploy
   has downloaded, a white card floats over the top of the screen, signed in
   or not: "A new version of Budget Buddy is available." with Later (hides it
@@ -320,8 +339,8 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   months and renames; new groups start open. Collapsing saves an open
   Planned/Assigned field first. The + opens "New envelope" (+ becomes ×) and
   opens a collapsed group.
-- "Compact rows" (phone only; a switch under the month in the purple band,
-  `aria-pressed`): every envelope shows only line 1 (name, Saved and what is
+- "Compact rows" (phone only; in the page menu since v0.36.0, a
+  `menuitemcheckbox` with a green tick when on): every envelope shows only line 1 (name, Saved and what is
   left); Planned, Assigned, Spent, Refunded and Short are hidden until it is
   switched off (the sheet still shows them). Kept in localStorage under
   `bb.budget.compactRows.<userId>` ("1" or "0"; unreadable means off).
@@ -435,9 +454,8 @@ the list comes back where it was scrolled.
 **The list** (nothing open):
 
 - The month band as on Budget ("OCTOBER 2026", ‹ › links to
-  `#accounts/YYYY-MM`). On a phone, "+ Add account" (a full-width button
-  under the open accounts, above "Show closed accounts") opens "Add an
-  account" in a sheet: Checking / Credit card / Tracking choice, Account
+  `#accounts/YYYY-MM`). On a phone, Add account in the page menu (v0.36.0;
+  before, a button under the open accounts) opens "Add an account" in a sheet: Checking / Credit card / Tracking choice, Account
   name, "Opening balance" (checking, tracking) or "Amount owed on the
   opening date" (card), Opening date (default today); a card shows a short
   explanation of its payment envelope, a tracking account one of standing
@@ -453,8 +471,8 @@ the list comes back where it was scrolled.
   opening balance plus every transaction (`accountBalance`).
 - Closed accounts are hidden behind "Show closed accounts (N)" at the bottom
   (not remembered); their transactions still show in All accounts.
-- Empty: "No accounts yet. Add your checking account with + Add account
-  below."
+- Empty: "No accounts yet. Add your checking account with Add account in
+  the menu (top right)."
 
 **Tracking accounts** (v0.34.0): an account added as Tracking is stored as
 `type = 'checking'`, `on_budget = false` (`accountFromKind` / `accountKind`
@@ -466,7 +484,7 @@ memory store and the form all enforce it); income rules skip it. Opened, it
 works like any account (figures, Import CSV, search, reconciling) except:
 no To review list and no amber "Uncategorized" labels; a row shows its
 notes (memo) where an envelope would be on a phone; search offers only
-"Not reconciled" and no "Envelope A–Z" sort; the desktop panel explains
+"Not reconciled" and no Envelope sort; the desktop panel explains
 what a tracking account is instead of To review. Imported rows arrive as
 plain transactions, matching typed ones as usual. Closing still needs a
 $0.00 balance.
@@ -501,10 +519,17 @@ $0.00 balance.
     figures follow the month picker.
   - "Import CSV" (an open account only) opens the bank import already set to
     this account (no account picker) in a sheet with Close.
+  - Collapsed (v0.36.0, phone, "Collapse info pane" in the page menu): line
+    1, then only CURRENT BALANCE on one line (BALANCE TODAY on All
+    accounts); the other figures and Import CSV are hidden. Kept in
+    localStorage under `bb.accounts.paneCollapsed.<userId>` ("1" or "0";
+    unreadable means open), for every account.
 - Search and sort (since v0.33.0, `TransactionSearch.tsx`,
   `transactionSearch.ts`, display only), pinned with the pane, between it
   and the ticked-rows bar, on the pane's tint: one
-  field ("Search transactions", a magnifying glass) and a "Sort by" menu.
+  field ("Search transactions", a magnifying glass); on a desktop also a
+  "Sort by" and an "Order" menu beside it (on a phone the sort is in the
+  page menu).
   Typing filters at once by payee, memo (every word, any case, any order),
   a transfer's "From → To" accounts, or an amount in or out ("45" is
   $45.00–$45.99, "45.2" is $45.20–$45.29, "45.20" or "$45" exactly; a
@@ -524,17 +549,28 @@ $0.00 balance.
   "N matches · ±$X" shows under the field (a split counts only the chosen
   envelope's part, which is highlighted in its open split), the To review
   card steps aside (the desktop panel keeps it), an ✕ clears text and chips, and an
-  empty result reads "No transactions match.". Sort: Newest (the default),
-  Oldest (month and day headings kept, day nets from the matches), Largest,
-  Smallest (by size, sign ignored), Payee A–Z, Envelope A–Z (one list
-  without headings, each row's date under its payee). Ties stay newest
-  first. Search and sort start over when another account opens and stay
+  empty result reads "No transactions match.". Sort (v0.36.0: a sort and
+  an order, `Sort` in `transactionSearch.ts`): Date (the default, newest
+  first; month and day headings kept, day nets from the matches), Name
+  (payee), Amount (by size, sign ignored), Envelope (a split by its first
+  part), Income/expense (money in, then money out), each Ascending or
+  Descending; the others give one list without headings, each row's date
+  under its payee. Choosing a sort starts it in its own order (Date and
+  Amount descending: newest, largest; Name, Envelope and Income/expense
+  ascending: A–Z, money in first), and Order then turns it round. Ties stay
+  newest first either way. Search and sort start over when another account opens and stay
   when the month changes; they are not in the URL. All accounts has none.
 - The To review card for this account only (as on All accounts).
 - Every transaction in the account, any month, newest first
   (`accountHistory`): a month divider ("OCTOBER 2026", 12px, purple, an
   `<h2>`) above each month, then day headings (`<h3>`, "FRI DEC 12, 2025"
-  when not this year) whose net leaves transfers out. Rows as on All
+  when not this year) whose net leaves transfers out. Since v0.36.0 a day
+  heading is a button (`aria-expanded`, a chevron) that folds its day to
+  the heading and net or opens it again; "Collapse all dates" in the page
+  menu folds every day (tapped days then open one by one) and "Expand all
+  dates" opens them all. Folds are not remembered and start over when
+  another account (or month on All accounts) opens. All accounts' day
+  headings fold the same way. Rows as on All
   accounts without the account line, except a transfer's "From → To"; a
   transfer is signed by its side in this account and edits its money-out
   side. Changing the month does not change or reload the list.
@@ -679,7 +715,8 @@ the matching inflow in ⟨account⟩.", "Also updates the ⟨account⟩ side.").
 
 ### Settings
 
-In order: household name and "Signed in as ⟨email⟩"; About (version); Sign out;
+In order: household name and "Signed in as ⟨email⟩"; About (version); Sign out
+(a desktop only; on a phone it is in the page menu since v0.36.0);
 Envelope groups; Import transactions; Income rules; Import envelope plan;
 Backup.
 
@@ -832,8 +869,10 @@ Decided or wanted, but not in the app:
 - Inviting a second household member.
 - Editing an income rule (delete and re-add instead).
 - Budget page: an icon chosen per envelope (every row shows the same
-  envelope icon, `EnvelopeIcon`; Settings shows none); "Collapse all" /
-  "Expand all" for groups.
+  envelope icon, `EnvelopeIcon`; Settings shows none); the page menu on a
+  desktop (Collapse all groups, Go to this month and Edit groups are phone
+  only); more page menu options (show unused envelopes, start or upload a
+  plan at any time).
 - Accounts lists: search and sort on All accounts (an open account has
   them since v0.33.0); a Reconciled chip (only Not reconciled exists);
   keeping a search in the URL or across accounts; a "Needs review" queue

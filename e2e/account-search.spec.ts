@@ -4,6 +4,9 @@ import {
   addAccount,
   addGroupWithEnvelopes,
   chooseEnvelope,
+  choosePageMenu,
+  menuOption,
+  openPageMenu,
   editCell,
   goTo,
   openAccount,
@@ -121,25 +124,41 @@ test("kinds: only what is still to review", async ({ page }) => {
   await expect(payees(page)).toHaveText(["Zelle"]);
 });
 
-test("sorting by amount or payee lists rows with their dates", async ({ page }) => {
-  const sort = page.getByRole("combobox", { name: "Sort by" });
-  await sort.selectOption("amount-large");
+test("sorting by amount or name lists rows with their dates", async ({ page }) => {
+  // The sort is in the page menu on a phone.
+  await expect(page.getByRole("combobox", { name: "Sort by" })).toHaveCount(0);
+  await choosePageMenu(page, "Amount");
   await expect(payees(page)).toHaveText(["Zelle", "Kroger", "Costco", "Pizza Place", "Aldi"]);
   await expect(page.getByRole("region", { name: "Transactions" }).getByRole("heading")).toHaveCount(
     0,
   );
   await expect(activityRow(page, "Zelle").locator(".activity-account")).toHaveText(/Jan 7/);
 
-  await sort.selectOption("payee");
-  await expect(payees(page)).toHaveText(["Aldi", "Costco", "Kroger", "Pizza Place", "Zelle"]);
+  await choosePageMenu(page, "Ascending");
+  await expect(payees(page)).toHaveText(["Aldi", "Pizza Place", "Costco", "Kroger", "Zelle"]);
 
-  await sort.selectOption("oldest");
+  await choosePageMenu(page, "Name");
+  await expect(payees(page)).toHaveText(["Aldi", "Costco", "Kroger", "Pizza Place", "Zelle"]);
+  await choosePageMenu(page, "Descending");
+  await expect(payees(page)).toHaveText(["Zelle", "Pizza Place", "Kroger", "Costco", "Aldi"]);
+
+  // Income/expense: money in first, then money out.
+  await choosePageMenu(page, "Income/expense");
+  await expect(payees(page).first()).toHaveText("Zelle");
+
+  await choosePageMenu(page, "Date");
+  await choosePageMenu(page, "Ascending");
   await expect(payees(page)).toHaveText(["Kroger", "Pizza Place", "Aldi", "Costco", "Zelle"]);
+  await expect(
+    page.getByRole("region", { name: "Transactions" }).getByRole("heading"),
+  ).not.toHaveCount(0);
 
   // Another account starts over.
   await addAccount(page, { name: "Savings", balance: "0", date: "2030-01-01" });
   await openAccount(page, "Checking");
-  await expect(sort).toHaveValue("newest");
+  const menu = await openPageMenu(page);
+  await expect(menuOption(menu, "Date")).toHaveAttribute("aria-checked", "true");
+  await expect(menuOption(menu, "Descending")).toHaveAttribute("aria-checked", "true");
 });
 
 test("chips stack: Uncategorized and Not reconciled", async ({ page }) => {

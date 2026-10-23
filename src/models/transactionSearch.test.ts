@@ -10,6 +10,8 @@ import {
   foundTotal,
   regroupDays,
   searchChoices,
+  DEFAULT_SORT,
+  sortBy,
   sortRows,
   type FoundRow,
 } from "./transactionSearch";
@@ -192,19 +194,20 @@ describe("sortRows", () => {
   const found = () => findRows(sample().days, [], "");
 
   it("orders by date either way", () => {
-    const newest = sortRows(found(), "newest");
+    const newest = sortRows(found(), DEFAULT_SORT);
     expect(newest[0]!.row.tx.id).toBe("mystery");
-    expect(sortRows(found(), "oldest")[0]!.row.tx.id).toBe("electric");
+    expect(sortRows(found(), { key: "date", direction: "asc" })[0]!.row.tx.id).toBe("electric");
   });
 
   it("orders by size, ignoring sign", () => {
-    expect(ids(sortRows(found(), "amount-large")).slice(0, 2)).toEqual(["pay", expect.any(String)]);
-    expect(sortRows(found(), "amount-large")[1]!.row.kind).toBe("transfer");
-    expect(sortRows(found(), "amount-small")[0]!.row.tx.id).toBe("refund");
+    const largest = sortRows(found(), sortBy("amount"));
+    expect(ids(largest).slice(0, 2)).toEqual(["pay", expect.any(String)]);
+    expect(largest[1]!.row.kind).toBe("transfer");
+    expect(sortRows(found(), { key: "amount", direction: "asc" })[0]!.row.tx.id).toBe("refund");
   });
 
-  it("orders by payee and by envelope, ties newest first", () => {
-    const byPayee = sortRows(found(), "payee").map((f) => f.row.tx.payee);
+  it("orders by name and by envelope, ties newest first", () => {
+    const byPayee = sortRows(found(), sortBy("name")).map((f) => f.row.tx.payee);
     expect(byPayee).toEqual([
       "Costco",
       "Dominion",
@@ -214,8 +217,8 @@ describe("sortRows", () => {
       "Payment",
       "Zelle",
     ]);
-    expect(sortRows(found(), "payee")[2]!.row.tx.id).toBe("refund");
-    const byEnvelope = sortRows(found(), "envelope").map((f) => f.row.tx.id);
+    expect(sortRows(found(), sortBy("name"))[2]!.row.tx.id).toBe("refund");
+    const byEnvelope = sortRows(found(), sortBy("envelope")).map((f) => f.row.tx.id);
     expect(byEnvelope).toEqual([
       "refund",
       "kroger",
@@ -225,6 +228,33 @@ describe("sortRows", () => {
       expect.any(String),
       "mystery",
     ]);
+  });
+
+  it("descending turns the order round, ties still newest first", () => {
+    const zToA = sortRows(found(), { key: "name", direction: "desc" }).map((f) => f.row.tx.payee);
+    expect(zToA[0]).toBe("Zelle");
+    expect(zToA.at(-1)).toBe("Costco");
+    const krogers = sortRows(found(), { key: "name", direction: "desc" }).filter(
+      (f) => f.row.tx.payee === "Kroger",
+    );
+    expect(ids(krogers)).toEqual(
+      ids(sortRows(found(), sortBy("name")).filter((f) => f.row.tx.payee === "Kroger")),
+    );
+  });
+
+  it("income/expense puts money in first (ascending) or money out first", () => {
+    const signs = (rows: FoundRow[]) => rows.map((f) => (f.amount < 0 ? "out" : "in"));
+    const inFirst = signs(sortRows(found(), sortBy("kind")));
+    expect(inFirst.indexOf("out")).toBe(inFirst.lastIndexOf("in") + 1);
+    const outFirst = signs(sortRows(found(), { key: "kind", direction: "desc" }));
+    expect(outFirst.indexOf("in")).toBe(outFirst.lastIndexOf("out") + 1);
+  });
+
+  it("a newly chosen sort starts in its own direction", () => {
+    expect(sortBy("date")).toEqual(DEFAULT_SORT);
+    expect(sortBy("name").direction).toBe("asc");
+    expect(sortBy("amount").direction).toBe("desc");
+    expect(sortBy("kind").direction).toBe("asc");
   });
 });
 

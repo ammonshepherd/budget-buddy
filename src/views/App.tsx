@@ -16,6 +16,7 @@ import {
   ROUTE_TITLES,
   ROUTES,
   routeHref,
+  settingsSection,
   type AccountsView,
   type Route,
 } from "../models/routes";
@@ -27,6 +28,7 @@ import { AccountsPage } from "./pages/AccountsPage";
 import { BudgetPage } from "./pages/BudgetPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { SignInPage } from "./SignInPage";
+import { MenuSlotProvider } from "./PageMenu";
 import { AddTransactionButton } from "./TransactionEntry";
 import { UpdateBanner } from "./UpdateBanner";
 
@@ -44,54 +46,58 @@ type Install = (() => Promise<void>) | null;
 /**
  * The app frame: header, then sign-in, household setup, or the budget itself.
  * Signed in on a wide window (desktop), a sidebar takes the header's place.
+ * On a phone the header's top right holds the page's menu (see PageMenu);
+ * the version is on Settings.
  */
 export function App() {
   const session = useSession(store);
   const { install } = useInstallPrompt();
   const update = useAppUpdate();
   const desktop = useDesktop() && session.status === "signedIn";
+  // The header's spot for the page menu (a state, so pages re-render once it exists).
+  const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
 
   return (
-    <div className={desktop ? "app-shell desktop" : "app-shell"}>
-      {update.ready && <UpdateBanner onRefresh={update.refresh} onDismiss={update.dismiss} />}
-      {!desktop && (
-        <header className="app-header">
-          <Brand />
-          <div className="header-actions">
-            <span className="app-version" aria-label="Application version">
-              v{APP_VERSION}
-            </span>
-            {install && (
-              <button
-                className="icon-button"
-                type="button"
-                aria-label="Install Budget Buddy"
-                onClick={install}
-              >
-                <InstallIcon />
-              </button>
-            )}
-          </div>
-        </header>
-      )}
+    <MenuSlotProvider value={menuSlot}>
+      <div className={desktop ? "app-shell desktop" : "app-shell"}>
+        {update.ready && <UpdateBanner onRefresh={update.refresh} onDismiss={update.dismiss} />}
+        {!desktop && (
+          <header className="app-header">
+            <Brand />
+            <div className="header-actions">
+              {install && (
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label="Install Budget Buddy"
+                  onClick={install}
+                >
+                  <InstallIcon />
+                </button>
+              )}
+              <div className="page-menu-slot" ref={setMenuSlot} />
+            </div>
+          </header>
+        )}
 
-      {session.status === "loading" && <Message text="Loading Budget Buddy..." />}
-      {session.status === "error" && <Message error={session.error} />}
-      {session.status === "signedOut" && (
-        <main className="page-content">
-          <SignInPage onSignIn={store.signIn} />
-        </main>
-      )}
-      {session.status === "signedIn" && (
-        // key: a different user gets a fresh budget, never the previous one's.
-        <SignedInApp
-          key={session.session.userId}
-          session={session.session}
-          desktop={desktop}
-          install={install}
-        />
-      )}
-    </div>
+        {session.status === "loading" && <Message text="Loading Budget Buddy..." />}
+        {session.status === "error" && <Message error={session.error} />}
+        {session.status === "signedOut" && (
+          <main className="page-content">
+            <SignInPage onSignIn={store.signIn} />
+          </main>
+        )}
+        {session.status === "signedIn" && (
+          // key: a different user gets a fresh budget, never the previous one's.
+          <SignedInApp
+            key={session.session.userId}
+            session={session.session}
+            desktop={desktop}
+            install={install}
+          />
+        )}
+      </div>
+    </MenuSlotProvider>
   );
 }
 
@@ -201,7 +207,14 @@ function SignedInApp({
       />
     ),
     settings: (
-      <SettingsPage budget={budget} data={data} email={session.email} onSignOut={store.signOut} />
+      <SettingsPage
+        budget={budget}
+        data={data}
+        email={session.email}
+        onSignOut={store.signOut}
+        desktop={desktop}
+        section={location.route === "settings" ? settingsSection(window.location.hash) : null}
+      />
     ),
   };
 
