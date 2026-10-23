@@ -1,14 +1,24 @@
-import { useState, type JSX, type ReactNode } from "react";
+import { Fragment, useState, type JSX, type ReactNode } from "react";
 import { useAppUpdate } from "../controllers/useAppUpdate";
 import { useBudget } from "../controllers/useBudget";
 import { useHashRoute } from "../controllers/useHashRoute";
 import { useInstallPrompt } from "../controllers/useInstallPrompt";
 import { useDesktop, useSidebar } from "../controllers/useLayout";
 import { useSession } from "../controllers/useSession";
+import { sidebarAccounts } from "../models/accounts";
+import { formatCents } from "../models/money";
 import { APP_VERSION } from "../models/appInfo";
 import type { UserSession } from "../models/dataStore";
+import type { BudgetData } from "../models/types";
 import { currentMonth, type Month } from "../models/month";
-import { ROUTE_TITLES, ROUTES, routeHref, type Route } from "../models/routes";
+import {
+  accountsHref,
+  ROUTE_TITLES,
+  ROUTES,
+  routeHref,
+  type AccountsView,
+  type Route,
+} from "../models/routes";
 import { store } from "../models/store";
 import { CreateHouseholdPage } from "./CreateHouseholdPage";
 import { ErrorMessage } from "./components";
@@ -131,7 +141,14 @@ function SignedInApp({
       />
     ) : null;
   const nav = (
-    <Navigation route={location.route} month={month} desktop={desktop} userId={session.userId}>
+    <Navigation
+      route={location.route}
+      month={month}
+      desktop={desktop}
+      userId={session.userId}
+      data={data}
+      opened={opened}
+    >
       {desktop && add}
       {desktop && (
         <SidebarFoot
@@ -194,18 +211,24 @@ function SignedInApp({
 /**
  * The pages: a bottom bar on a phone; on a desktop, a sidebar on the left
  * (brand, pages, then `children` at the bottom) that collapses to icons.
+ * On a desktop, Accounts lists every open account under it.
  */
 function Navigation({
   route,
   month,
   desktop,
   userId,
+  data,
+  opened,
   children,
 }: {
   route: Route;
   month: Month;
   desktop: boolean;
   userId: string;
+  /** Desktop only: the accounts listed under Accounts (none before there is a budget), and which one is open. */
+  data: BudgetData | null;
+  opened: AccountsView;
   /** Desktop only: the Add transaction button and the sidebar's foot. */
   children?: ReactNode;
 }) {
@@ -213,9 +236,8 @@ function Navigation({
   const links = ROUTES.map((name) => {
     const NavIcon = NAV_ICONS[name];
     const active = name === route;
-    return (
+    const link = (
       <a
-        key={name}
         href={routeHref(name, month)}
         className={active ? "active" : undefined}
         aria-current={active ? "page" : undefined}
@@ -224,6 +246,14 @@ function Navigation({
         <NavIcon />
         <span className="nav-label">{ROUTE_TITLES[name]}</span>
       </a>
+    );
+    return (
+      <Fragment key={name}>
+        {link}
+        {desktop && name === "accounts" && data && (
+          <SidebarAccounts data={data} opened={opened} month={month} />
+        )}
+      </Fragment>
     );
   });
 
@@ -258,6 +288,63 @@ function Navigation({
         <span className="nav-label">Collapse</span>
       </button>
     </aside>
+  );
+}
+
+/**
+ * The desktop sidebar's sub-menu under Accounts: All accounts and the open
+ * budget accounts, then a gap and the tracking accounts, each with its
+ * balance. Hidden while the sidebar shows icons only.
+ */
+function SidebarAccounts({
+  data,
+  opened,
+  month,
+}: {
+  data: BudgetData;
+  opened: AccountsView;
+  month: Month;
+}) {
+  const { budget, tracking } = sidebarAccounts(data);
+  if (budget.length + tracking.length === 0) return null;
+  const item = (view: "all" | string, label: string, balance?: number) => {
+    const active = opened === view;
+    const shown = balance === undefined ? null : formatCents(balance);
+    return (
+      <li key={view}>
+        <a
+          href={accountsHref(view, month)}
+          className={active ? "active" : undefined}
+          aria-current={active ? "true" : undefined}
+          title={shown ? `${label}: ${shown}` : label}
+          aria-label={shown ? `${label}, balance ${shown}` : undefined}
+        >
+          <span className="sidebar-account-name">{label}</span>
+          {shown && (
+            <span
+              className={
+                balance! < 0 ? "sidebar-account-balance negative" : "sidebar-account-balance"
+              }
+            >
+              {shown}
+            </span>
+          )}
+        </a>
+      </li>
+    );
+  };
+  return (
+    <div className="sidebar-accounts">
+      <ul aria-label="Budget accounts">
+        {item("all", "All accounts")}
+        {budget.map((a) => item(a.id, a.name, a.balance))}
+      </ul>
+      {tracking.length > 0 && (
+        <ul className="sidebar-tracking" aria-label="Tracking accounts">
+          {tracking.map((a) => item(a.id, a.name, a.balance))}
+        </ul>
+      )}
+    </div>
   );
 }
 

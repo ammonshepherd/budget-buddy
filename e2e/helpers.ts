@@ -189,7 +189,11 @@ export const editActivityRow = (page: Page, payee: string) =>
 
 /** Clicks a page in the bottom navigation. */
 export const goTo = (page: Page, name: "Budget" | "Accounts" | "Settings") =>
-  page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name }).click();
+  page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .getByRole("link", { name, exact: true })
+    .first()
+    .click();
 
 /** Adds a group in Settings, then its envelopes with the group's + button on Budget. */
 export async function addGroupWithEnvelopes(page: Page, group: string, envelopes: string[]) {

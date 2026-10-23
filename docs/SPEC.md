@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.35.0.
+Version described: 0.35.1.
 
 ## 1. Purpose
 
@@ -243,9 +243,15 @@ live by `useDesktop`), App adds `.desktop` to the shell; below that, or
 signed out, everything is as above.
 
 - No header or bottom bar. A sidebar on the left (`aside` "Sidebar",
-  13rem): the logo, "Budget Buddy" and the version; "+ Add transaction"
+  16rem): the logo, "Budget Buddy" and the version; "+ Add transaction"
   (not on Settings; opens the same dialog); the pages ("Primary
-  navigation"); Install (when offered); the household name and email; and
+  navigation"), with every open account listed under Accounts (since
+  v0.35.1, `sidebarAccounts` in `src/models/accounts.ts`): All accounts and
+  the budget accounts (Checking, then Credit cards, each by name), then,
+  after a gap and a short centred line, the tracking accounts; each shows its balance
+  today (red when negative, as in the Accounts list) and opens that account,
+  the open one highlighted, long names cut short with "…" so the balance
+  always shows (hidden while the sidebar shows icons only); Install (when offered); the household name and email; and
   "Collapse" (`Collapse sidebar` / `Expand sidebar`), which shrinks it to
   icons (names kept for screen readers). From 1000 to 1199px it always shows
   icons only and has no Collapse button.

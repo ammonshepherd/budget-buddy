@@ -7,6 +7,7 @@ import {
   isTracking,
   openingBalanceFromEntry,
   openingBalanceToEntry,
+  sidebarAccounts,
 } from "./accounts";
 import type { Account, Transaction } from "./types";
 
@@ -43,34 +44,34 @@ describe("opening balance entry", () => {
   });
 });
 
-describe("card debt", () => {
-  const account = (id: string, extra: Partial<Account> = {}): Account => ({
-    id,
-    name: id,
-    type: "credit_card",
-    openingBalance: 0,
-    openingDate: "2026-01-01",
-    onBudget: true,
-    closedAt: null,
-    importFormat: null,
-    ...extra,
-  });
-  const tx = (accountId: string, amount: number, date = "2026-10-01"): Transaction => ({
-    id: `${accountId}-${amount}-${date}`,
-    accountId,
-    date,
-    amount,
-    payee: "",
-    memo: "",
-    isTransfer: false,
-    isIncome: false,
-    transferId: null,
-    voided: false,
-    allocations: [],
-    importKey: null,
-    reconciled: false,
-  });
+const account = (id: string, extra: Partial<Account> = {}): Account => ({
+  id,
+  name: id,
+  type: "credit_card",
+  openingBalance: 0,
+  openingDate: "2026-01-01",
+  onBudget: true,
+  closedAt: null,
+  importFormat: null,
+  ...extra,
+});
+const tx = (accountId: string, amount: number, date = "2026-10-01"): Transaction => ({
+  id: `${accountId}-${amount}-${date}`,
+  accountId,
+  date,
+  amount,
+  payee: "",
+  memo: "",
+  isTransfer: false,
+  isIncome: false,
+  transferId: null,
+  voided: false,
+  allocations: [],
+  importKey: null,
+  reconciled: false,
+});
 
+describe("card debt", () => {
   it("adds up what every card owes today, leaving out checking and future dates", () => {
     const data = {
       accounts: [
@@ -124,5 +125,39 @@ describe("groupAccounts", () => {
       ["Tracking", ["Brokerage"]],
     ]);
     expect(groupAccounts([a("Visa", "credit_card")]).map((g) => g.name)).toEqual(["Credit cards"]);
+  });
+});
+
+describe("sidebarAccounts", () => {
+  it("lists open budget accounts (checking, then cards) apart from tracking accounts, with balances", () => {
+    const checking = { type: "checking" as const };
+    const tracking = { type: "checking" as const, onBudget: false };
+    const { budget, tracking: tracked } = sidebarAccounts({
+      accounts: [
+        account("Visa", { openingBalance: -10_000 }),
+        account("Savings", { ...checking, openingBalance: 50_000 }),
+        account("Old", { ...checking, closedAt: "2026-01-01T00:00:00Z" }),
+        account("Mortgage", { ...tracking, openingBalance: -200_000_00 }),
+        account("Brokerage", { ...tracking, openingBalance: 5_000_00 }),
+        account("Main", { ...checking, openingBalance: 1_000 }),
+      ],
+      transactions: [tx("Main", -250), tx("Visa", -2_500), tx("Visa", 1_000, "2026-11-30")],
+    });
+    expect(budget.map((a) => [a.name, a.balance])).toEqual([
+      ["Main", 750],
+      ["Savings", 50_000],
+      ["Visa", -11_500],
+    ]);
+    expect(tracked.map((a) => [a.name, a.balance])).toEqual([
+      ["Brokerage", 5_000_00],
+      ["Mortgage", -200_000_00],
+    ]);
+  });
+
+  it("gives empty lists when there are no accounts", () => {
+    expect(sidebarAccounts({ accounts: [], transactions: [] })).toEqual({
+      budget: [],
+      tracking: [],
+    });
   });
 });
