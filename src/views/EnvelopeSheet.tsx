@@ -107,6 +107,10 @@ export function EnvelopeSheet({
               Owed <Money cents={row.card.owed} /> · Remaining debt{" "}
               <Money cents={row.card.uncovered} />
             </span>
+            <span className="sheet-hero-parts">
+              Extra paid <Money cents={row.card.extraPaid.month} /> this month ·{" "}
+              <Money cents={row.card.extraPaid.yearToDate} /> this year
+            </span>
           </div>
           {row.shortfall > 0 && (
             <p className="short sheet-short">

@@ -111,6 +111,13 @@ Owed         = −card balance
 Uncovered    = max(0, Owed − (Saved_P + Remaining_P))   (display only, like Planned)
 ```
 
+- Extra paid (decided in v0.33.6, `cardExtraPaid` in `budgetMath.ts`,
+  display only): the part of a card's payments beyond its charges, so paid
+  from money set aside for paydown. Month by month, charges (purchases in an
+  envelope, cash advances) fill a pool, payments take from it first, and
+  what the pool cannot cover is extra. Shown on a card's info pane (this
+  month, in place of Opening balance) and in P's sheet (month and year to
+  date). It changes no other number.
 - Card purchase in an envelope: money moves from that envelope into P. Transfer out
   of the card (cash advance): into P. A card purchase still to review touches
   neither P nor Available to Assign (it only raises Owed).
@@ -238,8 +245,9 @@ non-card budget balances − all envelope money (P included)`.
   Tracking groups (`groupAccounts`), each row a link with name and balance;
   closed accounts behind "Show closed accounts". Opening one replaces the
   list with a sticky info pane (back arrow, name, pencil; Current balance,
-  Month start, Opening balance, Money in, Money out and Reconciled from
-  `accountFigures` in `src/models/activity.ts`, display only; transfers and
+  Month start, Opening balance (Extra paid on a card), Money in, Money out
+  and Reconciled from `accountFigures` in `src/models/activity.ts`, display
+  only; transfers and
   card payments left out of in and out; only the month figures follow the
   month; Import CSV), its To review list, and every transaction of the
   account in any month under month dividers (day nets leave transfers out).

@@ -3,6 +3,7 @@ import {
   accountBalance,
   availableToAssignFor,
   buildBudgetMonth,
+  cardExtraPaid,
   transactionShortfalls,
   type BudgetMonthView,
 } from "./budgetMath";
@@ -103,6 +104,7 @@ describe("card-payment envelope", () => {
       open: true,
       owed: 1_200_000,
       uncovered: 1_200_000,
+      extraPaid: { month: 0, yearToDate: 0 },
     });
 
     // 2. Assign $400 to Groceries.
@@ -333,5 +335,84 @@ describe("transactionShortfalls for cards", () => {
         },
       ]),
     ).toEqual([]);
+  });
+});
+
+describe("cardExtraPaid", () => {
+  /** A $10,000 card with groceries bought on it and payments from checking (card side only). */
+  const purchase = (id: string, date: string, amount: number) =>
+    tx({
+      id,
+      accountId: "visa",
+      date,
+      amount: -amount,
+      allocations: [{ envelopeId: "groceries", amount: -amount }],
+    });
+  const payment = (id: string, date: string, amount: number) =>
+    tx({ id, accountId: "visa", date, amount, isTransfer: true, transferId: id });
+  const extra = (data: BudgetData, month: string) => cardExtraPaid(data, "visa", month);
+
+  it("counts nothing extra when a payment stays within the month's charges", () => {
+    const data = household();
+    data.transactions.push(purchase("a", "2026-10-03", 40_000), payment("p", "2026-10-20", 40_000));
+    expect(extra(data, M)).toEqual({ month: 0, yearToDate: 0 });
+  });
+
+  it("counts what a payment pays beyond the charges as extra (the spec's example)", () => {
+    const data = household();
+    data.transactions.push(purchase("a", "2026-09-12", 40_000), payment("p", "2026-10-05", 60_000));
+    expect(extra(data, "2026-09")).toEqual({ month: 0, yearToDate: 0 });
+    expect(extra(data, M)).toEqual({ month: 20_000, yearToDate: 20_000 });
+  });
+
+  it("does not depend on order inside a month: paying first, charging later", () => {
+    const data = household();
+    data.transactions.push(payment("p", "2026-10-02", 60_000), purchase("a", "2026-10-28", 40_000));
+    expect(extra(data, M).month).toBe(20_000);
+  });
+
+  it("keeps extra paid as paid when later months charge more than they pay", () => {
+    const data = household();
+    data.transactions.push(
+      payment("p1", "2026-10-05", 20_000), // all extra: nothing charged yet
+      purchase("a", "2026-11-03", 30_000),
+      payment("p2", "2026-11-25", 10_000), // covered by November's charges
+      payment("p3", "2026-12-20", 25_000), // $20,000 still from November's charges, $5,000 extra
+    );
+    expect(extra(data, M).month).toBe(20_000);
+    expect(extra(data, "2026-11")).toEqual({ month: 0, yearToDate: 20_000 });
+    expect(extra(data, "2026-12")).toEqual({ month: 5_000, yearToDate: 25_000 });
+  });
+
+  it("counts a cash advance as a charge and starts the year-to-date in January", () => {
+    const data = household();
+    data.transactions.push(
+      payment("p1", "2026-12-10", 10_000),
+      tx({ id: "cash", accountId: "visa", date: "2027-01-04", amount: -5_000, isTransfer: true }),
+      payment("p2", "2027-01-20", 8_000),
+    );
+    expect(extra(data, "2027-01")).toEqual({ month: 3_000, yearToDate: 3_000 });
+  });
+
+  it("funds nothing with card credits, purchases to review or voided rows", () => {
+    const data = household();
+    data.transactions.push(
+      tx({ id: "credit", accountId: "visa", amount: 5_000 }),
+      tx({ id: "review", accountId: "visa", amount: -7_000 }),
+      { ...purchase("void", "2026-10-02", 9_000), voided: true },
+      { ...payment("void-pay", "2026-10-03", 4_000), voided: true },
+      payment("p", "2026-10-20", 6_000),
+    );
+    expect(extra(data, M).month).toBe(6_000);
+  });
+
+  it("shows on the payment envelope's row, and is 0 for an account without one", () => {
+    const data = household();
+    data.transactions.push(payment("p", "2026-10-20", 6_000));
+    expect(row(buildBudgetMonth(data, M), "visa-pay").card?.extraPaid).toEqual({
+      month: 6_000,
+      yearToDate: 6_000,
+    });
+    expect(cardExtraPaid(data, "checking", M)).toEqual({ month: 0, yearToDate: 0 });
   });
 });

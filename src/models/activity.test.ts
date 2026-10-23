@@ -446,6 +446,12 @@ describe("accountFigures", () => {
     });
   });
 
+  it("gives a card's extra paid for the month, and none for other accounts", () => {
+    expect(accountFigures(data, "checking", "2026-10").extraPaid).toBeNull();
+    // This household's card has no payment envelope, so nothing counts as extra.
+    expect(accountFigures(data, "card", "2026-10").extraPaid).toBe(0);
+  });
+
   it("adds a month's net activity to its start to give the next month's start", () => {
     for (const month of ["2026-09", "2026-10", "2026-11"]) {
       const next = `${month.slice(0, 5)}${String(Number(month.slice(5)) + 1).padStart(2, "0")}`;

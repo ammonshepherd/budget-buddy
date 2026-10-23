@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.33.5.
+Version described: 0.33.6.
 
 ## 1. Purpose
 
@@ -361,7 +361,8 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
     which stays open and updates after a save or delete;
   - Delete envelope (confirm: money assigned returns to Available to Assign).
     A card's payment envelope sheet shows Available to pay, "Owed $X · Remaining
-    debt $Y", "Assign (negative to take back)", the Saved panel and how it fills,
+    debt $Y", "Extra paid $X this month · $Y this year" (`cardExtraPaid`,
+    see the info pane's EXTRA PAID), "Assign (negative to take back)", the Saved panel and how it fills,
     and no Delete.
 - Moving money out of an envelope (v0.31.0): what is left on the right of a
   row (the Remaining column on a desktop) is a button ("Move money from
@@ -446,8 +447,15 @@ the list comes back where it was scrolled.
     MONEY OUT (red) for the month shown (the account's inflows and outflows
     dated in it, transfers (card payments too) left out, a split once at
     its full amount, inflows to review included), CURRENT BALANCE (every
-    transaction, any date). Row 2: OPENING BALANCE (as entered, signed: a
-    card owing $50 shows −$50.00), MONTH START (every transaction dated
+    transaction, any date). Row 2: OPENING BALANCE (as entered, signed)
+    on a checking account; on a credit card EXTRA PAID instead (v0.33.6,
+    `cardExtraPaid` in `budgetMath.ts`): the month's payments beyond the
+    card's charges, i.e. paid from money set aside for paydown. Month by
+    month the card's charges (purchases in an envelope, cash advances) fill
+    a pool and payments take from it first; what the pool cannot cover is
+    extra and stays extra. Card credits and purchases to review fund
+    nothing, and debt from before the opening date is all extra when paid.
+    Then MONTH START (every transaction dated
     before the month's first day: `accountBalance` with `before`),
     RECONCILED (opening balance plus reconciled transactions). Month start
     plus the month's net activity is the next month's start. Only the month

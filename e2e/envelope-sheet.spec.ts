@@ -189,14 +189,16 @@ test("a card's payment envelope sheet shows what can be paid and takes assigning
   await goTo(page, "Budget");
   const sheet = await openEnvelope(page, "Visa payment");
   await expect(sheet.locator(".sheet-hero-label")).toHaveText("Available to pay");
-  await expect(sheet.locator(".sheet-hero-parts")).toHaveText(
+  await expect(sheet.locator(".sheet-hero-parts")).toHaveText([
     "Owed $200.00 · Remaining debt $200.00",
-  );
+    "Extra paid $0.00 this month · $0.00 this year",
+  ]);
   await expect(sheet.getByRole("button", { name: "Delete envelope" })).toHaveCount(0);
   await sheet.getByLabel("Assign (negative to take back)").fill("150");
   await sheet.getByRole("button", { name: "Assign", exact: true }).click();
   await expect(sheet.locator(".sheet-hero-amount")).toHaveText("$150.00");
-  await expect(sheet.locator(".sheet-hero-parts")).toHaveText(
+  await expect(sheet.locator(".sheet-hero-parts")).toHaveText([
     "Owed $200.00 · Remaining debt $50.00",
-  );
+    "Extra paid $0.00 this month · $0.00 this year",
+  ]);
 });

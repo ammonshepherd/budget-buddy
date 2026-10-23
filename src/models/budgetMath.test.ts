@@ -252,7 +252,13 @@ describe("envelopeLeft and groupLeft", () => {
     card: null,
     ...money,
   });
-  const card = { accountId: "c", open: true, owed: 9_000, uncovered: 1_000 };
+  const card = {
+    accountId: "c",
+    open: true,
+    owed: 9_000,
+    uncovered: 1_000,
+    extraPaid: { month: 0, yearToDate: 0 },
+  };
 
   it("shows Remaining, or Saved + Remaining for a card's payment envelope", () => {
     expect(envelopeLeft(row("food", { remaining: 2_500, envelopeMoney: 4_000 }))).toBe(2_500);
