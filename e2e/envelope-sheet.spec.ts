@@ -52,7 +52,7 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
   await expect(sheet.locator(".plan-line")).toHaveClass(/over/);
 
   // Escape undoes the typing without closing the sheet.
-  await planned.fill("5");
+  await planned.fill("5.00");
   await planned.press("Escape");
   await expect(planned).toHaveValue("100.00");
   await expect(sheet).toBeVisible();
@@ -65,7 +65,7 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
     for (const key of keys) await pad.getByRole("button", { name: key, exact: true }).click();
   };
   await assigned.click();
-  await press("5", "0", "0", "0", "Assign");
+  await press("5", "0", "0", "0", "0", "0", "Assign");
   await expect(pad.getByRole("alert")).toHaveText("Only $700.00 available to assign.");
   await pad.getByRole("button", { name: "Cancel" }).click();
   await expect(pad).toBeHidden();
@@ -73,8 +73,8 @@ test("the sheet shows what is left, the plan and the month's transactions", asyn
   await expect(sheet).toBeVisible();
   // + adds to what is there; the equation shows in the field as it is typed.
   await assigned.click();
-  await press("Plus", "5", "0");
-  await expect(assigned).toContainText("300.00 + 50");
+  await press("Plus", "5", "0", "0", "0");
+  await expect(assigned).toContainText("300.00 + 50.00");
   await expect(pad).toContainText("= $350.00");
   await press("Assign");
   await expect(pad).toBeHidden();

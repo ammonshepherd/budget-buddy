@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.34.0.
+Version described: 0.35.0.
 
 ## 1. Purpose
 
@@ -328,20 +328,31 @@ Mockup: `docs/mockups/budget-screen.html` (design "J"; sample amounts).
   field in place. On a phone Assigned opens the number pad (`PadAmount`,
   `src/views/AssignPad.tsx`): a dialog along the bottom ("Assigned for
   ⟨name⟩") with 0–9, a decimal point, delete, − and + and a green Assign key;
-  the field is scrolled clear of it. Digits first type a new total; + or −
-  builds an equation on the current amount ("120.00 + 50", "120.00 − 20",
+  the field is scrolled clear of it. Digits first type a new total, filled
+  in cents first (see "Typing amounts" below); + or −
+  builds an equation on the current amount ("120.00 + 50.00", "120.00 − 20.00",
   several terms allowed), shown in the Assigned cell as it is typed and in the
   pad with its result ("= $170.00"). Assign saves the result (minus returns
   money to Available to Assign); × or tapping outside cancels; a refused
   amount keeps the pad open with the reason. A keyboard works in the pad too
   (digits, ., + and −, Backspace, Enter). On a desktop Assigned is typed in
-  place and takes the same equations ("+50", "350 − 100";
+  place and takes the same equations ("+50.00", "350.00 − 100.00";
   `evaluateAmount` in `src/models/amountEquation.ts`). Errors show under the
   row (in the pad for the pad) ("Only $X available to assign.", "Some is
   already spent: Assigned can go no lower than $X.", "Planned cannot be
   negative."). Edits show at once (an optimistic update) and are undone if the
   save fails. Card payment envelopes show Available to pay and Remaining debt
   cells.
+- Typing amounts (decided in v0.35.0): every amount field (transaction
+  amount and split lines, Planned, Assigned and its number pad, the Assign
+  and Move money dialogs, Assign and Release on the envelope sheet, opening
+  balance) fills in cents first, like a cash register: 1, 2, 3 shows
+  "0.01", "0.12", "1.23"; Backspace shifts back ("0.12"); a typed 0 shows
+  "0.00". Each part of an equation fills on its own and a minus stays put.
+  Typing a period yourself switches that field to plain entry (1, 2, "."
+  gives "12."), and a pasted amount is kept as pasted; emptying the field
+  starts cents first again. Always on (no setting). `editEntry` in
+  `src/models/amountEntry.ts`, `AmountInput` in `src/views/AmountInput.tsx`.
 - Tapping an envelope's top line opens its sheet ("⟨name⟩ envelope", a bottom
   sheet; close with × or Escape):
   - the group as a small purple picker ("Group for ⟨name⟩"; choosing another

@@ -95,7 +95,8 @@ test("collapsing or tapping another cell saves the open field first", async ({ p
     .click();
   await expect(row.getByRole("button", { name: /^Edit planned amount/ })).toContainText("$250.00");
   const pad = page.getByRole("dialog", { name: "Assigned for Fun" });
-  for (const key of ["6", "0", "Assign"]) await pad.getByRole("button", { name: key }).click();
+  for (const key of ["6", "0", "0", "0", "Assign"])
+    await pad.getByRole("button", { name: key }).click();
   await expect(pad).toBeHidden();
   await expect(available(page)).toContainText("$640.00");
 

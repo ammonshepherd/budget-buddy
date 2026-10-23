@@ -7,6 +7,7 @@ import { centsToInput, formatCents } from "../models/money";
 import { formatShortDay } from "../models/month";
 import { PadAmount } from "./AssignPad";
 import { EditableTitle, ErrorMessage, Money, SingleFieldForm, SpentAmount } from "./components";
+import { AmountInput } from "./AmountInput";
 
 type Detail = NonNullable<ReturnType<Page["detail"]>>;
 
@@ -338,13 +339,12 @@ function AmountField({
   return (
     <label className={className}>
       <span className="sheet-field-label">{label}</span>
-      <input
+      <AmountInput
         className="sheet-field-value"
         aria-label={`${label} amount for ${envelopeName}`}
-        inputMode="decimal"
         value={text}
         onFocus={(event) => event.target.select()}
-        onChange={(event) => setText(event.target.value)}
+        onChange={setText}
         onKeyDown={onKeyDown}
         onBlur={() => void commit()}
       />

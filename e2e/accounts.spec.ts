@@ -146,8 +146,8 @@ test("an open account: its figures follow the month, its list does not", async (
     { payee: "To savings", amount: "40", date: "2030-01-15", account: "Main" },
     "Savings",
   );
-  await add(page, { payee: "Bakery", amount: "7", date: "2030-02-02", account: "Main" });
-  await add(page, { payee: "Other", amount: "3", date: "2030-01-06", account: "Savings" });
+  await add(page, { payee: "Bakery", amount: "7.00", date: "2030-02-02", account: "Main" });
+  await add(page, { payee: "Other", amount: "3.00", date: "2030-01-06", account: "Savings" });
 
   await accountRow(page, "Main").click();
   await expect(page).toHaveURL(/#accounts\/[\w-]+\/2030-01$/);
@@ -291,7 +291,7 @@ test("Import CSV from the account, then 100 rows at a time", async ({ page }) =>
   await expect(more).toHaveText("Show 50 more (50 left)");
 
   // A transaction added between pages: no rows repeated or skipped.
-  await add(page, { payee: "Added", amount: "2", date: "2030-02-05", account: "Checking" });
+  await add(page, { payee: "Added", amount: "2.00", date: "2030-02-05", account: "Checking" });
   await expect(rows).toHaveCount(100);
   await expect(more).toHaveText("Show 51 more (51 left)");
   await more.click();

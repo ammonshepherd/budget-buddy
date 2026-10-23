@@ -9,6 +9,7 @@ import {
 import { useAsyncAction } from "../controllers/useAsyncAction";
 import { formatCents, formatSignedCents, type Cents } from "../models/money";
 import { PencilIcon } from "./icons";
+import { AmountInput } from "./AmountInput";
 
 /**
  * A Spent amount: money out of an envelope, so shown with a minus ("−$45.20",
@@ -107,15 +108,26 @@ export function SingleFieldForm({
       <div className="form-row">
         <label className="field">
           {label}
-          <input
-            value={value}
-            inputMode={inputMode}
-            placeholder={placeholder}
-            onChange={(event) => {
-              setValue(event.target.value);
-              action.clearError();
-            }}
-          />
+          {inputMode === "decimal" ? (
+            <AmountInput
+              value={value}
+              placeholder={placeholder}
+              onChange={(text) => {
+                setValue(text);
+                action.clearError();
+              }}
+            />
+          ) : (
+            <input
+              value={value}
+              inputMode={inputMode}
+              placeholder={placeholder}
+              onChange={(event) => {
+                setValue(event.target.value);
+                action.clearError();
+              }}
+            />
+          )}
         </label>
         <button className="secondary-button" type="submit" disabled={action.pending}>
           {button}

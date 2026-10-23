@@ -1,3 +1,4 @@
+import { editEntry, fillCents } from "./amountEntry";
 import { roundMoney, type Cents } from "./money";
 
 /**
@@ -36,13 +37,14 @@ export type PadKey =
 /**
  * What the pad shows. `fresh` is true while it still shows the amount it
  * opened with, so typing a digit replaces it (a new total) and + or −
- * builds on it.
+ * builds on it. `centsFirst` is true until the period key is pressed:
+ * digits fill in from the right ("5", "0" shows "0.50"; see `amountEntry.ts`).
  */
-export type PadState = { text: string; fresh: boolean };
+export type PadState = { text: string; fresh: boolean; centsFirst: boolean };
 
 /** The pad as it opens on an amount, e.g. "120.00". */
 export function padStart(text: string): PadState {
-  return { text, fresh: true };
+  return { text, fresh: true, centsFirst: true };
 }
 
 const OPERATOR = / [+−] $/;
@@ -52,21 +54,26 @@ export function padPress(state: PadState, key: PadKey): PadState {
   if (key === "+" || key === "−") {
     const base = state.text.replace(OPERATOR, "");
     // No amount yet: the sign applies to the amount the pad opened with.
-    return { text: `${base === "" ? "0.00" : base} ${key} `, fresh: false };
+    return { ...state, text: `${base === "" ? "0.00" : base} ${key} `, fresh: false };
   }
   if (key === "back") {
-    if (state.fresh) return { text: "", fresh: false };
+    if (state.fresh) return { text: "", fresh: false, centsFirst: true };
     const text = OPERATOR.test(state.text) ? state.text.slice(0, -3) : state.text.slice(0, -1);
-    return { text, fresh: false };
+    if (text === "") return { text, fresh: false, centsFirst: true };
+    return { ...state, text: state.centsFirst ? fillCents(text, true) : text, fresh: false };
   }
   const text = state.fresh ? "" : state.text;
+  if (state.centsFirst) {
+    const entry = editEntry({ text, centsFirst: true }, text + key, key);
+    return { ...entry, fresh: false };
+  }
   const term = text.split(/ [+−] /).pop() ?? "";
   if (key === ".") {
     if (term.includes(".")) return { ...state, fresh: false, text };
-    return { text: `${text}${term === "" ? "0" : ""}.`, fresh: false };
+    return { ...state, text: `${text}${term === "" ? "0" : ""}.`, fresh: false };
   }
   // At most two decimals, and no leading zeros ("05" → "5").
-  if (/\.\d\d$/.test(term)) return { text, fresh: false };
-  if (term === "0") return { text: text.slice(0, -1) + key, fresh: false };
-  return { text: text + key, fresh: false };
+  if (/\.\d\d$/.test(term)) return { ...state, text, fresh: false };
+  if (term === "0") return { ...state, text: text.slice(0, -1) + key, fresh: false };
+  return { ...state, text: text + key, fresh: false };
 }

@@ -4,6 +4,7 @@ import type { BudgetPageState as Page } from "../controllers/useBudgetPage";
 import { centsToInput, formatCents } from "../models/money";
 import { ErrorMessage, Money } from "./components";
 import { EnvelopePicker, type PickerOption } from "./EnvelopePicker";
+import { AmountInput } from "./AmountInput";
 
 /**
  * Opened from the Available to Assign banner: add an amount to one
@@ -58,12 +59,11 @@ export function AssignFromAvailable({ page, onDone }: { page: Page; onDone: () =
       />
       <label className="field">
         {takeBack ? "Amount to take back" : "Amount to add"}
-        <input
+        <AmountInput
           value={amount}
-          inputMode="decimal"
           placeholder="0.00"
-          onChange={(event) => {
-            setAmount(event.target.value);
+          onChange={(text) => {
+            setAmount(text);
             save.clearError();
           }}
         />
