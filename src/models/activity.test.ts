@@ -300,6 +300,55 @@ describe("one account's activity", () => {
   });
 });
 
+describe("a tracking account", () => {
+  const accounts = [
+    account("checking", "Main Checking"),
+    account("brokerage", "Brokerage", { onBudget: false, openingBalance: 500_000 }),
+  ];
+  const data = budget(
+    [
+      tx({
+        accountId: "brokerage",
+        amount: 2_500,
+        payee: "Dividend",
+        memo: "Q3",
+        reconciled: true,
+      }),
+      tx({ accountId: "brokerage", amount: -1_000, payee: "Fee", date: "2026-10-16" }),
+      tx({ amount: -2_000, payee: "Grocer" }),
+    ],
+    accounts,
+  );
+
+  it("lists its rows without envelopes or anything to review", () => {
+    const rows = accountHistory(data, "brokerage").flatMap((d) => d.rows);
+    expect(rows.map((r) => [r.tx.payee, r.category, r.toReview, r.kind])).toEqual([
+      ["Fee", "", false, "out"],
+      ["Dividend", "", false, "in"],
+    ]);
+    expect(transactionsToReview(data, "brokerage").count).toBe(0);
+    expect(transactionsToReview(data).count).toBe(1);
+  });
+
+  it("shows its own balances and money in and out", () => {
+    expect(accountFigures(data, "brokerage", "2026-10")).toMatchObject({
+      current: 501_500,
+      monthStart: 500_000,
+      opening: 500_000,
+      reconciled: 502_500,
+      moneyIn: 2_500,
+      moneyOut: 1_000,
+      extraPaid: null,
+    });
+  });
+
+  it("stays out of All accounts", () => {
+    const all = activityMonth(data, "2026-10");
+    expect(all.days.flatMap((d) => d.rows.map((r) => r.tx.payee))).toEqual(["Grocer"]);
+    expect(activityBalance(data, null, "2026-10-31").today).toBe(-2_000);
+  });
+});
+
 describe("ticking rows for reconciling", () => {
   const rowsIn = (data: BudgetData, accountId: string | null) =>
     activityMonth(data, "2026-10", accountId).days.flatMap((d) => d.rows);

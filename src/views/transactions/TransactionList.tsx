@@ -206,7 +206,9 @@ function TransactionItem({
             {row.toReview ? (
               <span className="badge-uncategorized">{row.category}</span>
             ) : (
-              row.category
+              // A tracking row has no envelope: a phone shows its notes here
+              // (a desktop has a memo column).
+              row.category || (desktop ? "" : row.tx.memo)
             )}
           </span>
         )}

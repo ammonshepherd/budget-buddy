@@ -128,6 +128,29 @@ describe("availableToAssignFor", () => {
     expect(view.availableToAssign).toBe(balances - envelopeMoney + view.toReview.outflow);
   });
 
+  it("leaves out a tracking account: its opening balance and every transaction", () => {
+    const data = household();
+    const before = buildBudgetMonth(data, "2026-10");
+    data.accounts.push({
+      id: "brokerage",
+      name: "Brokerage",
+      type: "checking",
+      openingBalance: 900_000,
+      openingDate: "2026-09-01",
+      onBudget: false,
+      closedAt: null,
+      importFormat: null,
+    });
+    data.transactions.push(
+      tx({ id: "dividend", accountId: "brokerage", date: "2026-10-03", amount: 12_000 }),
+      tx({ id: "fee", accountId: "brokerage", date: "2026-10-04", amount: -500 }),
+    );
+    const after = buildBudgetMonth(data, "2026-10");
+    expect(after.availableToAssign).toBe(before.availableToAssign);
+    expect(after.toReview).toEqual(before.toReview);
+    expect(accountBalance("brokerage", data)).toBe(911_500);
+  });
+
   it("counts a card without a payment envelope like any budget account", () => {
     const data = household();
     data.accounts.push({

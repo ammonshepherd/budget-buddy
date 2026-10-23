@@ -52,12 +52,18 @@ export function incomeRuleFor(
   return rules.find((rule) => matchesIncomeRule(rule, inflow)) ?? null;
 }
 
-/** Inflows waiting for review (never on a card: those are card credits) that a rule would mark as Income. */
+/**
+ * Inflows waiting for review that a rule would mark as Income. Never on a
+ * card (those are card credits) or in a tracking account.
+ */
 export function inflowsMatchingRules(data: BudgetData, rules = data.incomeRules): Transaction[] {
-  const cards = new Set(data.accounts.filter((a) => a.type === "credit_card").map((a) => a.id));
+  // Cards and tracking accounts never have Income.
+  const neverIncome = new Set(
+    data.accounts.filter((a) => a.type === "credit_card" || !a.onBudget).map((a) => a.id),
+  );
   return data.transactions.filter(
     (tx) =>
-      !cards.has(tx.accountId) &&
+      !neverIncome.has(tx.accountId) &&
       tx.amount > 0 &&
       isToReview(tx, false) &&
       incomeRuleFor(rules, tx) !== null,

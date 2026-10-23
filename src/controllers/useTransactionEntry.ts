@@ -27,6 +27,7 @@ import {
   type OtherSideChoice,
   type TransferInput,
 } from "../models/transfers";
+import { isTracking } from "../models/accounts";
 import type { Account, BudgetData, Transaction } from "../models/types";
 import { requireCents } from "./input";
 import type { Budget } from "./useBudget";
@@ -120,12 +121,14 @@ export function formFromTransaction(tx: Transaction, data: BudgetData): Transact
 
 /**
  * An empty form for a new transaction: today, in `accountId` when that
- * account is open (the account open on Accounts), else the first open account.
+ * account is open (the account open on Accounts), else the first open budget
+ * account (a tracking account only when there is nothing else).
  */
 export function blankTransactionForm(data: BudgetData, accountId?: string | null): TransactionForm {
   const open = data.accounts.filter((a) => !a.closedAt);
+  const fallback = open.find((a) => a.onBudget) ?? open[0];
   return {
-    accountId: (open.find((a) => a.id === accountId) ?? open[0])?.id ?? "",
+    accountId: (open.find((a) => a.id === accountId) ?? fallback)?.id ?? "",
     date: todayIso(),
     direction: "outflow",
     amount: "",
@@ -182,15 +185,21 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
   const householdId = data.household.id;
 
   const openAccounts = data.accounts.filter((a) => !a.closedAt);
+  /** Open budget accounts: the only ones a transfer can link. */
+  const budgetAccounts = openAccounts.filter((a) => a.onBudget);
+
+  /** The form is for a tracking account: no envelope, Income or transfer. */
+  const isTrackingForm = (form: TransactionForm) =>
+    isTracking(data.accounts.find((a) => a.id === form.accountId));
 
   /** An inflow on a credit card: a card credit (or a payment, if Transfer). */
   const isCardCredit = (form: TransactionForm) =>
     form.direction === "inflow" &&
     data.accounts.find((a) => a.id === form.accountId)?.type === "credit_card";
 
-  /** Open accounts a transfer from `accountId` can go to (or come from). */
+  /** Open budget accounts a transfer from `accountId` can go to (or come from). */
   const otherAccounts = (accountId: string): Account[] =>
-    openAccounts.filter((a) => a.id !== accountId);
+    budgetAccounts.filter((a) => a.id !== accountId);
   /** The form's other account, defaulting to the first that fits. */
   const transferAccountOf = (form: TransactionForm): string => {
     const others = otherAccounts(form.accountId);
@@ -203,6 +212,11 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
     const cents = requireCents(form.amount);
     if (cents <= 0)
       throw new UserFacingError("Enter an amount above zero, then pick Outflow or Inflow.");
+    if (isTrackingForm(form) && form.category !== "") {
+      throw new UserFacingError(
+        "A tracking account stands alone: no envelopes, Income or transfers.",
+      );
+    }
     const isIncome = form.category === INCOME;
     if (isIncome && form.direction === "outflow") {
       throw new UserFacingError("Income is money coming in: choose Inflow, or another envelope.");
@@ -293,6 +307,15 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
   return {
     openAccounts,
     isCardCredit,
+    isTrackingForm,
+    /**
+     * The Account picker's choices: budget accounts, or tracking accounts
+     * when the form is in one. A transaction never moves between the two.
+     */
+    accountChoices: (form: TransactionForm): Account[] =>
+      isTrackingForm(form) ? openAccounts.filter((a) => !a.onBudget) : budgetAccounts,
+    /** Whether a transfer is possible at all (two open budget accounts). */
+    canTransfer: budgetAccounts.length >= 2,
     /** Whether the transaction being edited is saved as a transfer (both sides). */
     isTransfer: (form: TransactionForm) =>
       Boolean(data.transactions.find((t) => t.id === form.id)?.transferId),

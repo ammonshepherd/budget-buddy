@@ -300,8 +300,17 @@ non-card budget balances − all envelope money (P included)`.
   of its transactions, so the opening date can be edited only up to the date
   of its first transaction.
 - Only open accounts can be edited (closing requires a $0.00 balance).
-- Account type (`checking` or `credit_card`) is chosen when adding and cannot
-  change. A credit card is a budget account with a normally negative balance
+- Tracking accounts (decided in v0.34.0): chosen as "Tracking" when adding,
+  stored as a checking-type account with `on_budget = false`. They stand
+  alone: never in Available to Assign, the to-review counts, All accounts or
+  card debt; their transactions have no envelope, are never Income and never
+  transfers (enforced by the allocation check, the memory store and the
+  form; income rules and `mark_income` skip them). Otherwise they work like
+  any account: balance, figures, CSV import, search (only "Not reconciled"),
+  reconciling. The form shows Notes (the memo) and no Envelope. A loan is a
+  negative balance.
+- Account type (`checking` or `credit_card`) and `on_budget` are chosen when
+  adding and cannot change (a database trigger keeps them). A credit card is a budget account with a normally negative balance
   (owed); the form takes the amount owed as positive and stores it negated
   (`src/models/accounts.ts`). Its payment envelope is described under
   "Credit cards" above; a card payment is a transfer from the paying account.

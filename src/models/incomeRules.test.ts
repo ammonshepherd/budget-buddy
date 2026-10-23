@@ -73,4 +73,21 @@ describe("inflowsMatchingRules", () => {
     } as unknown as BudgetData;
     expect(inflowsMatchingRules(data).map((t) => t.id)).toEqual(["match"]);
   });
+
+  it("leaves out cards and tracking accounts", () => {
+    const data = {
+      accounts: [
+        { id: "checking", type: "checking", onBudget: true },
+        { id: "visa", type: "credit_card", onBudget: true },
+        { id: "brokerage", type: "checking", onBudget: false },
+      ],
+      incomeRules: [rule],
+      transactions: [
+        tx({ id: "match", amount: 100, payee: "ACME PAYROLL" }),
+        tx({ id: "card", accountId: "visa", amount: 100, payee: "ACME PAYROLL" }),
+        tx({ id: "tracking", accountId: "brokerage", amount: 100, payee: "ACME PAYROLL" }),
+      ],
+    } as unknown as BudgetData;
+    expect(inflowsMatchingRules(data).map((t) => t.id)).toEqual(["match"]);
+  });
 });

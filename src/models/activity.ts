@@ -141,6 +141,17 @@ function activityRow(data: BudgetData, tx: Transaction, accountId: string | null
     };
   }
 
+  // A tracking account's rows have no envelope and nothing to review.
+  if (account(tx.accountId)?.onBudget === false) {
+    return {
+      ...base,
+      kind: tx.amount > 0 ? "in" : "out",
+      amount: tx.amount,
+      accountLine: accountName,
+      category: "",
+    };
+  }
+
   const portions =
     tx.allocations.length > 1
       ? tx.allocations.map((a) => ({

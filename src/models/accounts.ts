@@ -8,6 +8,35 @@ export const ACCOUNT_TYPE_NAMES: Record<AccountType, string> = {
 };
 
 /**
+ * What the Add account form offers. A tracking account is stored as a
+ * checking-type account that is off budget (`onBudget: false`): it stands
+ * alone, outside Available to Assign, envelopes and transfers.
+ */
+export type AccountKind = AccountType | "tracking";
+
+export const ACCOUNT_KIND_NAMES: Record<AccountKind, string> = {
+  checking: "Checking",
+  credit_card: "Credit card",
+  tracking: "Tracking",
+};
+
+export function accountKind(account: Pick<Account, "type" | "onBudget">): AccountKind {
+  return account.onBudget ? account.type : "tracking";
+}
+
+/** How an account of this kind is stored. */
+export function accountFromKind(kind: AccountKind): { type: AccountType; onBudget: boolean } {
+  return kind === "tracking"
+    ? { type: "checking", onBudget: false }
+    : { type: kind, onBudget: true };
+}
+
+/** A tracking account: off budget, standalone. */
+export function isTracking(account: Pick<Account, "onBudget"> | undefined): boolean {
+  return account !== undefined && !account.onBudget;
+}
+
+/**
  * Cards are entered as the amount owed (positive), but stored signed like
  * every balance: owing $50 is -5000. A negative entry on a card is a credit.
  */

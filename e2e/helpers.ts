@@ -73,13 +73,14 @@ export async function openEnvelope(page: Page, name: string) {
  */
 export async function addAccount(
   page: Page,
-  account: { name: string; balance?: string; owed?: string; date?: string },
+  account: { name: string; balance?: string; owed?: string; date?: string; tracking?: boolean },
 ) {
   await goTo(page, "Accounts");
   const form = page.getByRole("form", { name: "Add an account" });
   if (!(await form.isVisible())) {
     await page.getByRole("button", { name: "Add account", exact: true }).click();
   }
+  if (account.tracking) await form.getByRole("radio", { name: "Tracking" }).check();
   if (account.owed !== undefined) {
     await form.getByRole("radio", { name: "Credit card" }).check();
     await form.getByLabel("Amount owed on the opening date").fill(account.owed);

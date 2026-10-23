@@ -1,9 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import type { useAccountsPage, AccountForm as Fields } from "../controllers/useAccountsPage";
 import { useAsyncAction } from "../controllers/useAsyncAction";
-import { ACCOUNT_TYPE_NAMES } from "../models/accounts";
+import { ACCOUNT_KIND_NAMES, type AccountKind } from "../models/accounts";
 import { todayIso } from "../models/month";
-import type { AccountType } from "../models/types";
 import { ErrorMessage } from "./components";
 
 type Page = ReturnType<typeof useAccountsPage>;
@@ -15,7 +14,7 @@ export function AddAccount({ page, onDone }: { page: Page; onDone?: () => void }
     <AccountForm
       heading="Add an account"
       button="Add account"
-      initial={{ type: "checking", name: "", openingBalance: "", openingDate: todayIso() }}
+      initial={{ kind: "checking", name: "", openingBalance: "", openingDate: todayIso() }}
       chooseType
       resetAfterSubmit
       onSubmit={async (form) => {
@@ -52,7 +51,7 @@ export function EditAccount({
       heading={`Edit ${account.name}`}
       button="Save changes"
       initial={{
-        type: account.type,
+        kind: account.kind,
         name: account.name,
         openingBalance: account.openingBalanceInput,
         openingDate: account.openingDate,
@@ -109,7 +108,8 @@ function AccountForm({
     event.preventDefault();
     if ((await action.run(form)).ok && resetAfterSubmit) setForm(initial);
   };
-  const card = form.type === "credit_card";
+  const card = form.kind === "credit_card";
+  const tracking = form.kind === "tracking";
   const field = (key: "name" | "openingBalance" | "openingDate") => ({
     value: form[key],
     onChange: (event: { target: { value: string } }) => {
@@ -125,30 +125,40 @@ function AccountForm({
       </div>
       {chooseType && (
         <div className="segmented" role="radiogroup" aria-label="Account type">
-          {(Object.keys(ACCOUNT_TYPE_NAMES) as AccountType[]).map((type) => (
-            <label key={type}>
+          {(Object.keys(ACCOUNT_KIND_NAMES) as AccountKind[]).map((kind) => (
+            <label key={kind}>
               <input
                 type="radio"
                 name="account-type"
-                checked={form.type === type}
+                checked={form.kind === kind}
                 onChange={() => {
-                  setForm({ ...form, type });
+                  setForm({ ...form, kind });
                   action.clearError();
                 }}
               />
-              {ACCOUNT_TYPE_NAMES[type]}
+              {ACCOUNT_KIND_NAMES[kind]}
             </label>
           ))}
         </div>
       )}
       <label className="field">
         Account name
-        <input {...field("name")} placeholder={card ? "Visa card" : "Everyday checking"} />
+        <input
+          {...field("name")}
+          placeholder={card ? "Visa card" : tracking ? "Brokerage" : "Everyday checking"}
+        />
       </label>
       <label className="field">
         {card ? "Amount owed on the opening date" : "Opening balance"}
         <input {...field("openingBalance")} inputMode="decimal" placeholder="0.00" />
       </label>
+      {tracking && chooseType && (
+        <p className="empty-state">
+          A tracking account stands alone: its balance and transactions are kept here, outside the
+          budget. It never counts toward Available to Assign, has no envelopes and no transfers. For
+          a loan, enter what is owed as a negative balance.
+        </p>
+      )}
       {card && (
         <p className="empty-state">
           The card gets a payment envelope on the Budget page. Purchases move money into it from

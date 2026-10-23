@@ -1,15 +1,23 @@
-import { groupAccounts, openingBalanceFromEntry, openingBalanceToEntry } from "../models/accounts";
+import {
+  accountFromKind,
+  accountKind,
+  groupAccounts,
+  openingBalanceFromEntry,
+  openingBalanceToEntry,
+  type AccountKind,
+} from "../models/accounts";
 import { activityMonth } from "../models/activity";
 import { accountBalance } from "../models/budgetMath";
 import { UserFacingError, type NewAccount } from "../models/dataStore";
 import { centsToInput } from "../models/money";
 import type { Month } from "../models/month";
-import type { AccountType, BudgetData, IsoDate } from "../models/types";
+import type { BudgetData, IsoDate } from "../models/types";
 import { requireCents, requireName } from "./input";
 import type { Budget } from "./useBudget";
 
 export interface AccountForm {
-  type: AccountType;
+  /** Checking, Credit card or Tracking; chosen only when adding. */
+  kind: AccountKind;
   name: string;
   /** As typed; for a card, the amount owed. */
   openingBalance: string;
@@ -19,15 +27,17 @@ export interface AccountForm {
 /** Checks the account form and turns it into what the store saves. */
 function readAccountForm(form: AccountForm): NewAccount {
   const name = requireName(form.name, "Account name");
+  const { type, onBudget } = accountFromKind(form.kind);
   const entered = requireCents(
     form.openingBalance || "0",
-    form.type === "credit_card" ? "Amount owed" : "Opening balance",
+    type === "credit_card" ? "Amount owed" : "Opening balance",
   );
   if (!form.openingDate) throw new UserFacingError("Opening date is required");
   return {
-    type: form.type,
+    type,
+    onBudget,
     name,
-    openingBalance: openingBalanceFromEntry(form.type, entered),
+    openingBalance: openingBalanceFromEntry(type, entered),
     openingDate: form.openingDate,
   };
 }
@@ -40,6 +50,7 @@ function readAccountForm(form: AccountForm): NewAccount {
 export function useAccountsPage(budget: Budget, data: BudgetData, month: Month) {
   const withBalances = data.accounts.map((account) => ({
     ...account,
+    kind: accountKind(account),
     balance: accountBalance(account.id, data),
     /** Opening balance as the edit form shows it (the amount owed, for a card). */
     openingBalanceInput: centsToInput(openingBalanceToEntry(account.type, account.openingBalance)),
@@ -70,10 +81,10 @@ export function useAccountsPage(budget: Budget, data: BudgetData, month: Month) 
     updateAccount: async (accountId: string, form: AccountForm) => {
       const account = data.accounts.find((a) => a.id === accountId);
       if (!account) throw new UserFacingError("Account not found");
-      // The type is fixed once added: it decides what the opening balance means.
+      // The kind is fixed once added: it decides what the opening balance means.
       const { name, openingBalance, openingDate } = readAccountForm({
         ...form,
-        type: account.type,
+        kind: accountKind(account),
       });
       const changes = { name, openingBalance, openingDate };
       if (account.closedAt) throw new UserFacingError("A closed account cannot be edited.");

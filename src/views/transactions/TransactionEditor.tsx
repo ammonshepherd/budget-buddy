@@ -44,12 +44,16 @@ export function TransactionEditor({
   const save = useAsyncAction(entry.prepare);
   const remove = useAsyncAction(async () => onDelete?.());
   const transfer = form.category === TRANSFER;
+  // A tracking account stands alone: no envelope, Income or transfer.
+  const tracking = entry.isTrackingForm(form);
   const cardCredit = entry.isCardCredit(form);
   const transferNote = entry.describeTransfer(form);
   const transferOptions = entry.transferOptions(form);
   const update = (change: Partial<TransactionForm>) => {
     let next = { ...form, ...change };
     if (next.category === SPLIT && form.category !== SPLIT) next = entry.startSplit(form);
+    // A tracking account has no envelope, Income or transfer.
+    if (entry.isTrackingForm(next)) next = { ...next, category: "" };
     // A card credit has no envelope: drop one picked before switching to it.
     const keep = next.category === "" || next.category === TRANSFER;
     if (entry.isCardCredit(next) && !keep) next = { ...next, category: "" };
@@ -108,13 +112,15 @@ export function TransactionEditor({
         Payee
         <input value={form.payee} onChange={(e) => update({ payee: e.target.value })} />
       </label>
-      <EnvelopePicker
-        label="Envelope"
-        className="field field-envelope"
-        value={form.category}
-        options={categoryChoices(entry, form, cardCredit, remaining)}
-        onChange={(category) => update({ category })}
-      />
+      {!tracking && (
+        <EnvelopePicker
+          label="Envelope"
+          className="field field-envelope"
+          value={form.category}
+          options={categoryChoices(entry, form, cardCredit, remaining)}
+          onChange={(category) => update({ category })}
+        />
+      )}
       {form.category === SPLIT && (
         <fieldset className="split">
           <legend>Split</legend>
@@ -190,7 +196,7 @@ export function TransactionEditor({
         <label className="field field-account">
           Account
           <select value={form.accountId} onChange={(e) => update({ accountId: e.target.value })}>
-            {entry.openAccounts.map((account) => (
+            {entry.accountChoices(form).map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name}
               </option>
@@ -240,7 +246,7 @@ export function TransactionEditor({
         <input type="date" value={form.date} onChange={(e) => update({ date: e.target.value })} />
       </label>
       <label className="field field-memo">
-        Memo
+        {tracking ? "Notes" : "Memo"}
         <input value={form.memo} onChange={(e) => update({ memo: e.target.value })} />
       </label>
       {/* A box only in the row layout; otherwise the buttons stack like fields. */}
@@ -298,7 +304,7 @@ function categoryChoices(
   const transfer = {
     value: TRANSFER,
     label: "Transfer (not spending or income)",
-    disabled: entry.openAccounts.length < 2,
+    disabled: !entry.canTransfer,
   };
   // Money into a card only lowers what is owed (or is a payment).
   if (cardCredit) return [{ value: "", label: "Card credit (lowers what you owe)" }, transfer];
