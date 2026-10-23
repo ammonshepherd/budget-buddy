@@ -90,14 +90,23 @@ export function groupAccounts<A extends Pick<Account, "name" | "type" | "onBudge
     .filter((group) => group.accounts.length > 0);
 }
 
+/** An account in the desktop sidebar, with its balance today (all its transactions). */
+export type SidebarAccount = Account & { balance: Cents };
+
 /**
  * The desktop sidebar's account links: open budget accounts (Checking, then
- * Credit cards) and, kept apart, open tracking accounts; each by name.
+ * Credit cards) and, kept apart, open tracking accounts; each by name, with
+ * its balance.
  */
-export function sidebarAccounts<A extends Pick<Account, "name" | "type" | "onBudget" | "closedAt">>(
-  accounts: A[],
-): { budget: A[]; tracking: A[] } {
-  const groups = groupAccounts(accounts.filter((a) => !a.closedAt));
+export function sidebarAccounts(data: Pick<BudgetData, "accounts" | "transactions">): {
+  budget: SidebarAccount[];
+  tracking: SidebarAccount[];
+} {
+  const groups = groupAccounts(
+    data.accounts
+      .filter((a) => !a.closedAt)
+      .map((a) => ({ ...a, balance: accountBalance(a.id, data) })),
+  );
   return {
     budget: groups.filter((g) => g.name !== "Tracking").flatMap((g) => g.accounts),
     tracking: groups.find((g) => g.name === "Tracking")?.accounts ?? [],

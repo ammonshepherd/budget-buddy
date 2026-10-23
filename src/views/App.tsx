@@ -6,9 +6,10 @@ import { useInstallPrompt } from "../controllers/useInstallPrompt";
 import { useDesktop, useSidebar } from "../controllers/useLayout";
 import { useSession } from "../controllers/useSession";
 import { sidebarAccounts } from "../models/accounts";
+import { formatCents } from "../models/money";
 import { APP_VERSION } from "../models/appInfo";
 import type { UserSession } from "../models/dataStore";
-import type { Account } from "../models/types";
+import type { BudgetData } from "../models/types";
 import { currentMonth, type Month } from "../models/month";
 import {
   accountsHref,
@@ -145,7 +146,7 @@ function SignedInApp({
       month={month}
       desktop={desktop}
       userId={session.userId}
-      accounts={data?.accounts ?? []}
+      data={data}
       opened={opened}
     >
       {desktop && add}
@@ -217,7 +218,7 @@ function Navigation({
   month,
   desktop,
   userId,
-  accounts,
+  data,
   opened,
   children,
 }: {
@@ -225,8 +226,8 @@ function Navigation({
   month: Month;
   desktop: boolean;
   userId: string;
-  /** Desktop only: the accounts listed under Accounts, and which one is open. */
-  accounts: Account[];
+  /** Desktop only: the accounts listed under Accounts (none before there is a budget), and which one is open. */
+  data: BudgetData | null;
   opened: AccountsView;
   /** Desktop only: the Add transaction button and the sidebar's foot. */
   children?: ReactNode;
@@ -249,8 +250,8 @@ function Navigation({
     return (
       <Fragment key={name}>
         {link}
-        {desktop && name === "accounts" && (
-          <SidebarAccounts accounts={accounts} opened={opened} month={month} />
+        {desktop && name === "accounts" && data && (
+          <SidebarAccounts data={data} opened={opened} month={month} />
         )}
       </Fragment>
     );
@@ -292,31 +293,42 @@ function Navigation({
 
 /**
  * The desktop sidebar's sub-menu under Accounts: All accounts and the open
- * budget accounts, then a gap and the tracking accounts. Hidden while the
- * sidebar shows icons only.
+ * budget accounts, then a gap and the tracking accounts, each with its
+ * balance. Hidden while the sidebar shows icons only.
  */
 function SidebarAccounts({
-  accounts,
+  data,
   opened,
   month,
 }: {
-  accounts: Account[];
+  data: BudgetData;
   opened: AccountsView;
   month: Month;
 }) {
-  const { budget, tracking } = sidebarAccounts(accounts);
+  const { budget, tracking } = sidebarAccounts(data);
   if (budget.length + tracking.length === 0) return null;
-  const item = (view: "all" | string, label: string) => {
+  const item = (view: "all" | string, label: string, balance?: number) => {
     const active = opened === view;
+    const shown = balance === undefined ? null : formatCents(balance);
     return (
       <li key={view}>
         <a
           href={accountsHref(view, month)}
           className={active ? "active" : undefined}
           aria-current={active ? "true" : undefined}
-          title={label}
+          title={shown ? `${label}: ${shown}` : label}
+          aria-label={shown ? `${label}, balance ${shown}` : undefined}
         >
-          {label}
+          <span className="sidebar-account-name">{label}</span>
+          {shown && (
+            <span
+              className={
+                balance! < 0 ? "sidebar-account-balance negative" : "sidebar-account-balance"
+              }
+            >
+              {shown}
+            </span>
+          )}
         </a>
       </li>
     );
@@ -325,11 +337,11 @@ function SidebarAccounts({
     <div className="sidebar-accounts">
       <ul aria-label="Budget accounts">
         {item("all", "All accounts")}
-        {budget.map((a) => item(a.id, a.name))}
+        {budget.map((a) => item(a.id, a.name, a.balance))}
       </ul>
       {tracking.length > 0 && (
         <ul className="sidebar-tracking" aria-label="Tracking accounts">
-          {tracking.map((a) => item(a.id, a.name))}
+          {tracking.map((a) => item(a.id, a.name, a.balance))}
         </ul>
       )}
     </div>
