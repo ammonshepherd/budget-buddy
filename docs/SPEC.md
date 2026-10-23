@@ -94,7 +94,11 @@ always show what the store holds.
 ### Commands and CI
 
 `npm run dev | build | preview | typecheck | lint | format | format:check |
-test (= test:unit) | test:ui | test:integration | test:ui:db | db:seed:test`.
+test (= test:unit) | test:ui | test:integration | test:ui:db | db:seed:test |
+backup`. `npm run backup` (`scripts/backup-database.ts`) saves production's
+data as the Settings → Export JSON (the `export_backup` function, run as the
+household's owner through the Supabase CLI login, no password) in
+`.backups/` (ignored by git), keeping the 5 newest. Run before every merge.
 UI tests build with the memory store into `dist-e2e/` and run against
 `vite preview` on port 4173: every spec at phone width (Pixel 7), and
 `*.desktop.spec.ts` at 1280×800 (the desktop layout); `test:ui:db` builds with

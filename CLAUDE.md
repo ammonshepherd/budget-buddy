@@ -424,7 +424,10 @@ the version, changed files, tests run, remaining limitations, and the PR link.
   the decided math needs the owner's approval first and is a feature version (y).
 - Check visible UI changes with a Playwright screenshot (a throwaway spec,
   deleted afterwards) at phone width before opening the PR.
-- Merge only when asked: wait for the PR's checks, merge with `--delete-branch`,
+- Merge only when asked: run `npm run backup` first (the production
+  database as a Settings → Export JSON file in `.backups/`, ignored by git;
+  it keeps the 5 newest and deletes older ones; it prints only counts),
+  wait for the PR's checks, merge with `--delete-branch`,
   pull `main`, then confirm the Pages deploy succeeded and the live bundle shows
   the new version.
 - Stacked PRs: before merging the lower PR, keep its branch, retarget the upper
