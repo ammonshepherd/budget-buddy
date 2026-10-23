@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { accountRow, goTo, openAccount, signInWithHousehold } from "./helpers";
+import { accountRow, addAccount, goTo, openAccount, signInWithHousehold } from "./helpers";
 
 // Accounts and Settings in the desktop layout (this project runs at 1280×800).
 
@@ -72,4 +72,20 @@ test("Settings shows its sections in two columns", async ({ page }) => {
   expect(Math.abs(r.y - p.y)).toBeLessThan(4);
   expect(p.x).toBeGreaterThan(r.x + r.width - 1);
   expect(i.width).toBeGreaterThan(g.width * 1.8);
+});
+
+test("no page menu on a desktop: sort, order and Sign out stay on the page", async ({ page }) => {
+  await signInWithHousehold(page);
+  await expect(page.getByRole("button", { name: / menu$/ })).toHaveCount(0);
+  await addAccount(page, { name: "Checking", balance: "100" });
+  await openAccount(page, "Checking");
+  const sort = page.getByRole("combobox", { name: "Sort by" });
+  const order = page.getByRole("combobox", { name: "Order" });
+  await expect(sort).toHaveValue("date");
+  await expect(order).toHaveValue("desc");
+  // A new sort starts in its own order: Name A–Z.
+  await sort.selectOption("name");
+  await expect(order).toHaveValue("asc");
+  await goTo(page, "Settings");
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });

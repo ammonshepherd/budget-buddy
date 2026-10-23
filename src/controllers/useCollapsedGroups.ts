@@ -28,5 +28,17 @@ export function useCollapsedGroups(userId: string, groupIds: string[]) {
     expand: (groupId: string) => {
       if (collapsed.has(groupId)) setGroup(groupId, false);
     },
+    /** Whether every one of these groups is collapsed (false when there are none). */
+    allCollapsed: (ids: string[]) => ids.length > 0 && ids.every((id) => collapsed.has(id)),
+    /** Collapses (or opens) all of these groups at once. */
+    setAll: (ids: string[], collapse: boolean) => {
+      const next = new Set(collapsed);
+      for (const id of ids) {
+        if (collapse) next.add(id);
+        else next.delete(id);
+      }
+      setCollapsed(next);
+      saveCollapsedGroups(browserStorage(), userId, next, groupIds);
+    },
   };
 }

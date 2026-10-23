@@ -19,6 +19,10 @@ export const SettingsIcon = () => (
 export const InstallIcon = () => (
   <Icon path="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" />
 );
+/** Three stacked bars: the page menu in the phone header. */
+export const MenuIcon = () => <Icon path="M4 7h16M4 12h16M4 17h16" />;
+/** A tick: a menu option that is on. */
+export const CheckIcon = () => <Icon path="M5 12.5l4.5 4.5L19 7" />;
 export const PlusIcon = () => <Icon path="M12 5v14M5 12h14" />;
 export const PencilIcon = () => <Icon path="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />;
 /** A bank: roof, four columns, base. The reconciled mark on Accounts. */

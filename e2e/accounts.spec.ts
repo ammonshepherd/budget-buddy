@@ -103,17 +103,15 @@ test("the list groups accounts by type, with All accounts first and closed ones 
   await expect(page.getByRole("button", { name: "Import CSV" })).toHaveCount(0);
 });
 
-test("Add account sits under the list; adding inside an account has no Account picker", async ({
+test("Add account is in the page menu; adding inside an account has no Account picker", async ({
   page,
 }) => {
   await signInWithHousehold(page);
   await addAccount(page, { name: "Checking", balance: "100" });
   await addAccount(page, { name: "Savings", balance: "0" });
 
-  // + Add account comes after the last account row.
-  const add = page.getByRole("button", { name: "Add account", exact: true });
-  const lastRow = (await accountRow(page, "Savings").boundingBox())!;
-  expect((await add.boundingBox())!.y).toBeGreaterThan(lastRow.y);
+  // No button on the list itself: Add account waits in the menu.
+  await expect(page.getByRole("button", { name: "Add account", exact: true })).toHaveCount(0);
 
   // Inside an account: its name instead of the picker.
   await openAccount(page, "Savings");

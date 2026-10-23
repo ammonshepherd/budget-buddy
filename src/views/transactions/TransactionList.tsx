@@ -8,7 +8,8 @@ import { BankIcon, ChevronDownIcon } from "../icons";
 /**
  * Transactions under day headings (newest first), and for an open account
  * under month dividers too, then "Show 100 more"; or, sorted other than by
- * date, one list with each row's date. Each row has a checkbox, the
+ * date, one list with each row's date. A day heading folds its day (only
+ * the date and net show) or opens it again. Each row has a checkbox, the
  * bank icon (colored once reconciled), payee (tap to edit), envelope or split
  * pill, and amount.
  */
@@ -29,6 +30,8 @@ export function TransactionList({
   onEdit,
   editingId,
   desktop,
+  isFolded = () => false,
+  onToggleDay,
 }: {
   days: ActivityDay[];
   /** With months, the days sit under month dividers (an open account's list crosses months). */
@@ -53,6 +56,10 @@ export function TransactionList({
   /** The transaction open in the desktop panel. */
   editingId: string | null;
   desktop: boolean;
+  /** Whether a day is folded to its heading. */
+  isFolded?: (date: string) => boolean;
+  /** Folds or opens a day; without it, day headings cannot be tapped. */
+  onToggleDay?: (date: string) => void;
 }) {
   // An open account's list crosses years: a day in another year shows it.
   const today = months ? todayIso() : undefined;
@@ -74,15 +81,37 @@ export function TransactionList({
       highlightEnvelopeId={highlightEnvelopeId}
     />
   );
-  const dayGroup = (day: ActivityDay) => (
-    <section key={day.date} aria-labelledby={`day-${day.date}`}>
-      <div className="activity-day-head">
-        <DayHeading id={`day-${day.date}`}>{formatDay(day.date, today)}</DayHeading>
-        <span>{formatSignedCents(day.net)}</span>
-      </div>
-      <ul className="activity-rows">{day.rows.map((row) => item(row))}</ul>
-    </section>
-  );
+  const dayGroup = (day: ActivityDay) => {
+    const folded = isFolded(day.date);
+    const rowsId = `day-rows-${day.date}`;
+    const label = formatDay(day.date, today);
+    return (
+      <section key={day.date} aria-labelledby={`day-${day.date}`}>
+        <div className={folded ? "activity-day-head folded" : "activity-day-head"}>
+          <DayHeading id={`day-${day.date}`}>
+            {onToggleDay ? (
+              <button
+                className="day-toggle"
+                type="button"
+                aria-expanded={!folded}
+                aria-controls={rowsId}
+                onClick={() => onToggleDay(day.date)}
+              >
+                <ChevronDownIcon />
+                {label}
+              </button>
+            ) : (
+              label
+            )}
+          </DayHeading>
+          <span>{formatSignedCents(day.net)}</span>
+        </div>
+        <ul className="activity-rows" id={rowsId} hidden={folded}>
+          {day.rows.map((row) => item(row))}
+        </ul>
+      </section>
+    );
+  };
 
   return (
     <section className="activity-list" aria-label="Transactions">

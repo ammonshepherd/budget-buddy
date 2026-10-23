@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { browserStorage } from "../models/collapsedGroups";
 import {
   DESKTOP_QUERY,
+  loadAccountPaneCollapsed,
   loadCompactRows,
   loadSidebarCollapsed,
+  saveAccountPaneCollapsed,
   saveCompactRows,
   saveSidebarCollapsed,
   type Sidebar,
@@ -68,6 +70,24 @@ export function useCompactRows(userId: string) {
     toggle: () => {
       setCompact(!compact);
       saveCompactRows(browserStorage(), userId, !compact);
+    },
+  };
+}
+
+/**
+ * Whether an open account's info pane is collapsed to its name and Current
+ * balance (phone), remembered on this device for this user.
+ */
+export function useAccountPaneCollapsed(userId: string) {
+  const [collapsed, setCollapsed] = useState(() =>
+    loadAccountPaneCollapsed(browserStorage(), userId),
+  );
+
+  return {
+    collapsed,
+    toggle: () => {
+      setCollapsed(!collapsed);
+      saveAccountPaneCollapsed(browserStorage(), userId, !collapsed);
     },
   };
 }

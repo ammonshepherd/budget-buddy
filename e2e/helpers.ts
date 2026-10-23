@@ -67,6 +67,31 @@ export async function expectAssignedError(page: Page, name: string, message: str
   await expect(pad).toBeHidden();
 }
 
+/** Opens the page menu (phone header, top right) and returns its list. */
+export async function openPageMenu(page: Page) {
+  await page
+    .locator(".app-header")
+    .getByRole("button", { name: / menu$/ })
+    .click();
+  const menu = page.getByRole("menu");
+  await menu.waitFor();
+  return menu;
+}
+
+/** An option in an open page menu, by its exact name (any kind: action, on/off or one of a group). */
+export const menuOption = (menu: Locator, name: string) =>
+  menu
+    .getByRole("menuitem", { name, exact: true })
+    .or(menu.getByRole("menuitemcheckbox", { name, exact: true }))
+    .or(menu.getByRole("menuitemradio", { name, exact: true }));
+
+/** Opens the page menu and chooses an option (the menu then closes). */
+export async function choosePageMenu(page: Page, name: string) {
+  const menu = await openPageMenu(page);
+  await menuOption(menu, name).click();
+  await expect(menu).toBeHidden();
+}
+
 /** Opens an envelope's sheet (tap the top line of its row). */
 export async function openEnvelope(page: Page, name: string) {
   await envelope(page, name).locator(".envelope-top").click();
@@ -76,8 +101,8 @@ export async function openEnvelope(page: Page, name: string) {
 }
 
 /**
- * Adds an account on Accounts: + Add account opens the form in a sheet on a
- * phone; on a desktop it is in the panel. A card takes the amount `owed`.
+ * Adds an account on Accounts: Add account in the page menu opens the form in
+ * a sheet on a phone; on a desktop it is in the panel. A card takes the amount `owed`.
  */
 export async function addAccount(
   page: Page,
@@ -85,9 +110,9 @@ export async function addAccount(
 ) {
   await goTo(page, "Accounts");
   const form = page.getByRole("form", { name: "Add an account" });
-  if (!(await form.isVisible())) {
-    await page.getByRole("button", { name: "Add account", exact: true }).click();
-  }
+  // A phone opens the form from the page menu; a desktop has it in the panel.
+  if (onPhone()) await choosePageMenu(page, "Add account");
+  await expect(form).toBeVisible();
   if (account.tracking) await form.getByRole("radio", { name: "Tracking" }).check();
   if (account.owed !== undefined) {
     await form.getByRole("radio", { name: "Credit card" }).check();

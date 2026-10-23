@@ -4,8 +4,8 @@ import { useBudgetPage } from "../../controllers/useBudgetPage";
 import { useCollapsedGroups } from "../../controllers/useCollapsedGroups";
 import { useCompactRows, useSidebar } from "../../controllers/useLayout";
 import { formFromTransaction } from "../../controllers/useTransactionEntry";
-import type { Month } from "../../models/month";
-import { accountsHref } from "../../models/routes";
+import { currentMonth, type Month } from "../../models/month";
+import { accountsHref, budgetHref, settingsHref } from "../../models/routes";
 import type { BudgetData } from "../../models/types";
 import { Money, Sheet } from "../components";
 import { AssignFromAvailable } from "../AssignFromAvailable";
@@ -13,6 +13,7 @@ import { CardDebt } from "../CardDebt";
 import { EnvelopePlanImport } from "../EnvelopePlanImport";
 import { EnvelopeSheet } from "../EnvelopeSheet";
 import { MoveFromEnvelope } from "../MoveFromEnvelope";
+import { MenuItem, PageMenu } from "../PageMenu";
 import { SidePanel } from "../SidePanel";
 import { TransactionDialog, TransactionEntry } from "../TransactionEntry";
 import { GroupSection } from "../budget/GroupSection";
@@ -59,6 +60,9 @@ export function BudgetPage({
   // Phone only: rows down to name, Saved and what is left (desktop rows are one line).
   const rows = useCompactRows(userId);
   const compact = !desktop && rows.compact;
+  const groupIds = data.groups.map((g) => g.id);
+  const allCollapsed = collapse.allCollapsed(groupIds);
+  const today = currentMonth();
   const openEnvelope = (id: string) => {
     setOpenId(id);
     setEditingId(null);
@@ -135,17 +139,24 @@ export function BudgetPage({
       ) : (
         <>
           {monthNav}
-          <div className="budget-band-tools">
-            <button
-              className="compact-toggle"
-              type="button"
-              aria-pressed={compact}
-              onClick={rows.toggle}
-            >
-              <span className="compact-switch" aria-hidden="true" />
+          <PageMenu label="Budget menu">
+            <MenuItem checked={rows.compact} onSelect={rows.toggle}>
               Compact rows
-            </button>
-          </div>
+            </MenuItem>
+            {groupIds.length > 0 && (
+              <MenuItem onSelect={() => collapse.setAll(groupIds, !allCollapsed)}>
+                {allCollapsed ? "Expand all groups" : "Collapse all groups"}
+              </MenuItem>
+            )}
+            {month !== today && (
+              <MenuItem onSelect={() => (window.location.hash = budgetHref(today))}>
+                Go to this month
+              </MenuItem>
+            )}
+            <MenuItem onSelect={() => (window.location.hash = settingsHref("groups"))}>
+              Edit groups
+            </MenuItem>
+          </PageMenu>
           <CardDebt data={data} />
           {/* Stays at the top while the envelopes scroll under it. */}
           {assignCard && <div className="assign-wrap">{assignCard}</div>}

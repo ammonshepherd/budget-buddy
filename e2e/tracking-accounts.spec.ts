@@ -6,9 +6,11 @@ import {
   available,
   chooseEnvelope,
   goTo,
+  menuOption,
   openAccount,
   openAddTransaction,
   openAllAccounts,
+  openPageMenu,
   signInWithHousehold,
 } from "./helpers";
 
@@ -74,9 +76,10 @@ test("a tracking account stands alone: own balance, no envelopes, no transfers",
     /Not reconciled/,
   ]);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("combobox", { name: "Sort by" }).locator("option")).not.toContainText(
-    ["Envelope A–Z"],
-  );
+  const menu = await openPageMenu(page);
+  await expect(menuOption(menu, "Envelope")).toHaveCount(0);
+  await expect(menuOption(menu, "Name")).toBeVisible();
+  await page.keyboard.press("Escape");
 
   // Editing keeps it a tracking transaction.
   await activityRow(page, "Fee").locator(".activity-who").click();

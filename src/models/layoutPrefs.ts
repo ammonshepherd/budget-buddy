@@ -70,3 +70,30 @@ export function saveCompactRows(
     // Storage full or blocked: the state lasts until the page closes.
   }
 }
+
+export const accountPaneKey = (userId: string) => `bb.accounts.paneCollapsed.${userId}`;
+
+/**
+ * Whether an open account's info pane was left collapsed (name and Current
+ * balance only) on this device; false when unknown. Phone only.
+ */
+export function loadAccountPaneCollapsed(storage: KeyValueStorage | null, userId: string): boolean {
+  try {
+    return storage?.getItem(accountPaneKey(userId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Remembers whether the info pane is collapsed. Failures are ignored. */
+export function saveAccountPaneCollapsed(
+  storage: KeyValueStorage | null,
+  userId: string,
+  collapsed: boolean,
+): void {
+  try {
+    storage?.setItem(accountPaneKey(userId), collapsed ? "1" : "0");
+  } catch {
+    // Storage full or blocked: the state lasts until the page closes.
+  }
+}

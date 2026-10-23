@@ -71,3 +71,15 @@ export function accountsHref(account: AccountsView, month: Month | null): string
 export function routeHref(route: Route, month: Month): string {
   return MONTH_ROUTES.includes(route) ? `#${route}/${month}` : `#${route}`;
 }
+
+/** Sections of Settings a link can go straight to ("#settings/groups"). */
+export type SettingsSection = "groups";
+
+export function settingsHref(section?: SettingsSection): string {
+  return section ? `#settings/${section}` : "#settings";
+}
+
+/** The Settings section a hash points at ("#settings/groups"), else null. */
+export function settingsSection(hash: string): SettingsSection | null {
+  return /^#\/?settings\/groups\/?$/i.test(hash) ? "groups" : null;
+}

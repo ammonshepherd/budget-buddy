@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { accountsHref, budgetHref, locationHash, parseLocation, routeHref } from "./routes";
+import {
+  accountsHref,
+  budgetHref,
+  locationHash,
+  parseLocation,
+  routeHref,
+  settingsHref,
+  settingsSection,
+} from "./routes";
 
 describe("parseLocation", () => {
   it("reads known routes regardless of case or a leading slash", () => {
@@ -74,5 +82,21 @@ describe("links", () => {
     expect(locationHash(parseLocation("#activity/2026-10"))).toBe("#accounts/all/2026-10");
     expect(locationHash(parseLocation("#activity"))).toBe("#accounts/all");
     expect(locationHash(parseLocation("#budget/2026-10"))).toBe("#budget/2026-10");
+  });
+});
+
+describe("settings sections", () => {
+  it("links to the envelope groups on Settings", () => {
+    expect(settingsHref()).toBe("#settings");
+    expect(settingsHref("groups")).toBe("#settings/groups");
+    expect(parseLocation(settingsHref("groups"))).toEqual({
+      route: "settings",
+      month: null,
+      account: null,
+    });
+    expect(settingsSection("#settings/groups")).toBe("groups");
+    expect(settingsSection("#Settings/Groups")).toBe("groups");
+    expect(settingsSection("#settings")).toBeNull();
+    expect(settingsSection("#budget/groups")).toBeNull();
   });
 });

@@ -126,6 +126,96 @@ a:focus-visible {
   stroke-width: 1.8;
 }
 
+/* The page menu (phone): three bars in the header's top right, opening a
+   list of options for the page showing. Options that are on show a green tick. */
+.page-menu-slot:empty {
+  display: none;
+}
+
+.page-menu {
+  position: relative;
+}
+
+.page-menu-list {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 60;
+  min-inline-size: 15rem;
+  max-block-size: calc(100dvh - 5rem);
+  padding: 6px 0;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.page-menu-group + .page-menu-group,
+.page-menu-group + .page-menu-item,
+.page-menu-item + .page-menu-group {
+  margin-block-start: 6px;
+  padding-block-start: 6px;
+  border-block-start: 1px solid var(--border);
+}
+
+.page-menu-heading {
+  margin: 0;
+  padding: 4px 16px 2px 44px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  padding: 0 16px 0 12px;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+
+.page-menu-item:hover,
+.page-menu-item:focus-visible {
+  outline: none;
+  background: var(--surface-muted);
+}
+
+.page-menu-item:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.page-menu-check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+  color: #2e8b57;
+}
+
+.page-menu-check svg {
+  inline-size: 20px;
+  block-size: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+}
+
 .page-content {
   flex: 1;
   /* Room for the bottom navigation and the floating + button above it. */
@@ -1379,65 +1469,8 @@ button.cell::after {
   font-weight: 700;
 }
 
-/* Compact rows (phone): a switch under the month in the purple band; when on,
-   each envelope shows only line 1 (name, Saved and what is left). */
-.budget-band-tools {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 12px 6px;
-  background: var(--bb-purple);
-}
-
-.compact-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-block-size: 32px;
-  padding: 0 4px;
-  border: 0;
-  color: #fff;
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.compact-switch {
-  position: relative;
-  inline-size: 30px;
-  block-size: 18px;
-  border-radius: 9px;
-  background: rgb(255 255 255 / 30%);
-  transition: background 0.15s;
-}
-
-.compact-switch::after {
-  position: absolute;
-  inset-block-start: 2px;
-  inset-inline-start: 2px;
-  inline-size: 14px;
-  block-size: 14px;
-  border-radius: 50%;
-  background: #fff;
-  content: "";
-  transition: transform 0.15s;
-}
-
-.compact-toggle[aria-pressed="true"] .compact-switch {
-  background: #2e8b57;
-}
-
-.compact-toggle[aria-pressed="true"] .compact-switch::after {
-  transform: translateX(12px);
-}
-
-.compact-toggle:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
+/* Compact rows (phone, from the page menu): each envelope shows only line 1
+   (name, Saved and what is left). */
 .compact-rows .envelope-cells,
 .compact-rows .envelope-extra {
   display: none;
@@ -2211,6 +2244,47 @@ div.sheet-field .sheet-field-value {
   margin: 0;
   font-size: inherit;
   font-weight: inherit;
+}
+
+/* A day heading is a button that folds its day to the heading (date and net). */
+.activity-day-head {
+  position: relative;
+}
+
+.day-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+/* The whole bar is the tap target. */
+.day-toggle::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.day-toggle svg {
+  inline-size: 14px;
+  block-size: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
+  transition: transform 0.15s;
+}
+
+.activity-day-head.folded .day-toggle svg {
+  transform: rotate(-90deg);
 }
 
 .activity-rows {
@@ -3415,35 +3489,6 @@ body:has(.app-shell.desktop) {
 
 /* ---- v0.29.0: Accounts and Activity merged into one Accounts page ---- */
 
-/* Phone: + Add account sits under the open accounts. */
-.account-list-add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  inline-size: calc(100% - 32px);
-  min-block-size: 2.75rem;
-  margin: 12px 16px;
-  padding: 0 12px;
-  border: 1px dashed var(--border);
-  border-radius: 0.9rem;
-  color: var(--brand);
-  background: var(--brand-light);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.account-list-add svg {
-  inline-size: 16px;
-  block-size: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-width: 2.6;
-}
-
 /* The list: All accounts first, then a bar per type (like Budget's groups). */
 .account-list {
   background: var(--surface);
@@ -3620,6 +3665,18 @@ body:has(.app-shell.desktop) {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
+}
+
+/* Collapsed from the page menu: the balance alone, on one line with its label. */
+.account-figures.folded {
+  display: block;
+}
+
+.account-figures.folded .account-figure {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .account-figure {

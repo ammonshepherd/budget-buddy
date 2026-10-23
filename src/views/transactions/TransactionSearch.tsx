@@ -2,7 +2,7 @@ import { useId, useRef, useState, type KeyboardEvent } from "react";
 import type { useAccountView } from "../../controllers/useAccountView";
 import { exactOption, matchOptions, type PickerOption } from "../../models/envelopeSearch";
 import { formatSignedCents } from "../../models/money";
-import type { SortOrder } from "../../models/transactionSearch";
+import type { SortDirection, SortKey } from "../../models/transactionSearch";
 import { SearchIcon } from "../icons";
 
 type Search = ReturnType<typeof useAccountView>["search"];
@@ -17,9 +17,16 @@ const TEXT = "__text__";
  * becomes a chip, so only its transactions show; chips stack (an envelope
  * or kind, plus Not reconciled). Backspace in the empty field removes the
  * last chip, a chip's ✕ removes it. Enter keeps the typed text, unless it
- * is exactly an envelope's name.
+ * is exactly an envelope's name. With showSort (desktop), the sort and its
+ * order sit beside the field; a phone has them in the page menu.
  */
-export function TransactionSearch({ search }: { search: Search }) {
+export function TransactionSearch({
+  search,
+  showSort = true,
+}: {
+  search: Search;
+  showSort?: boolean;
+}) {
   const id = useId();
   const listId = `${id}-list`;
   const input = useRef<HTMLInputElement>(null);
@@ -168,19 +175,33 @@ export function TransactionSearch({ search }: { search: Search }) {
             </ul>
           )}
         </div>
-        <label className="tx-sort">
-          <span className="visually-hidden">Sort by</span>
-          <select
-            value={search.sort}
-            onChange={(event) => search.setSort(event.target.value as SortOrder)}
-          >
-            {search.sortOrders.map((order) => (
-              <option key={order.value} value={order.value}>
-                {order.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {showSort && (
+          <>
+            <label className="tx-sort">
+              <span className="visually-hidden">Sort by</span>
+              <select
+                value={search.sort.key}
+                onChange={(event) => search.setSortKey(event.target.value as SortKey)}
+              >
+                {search.sortKeys.map((key) => (
+                  <option key={key.value} value={key.value}>
+                    {key.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="tx-sort">
+              <span className="visually-hidden">Order</span>
+              <select
+                value={search.sort.direction}
+                onChange={(event) => search.setSortDirection(event.target.value as SortDirection)}
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </label>
+          </>
+        )}
       </div>
       <p className="tx-search-summary" aria-live="polite">
         {search.searching &&

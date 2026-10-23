@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from "react";
 import type { useAccountsPage } from "../controllers/useAccountsPage";
 import { ROWS_PER_PAGE, useAccountView } from "../controllers/useAccountView";
 import type { Budget } from "../controllers/useBudget";
-import { useSidebar } from "../controllers/useLayout";
+import { useAccountPaneCollapsed, useSidebar } from "../controllers/useLayout";
 import { formFromTransaction } from "../controllers/useTransactionEntry";
 import { formatCents, formatSignedCents } from "../models/money";
 import type { Month } from "../models/month";
@@ -12,6 +12,7 @@ import { EditAccount } from "./AccountForm";
 import { CardDebt } from "./CardDebt";
 import { Sheet } from "./components";
 import { ArrowLeftIcon, PencilIcon } from "./icons";
+import { MenuGroup, MenuItem, PageMenu } from "./PageMenu";
 import { SidePanel } from "./SidePanel";
 import { TransactionDialog, TransactionEntry } from "./TransactionEntry";
 import { TransactionImport } from "./TransactionImport";
@@ -35,6 +36,9 @@ type Tool = "review" | "edit" | "import";
  * On a desktop, editing (a transaction or the account), importing and To
  * review sit in the panel on the right, and Add transaction opens a new row
  * at the top of the list.
+ * On a phone the page menu folds every day to its heading (each day heading
+ * also folds its own day), collapses the info pane to the balance, and for
+ * an open account sorts the list.
  */
 export function AccountView({
   budget,
@@ -93,6 +97,22 @@ export function AccountView({
     setAdding(true);
   }
 
+  // Folded days: all of them after "Collapse all dates", except those tapped
+  // open (or, with none folded, just those tapped shut). Not remembered.
+  const [folds, setFolds] = useState({
+    all: false,
+    flipped: new Set<string>() as ReadonlySet<string>,
+  });
+  const isFolded = (date: string) => folds.all !== folds.flipped.has(date);
+  const toggleDay = (date: string) =>
+    setFolds((f) => {
+      const flipped = new Set(f.flipped);
+      if (!flipped.delete(date)) flipped.add(date);
+      return { ...f, flipped };
+    });
+  const paneFold = useAccountPaneCollapsed(userId);
+  const paneCollapsed = paneFold.collapsed && !desktop;
+
   /** Splits the user closed (they start open). */
   const [closedSplits, setClosedSplits] = useState<ReadonlySet<string>>(new Set());
   const toggleSplit = (id: string) =>
@@ -145,7 +165,15 @@ export function AccountView({
           </button>
         )}
       </div>
-      {view.figures ? (
+      {paneCollapsed ? (
+        <dl className="account-figures folded" aria-label={`${title} balance`}>
+          {view.figures ? (
+            <Figure label="Current balance" cents={view.figures.current} />
+          ) : (
+            <Figure label="Balance today" cents={view.balance.today} />
+          )}
+        </dl>
+      ) : view.figures ? (
         <dl className="account-figures" aria-label={`${title} figures for ${view.monthLabel}`}>
           <Figure label="Money in" cents={view.figures.moneyIn} signed tone="in" />
           <Figure label="Money out" cents={-view.figures.moneyOut} signed tone="out" />
@@ -161,7 +189,7 @@ export function AccountView({
       ) : (
         <AllAccountsTotals view={view} />
       )}
-      {editable && (
+      {editable && !paneCollapsed && (
         <div className="account-actions">
           <button className="pane-action" type="button" onClick={() => openTool("import")}>
             Import CSV
@@ -195,10 +223,63 @@ export function AccountView({
       onEdit={edit}
       editingId={editing?.id ?? null}
       desktop={desktop}
+      isFolded={isFolded}
+      onToggleDay={toggleDay}
     />
   );
   const review = <ReviewCard view={view} onEdit={edit} />;
-  const search = account && <TransactionSearch search={view.search} />;
+  // The sort menu sits beside the search on a desktop; a phone has it in the page menu.
+  const search = account && <TransactionSearch search={view.search} showSort={desktop} />;
+
+  // Day headings show unless the list is sorted other than by date.
+  const shownDays = view.flatRows ? [] : view.days.map((day) => day.date);
+  const allFolded = shownDays.length > 0 && shownDays.every(isFolded);
+  const menu = (
+    <PageMenu label={`${title} menu`}>
+      <MenuGroup label="View">
+        {shownDays.length > 0 && (
+          <MenuItem onSelect={() => setFolds({ all: !allFolded, flipped: new Set() })}>
+            {allFolded ? "Expand all dates" : "Collapse all dates"}
+          </MenuItem>
+        )}
+        <MenuItem checked={paneFold.collapsed} onSelect={paneFold.toggle}>
+          Collapse info pane
+        </MenuItem>
+      </MenuGroup>
+      {account && (
+        <>
+          <MenuGroup label="Sort by">
+            {view.search.sortKeys.map((key) => (
+              <MenuItem
+                key={key.value}
+                radio
+                checked={view.search.sort.key === key.value}
+                onSelect={() => view.search.setSortKey(key.value)}
+              >
+                {key.label}
+              </MenuItem>
+            ))}
+          </MenuGroup>
+          <MenuGroup label="Order">
+            <MenuItem
+              radio
+              checked={view.search.sort.direction === "asc"}
+              onSelect={() => view.search.setSortDirection("asc")}
+            >
+              Ascending
+            </MenuItem>
+            <MenuItem
+              radio
+              checked={view.search.sort.direction === "desc"}
+              onSelect={() => view.search.setSortDirection("desc")}
+            >
+              Descending
+            </MenuItem>
+          </MenuGroup>
+        </>
+      )}
+    </PageMenu>
+  );
   const notice = !view.hasOpenAccounts && (
     <p className="notice activity-notice">
       <a href={listHref}>Add an account</a> before entering transactions.
@@ -313,6 +394,7 @@ export function AccountView({
         </>
       ) : (
         <>
+          {menu}
           {monthNav}
           <CardDebt data={data} />
           <div className="account-sticky">
