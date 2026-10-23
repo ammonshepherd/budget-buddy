@@ -6,7 +6,7 @@
  * rows at a time, and ticked rows add up for reconciling. These are display
  * figures for this page only; they are not Available to Assign.
  */
-import { accountBalance, isCardCredit, isToReview } from "./budgetMath";
+import { accountBalance, cardExtraPaid, isCardCredit, isToReview } from "./budgetMath";
 import type { Cents } from "./money";
 import { monthOf, type Month } from "./month";
 import { transferPartner } from "./transfers";
@@ -273,6 +273,8 @@ export interface AccountFigures {
   moneyIn: Cents;
   /** The month's outflows, transfers left out: spending and card purchases (positive). */
   moneyOut: Cents;
+  /** A credit card's extra paid in the month (see cardExtraPaid); null for other accounts. */
+  extraPaid: Cents | null;
 }
 
 /**
@@ -297,6 +299,7 @@ export function accountFigures(data: BudgetData, accountId: string, month: Month
     reconciled: accountBalance(accountId, data, { reconciled: true }),
     moneyIn,
     moneyOut,
+    extraPaid: account.type === "credit_card" ? cardExtraPaid(data, accountId, month).month : null,
   };
 }
 

@@ -150,7 +150,13 @@ describe("monthWatchList", () => {
         {
           outflow: 40_000,
           planned: 0,
-          card: { accountId: "c", open: true, owed: 50_000, uncovered: 10_000 },
+          card: {
+            accountId: "c",
+            open: true,
+            owed: 50_000,
+            uncovered: 10_000,
+            extraPaid: { month: 0, yearToDate: 0 },
+          },
         },
       ]),
     );

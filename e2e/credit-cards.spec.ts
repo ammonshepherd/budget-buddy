@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import {
   editAccount,
   addGroupWithEnvelopes,
+  openAccount,
+  openEnvelope,
   available,
   envelope,
   editCell,
@@ -63,10 +65,14 @@ test("a credit card account owes money and gets a payment envelope", async ({ pa
   await expect(edit.getByLabel("Amount owed on the opening date")).toHaveValue("200.00");
   await edit.getByLabel("Amount owed on the opening date").fill("250");
   await edit.getByRole("button", { name: "Save changes" }).click();
-  // The pane shows the new opening balance, signed like the balance.
-  await expect(
-    page.locator(".account-figure").filter({ hasText: "Opening balance" }),
-  ).toContainText("-$250.00");
+  // A card's pane shows Extra paid in place of the opening balance, which
+  // flows into the current balance, signed like it.
+  await expect(page.locator(".account-figure").filter({ hasText: "Opening balance" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator(".account-figure").filter({ hasText: "Extra paid" })).toContainText(
+    "$0.00",
+  );
   await expect(
     page.locator(".account-figure").filter({ hasText: "Current balance" }),
   ).toContainText("-$280.00");
@@ -132,6 +138,21 @@ test("pay a card from checking, covering what the payment envelope lacks", async
   await goTo(page, "Accounts");
   await expect(accountRow(page, "Visa")).toContainText("-$100.00");
   await expect(accountRow(page, "Checking")).toContainText("$860.00");
+
+  // $40 of the payment was for the card's own charges; the other $100 paid
+  // down older debt: that is Extra paid, on the card's pane for this month
+  // only, and in its payment envelope's sheet.
+  await openAccount(page, "Visa");
+  const extra = page.locator(".account-figure").filter({ hasText: "Extra paid" });
+  await expect(extra).toContainText("$100.00");
+  await page.getByRole("link", { name: "Previous month" }).click();
+  await expect(extra).toContainText("$0.00");
+  // The month is shared with Budget: back to this month first.
+  await page.getByRole("link", { name: "Next month" }).click();
+  await expect(extra).toContainText("$100.00");
+  await goTo(page, "Budget");
+  const sheet = await openEnvelope(page, "Visa payment");
+  await expect(sheet).toContainText("Extra paid $100.00 this month · $100.00 this year");
 });
 
 test("a payment nothing can cover is not suggested as Uncategorized", async ({ page }) => {

@@ -150,7 +150,11 @@ export function AccountView({
           <Figure label="Money in" cents={view.figures.moneyIn} signed tone="in" />
           <Figure label="Money out" cents={-view.figures.moneyOut} signed tone="out" />
           <Figure label="Current balance" cents={view.figures.current} />
-          <Figure label="Opening balance" cents={view.figures.opening} />
+          {view.figures.extraPaid === null ? (
+            <Figure label="Opening balance" cents={view.figures.opening} />
+          ) : (
+            <Figure label="Extra paid" cents={view.figures.extraPaid} />
+          )}
           <Figure label="Month start" cents={view.figures.monthStart} />
           <Figure label="Reconciled" cents={view.figures.reconciled} />
         </dl>
