@@ -94,7 +94,6 @@ for (const f of old) {
 
 // Counts only: the file holds the household's data.
 const counts = Object.entries(backup)
-  .filter(([, value]) => Array.isArray(value))
-  .map(([key, value]) => `${(value as unknown[]).length} ${key}`)
+  .flatMap(([key, value]) => (Array.isArray(value) ? [`${value.length} ${key}`] : []))
   .join(", ");
 console.log(`Backed up to .backups/${name}: ${counts}`);
