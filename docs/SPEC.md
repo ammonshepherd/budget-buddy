@@ -248,7 +248,7 @@ signed out, everything is as above.
   navigation"), with every open account listed under Accounts (since
   v0.35.1, `sidebarAccounts` in `src/models/accounts.ts`): All accounts and
   the budget accounts (Checking, then Credit cards, each by name), then,
-  after a gap and a line, the tracking accounts; each shows its balance
+  after a gap and a short centred line, the tracking accounts; each shows its balance
   today (red when negative, as in the Accounts list) and opens that account,
   the open one highlighted, long names cut short with "…" so the balance
   always shows (hidden while the sidebar shows icons only); Install (when offered); the household name and email; and

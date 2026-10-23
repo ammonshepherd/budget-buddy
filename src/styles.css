@@ -2668,9 +2668,19 @@ body:has(.app-shell.desktop) {
 }
 
 .sidebar-accounts .sidebar-tracking {
+  position: relative;
   margin-block-start: 1rem;
   padding-block-start: 0.75rem;
+}
+
+/* A short centred line, half the sidebar's width, above the tracking accounts. */
+.sidebar-accounts .sidebar-tracking::before {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 25%;
+  inline-size: 50%;
   border-block-start: 1px solid var(--border);
+  content: "";
 }
 
 .sidebar-nav .sidebar-accounts a {
