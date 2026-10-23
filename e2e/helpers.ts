@@ -20,6 +20,14 @@ export const envelope = (page: Page, name: string) =>
 export const onPhone = () => test.info().project.name.startsWith("mobile");
 
 /**
+ * The keys that enter `value` on the number pad, which fills cents first:
+ * a whole-dollar amount needs its cents typed too ("100" → "10000",
+ * "+50" → "+5000"); one with a period is typed as it is.
+ */
+export const padKeys = (value: string) =>
+  value.replace(/[\d.]+/g, (amount) => (amount.includes(".") ? amount : `${amount}00`));
+
+/**
  * Types a new amount into an envelope's Planned or Assigned cell and presses
  * Enter. On a phone Assigned opens the number pad, which takes typed keys too.
  */
@@ -34,7 +42,7 @@ export async function editCell(
   if (cell === "assigned" && onPhone()) {
     const pad = page.getByRole("dialog", { name: `Assigned for ${name}` });
     await pad.waitFor();
-    await page.keyboard.type(value);
+    await page.keyboard.type(padKeys(value));
     await page.keyboard.press("Enter");
     return;
   }

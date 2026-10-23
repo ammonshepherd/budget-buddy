@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { centsToInput, formatCents } from "../../models/money";
 import { Money } from "../components";
+import { AmountInput } from "../AmountInput";
 
 /**
  * A Planned or Assigned amount that turns into a text field when tapped.
@@ -50,13 +51,12 @@ export function EditableCell({
     return (
       <label className={`${className} editing`}>
         <span className="cell-label">{label}</span>
-        <input
+        <AmountInput
           aria-label={`${label} amount for ${envelopeName}`}
-          inputMode="decimal"
           autoFocus
           value={text}
           onFocus={(event) => event.target.select()}
-          onChange={(event) => setText(event.target.value)}
+          onChange={setText}
           onKeyDown={onKeyDown}
           onBlur={() => finish(true, false)}
         />

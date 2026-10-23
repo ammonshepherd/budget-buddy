@@ -107,3 +107,42 @@ test("envelope pickers show each envelope's Remaining in the transaction's month
     "Groceries has $0.00",
   );
 });
+
+test("amounts fill in cents first; a typed period keeps what is typed", async ({ page }) => {
+  await signInWithHousehold(page);
+  await addAccount(page, { name: "Checking", balance: "500" });
+  const dialog = await openAddTransaction(page);
+  const amount = dialog.getByLabel("Amount");
+
+  for (const [key, shown] of [
+    ["1", "0.01"],
+    ["2", "0.12"],
+    ["3", "1.23"],
+    ["4", "12.34"],
+  ]) {
+    await amount.press(key);
+    await expect(amount).toHaveValue(shown);
+  }
+  await amount.press("Backspace");
+  await expect(amount).toHaveValue("1.23");
+  await amount.press("Backspace");
+  await amount.press("Backspace");
+  await amount.press("Backspace");
+  await expect(amount).toHaveValue("");
+
+  // A period typed after 1, 2 means $12, as typed.
+  await amount.pressSequentially("12.5");
+  await expect(amount).toHaveValue("12.5");
+
+  // A pasted amount is taken as it is.
+  await amount.fill("45");
+  await expect(amount).toHaveValue("45");
+
+  await amount.fill("");
+  await amount.pressSequentially("4520");
+  await dialog.getByLabel("Payee").fill("Bakery");
+  await dialog.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await openAllAccounts(page);
+  await expect(activityRow(page, "Bakery")).toContainText("−$45.20");
+});

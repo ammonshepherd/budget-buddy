@@ -64,7 +64,7 @@ test("add an account, envelopes, assign, spend, and cover a shortfall", async ({
   await addAccount(page, { name: "Savings" });
   // One entry records both sides: out of Checking, into Savings.
   await addTransaction(page, {
-    amount: "5",
+    amount: "5.00",
     payee: "To savings",
     envelope: "Transfer (not spending or income)",
   });

@@ -4,6 +4,7 @@ import { useAsyncAction } from "../controllers/useAsyncAction";
 import { ACCOUNT_KIND_NAMES, type AccountKind } from "../models/accounts";
 import { todayIso } from "../models/month";
 import { ErrorMessage } from "./components";
+import { AmountInput } from "./AmountInput";
 
 type Page = ReturnType<typeof useAccountsPage>;
 export type AccountRow = Page["openAccounts"][number];
@@ -150,7 +151,14 @@ function AccountForm({
       </label>
       <label className="field">
         {card ? "Amount owed on the opening date" : "Opening balance"}
-        <input {...field("openingBalance")} inputMode="decimal" placeholder="0.00" />
+        <AmountInput
+          value={form.openingBalance}
+          placeholder="0.00"
+          onChange={(openingBalance) => {
+            setForm({ ...form, openingBalance });
+            action.clearError();
+          }}
+        />
       </label>
       {tracking && chooseType && (
         <p className="empty-state">

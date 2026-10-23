@@ -190,7 +190,9 @@ non-card budget balances − all envelope money (P included)`.
   Digits first set a new total; + or − builds an equation on the current
   amount, shown in the Assigned field as typed; Assign commits (minus returns
   money to Available to Assign). On a desktop it is typed in place and takes
-  the same equations ("+50"). `evaluateAmount` in
+  the same equations ("+50.00"). Every amount field fills in cents first
+  (decided in v0.35.0: 1, 2, 3 shows "1.23"; a typed period or a paste keeps
+  the text as typed; `editEntry` in `src/models/amountEntry.ts`). `evaluateAmount` in
   `src/models/amountEquation.ts`; never negative. Raising Assigned is blocked beyond Available to Assign, and
   lowering it below what is spent is blocked. Spent turns orange (no extra
   word, only "Spent"; screen readers hear "over Planned") when above Planned (`overPlan`, a

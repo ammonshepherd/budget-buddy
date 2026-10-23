@@ -61,7 +61,7 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
   await page.evaluate(() => (location.hash = "#budget/2030-01"));
   await editCell(page, "Groceries", "assigned", "100");
 
-  await add(page, { payee: "Coffee", amount: "5", date: "2030-01-02" });
+  await add(page, { payee: "Coffee", amount: "5.00", date: "2030-01-02" });
   await add(page, { payee: "Kroger", amount: "20", date: "2030-01-03", envelope: "Groceries" });
   await add(page, {
     payee: "Paycheck",
@@ -76,7 +76,7 @@ test("a month's transactions by day, with totals and day nets", async ({ page })
     date: "2030-01-04",
     envelope: "Transfer (not spending or income)",
   });
-  await add(page, { payee: "Next month", amount: "7", date: "2030-02-01" });
+  await add(page, { payee: "Next month", amount: "7.00", date: "2030-02-01" });
 
   await openActivityMonth(page, "2030-01");
   await expect(page.locator(".budget-month")).toContainText("January 2030");
@@ -157,7 +157,7 @@ test("splits open with their parts and close one at a time", async ({ page }) =>
   await editCell(page, "Kids", "assigned", "100");
   await addSplit(page, "Target", "2030-01-05", "Kids", "Groceries");
   await addSplit(page, "Costco", "2030-01-04", "Groceries", "Kids");
-  await add(page, { payee: "February shop", amount: "1", date: "2030-02-01" });
+  await add(page, { payee: "February shop", amount: "1.00", date: "2030-02-01" });
 
   await openActivityMonth(page, "2030-01");
   const target = activityRow(page, "Target");
@@ -192,8 +192,8 @@ test("splits open with their parts and close one at a time", async ({ page }) =>
 
 test("a closed account's transactions keep its name", async ({ page }) => {
   await newAccount(page, "Old Bank", "0");
-  await add(page, { payee: "Fee", amount: "3", date: "2030-01-02" });
-  await add(page, { payee: "Fee refund", amount: "3", date: "2030-01-03", inflow: true });
+  await add(page, { payee: "Fee", amount: "3.00", date: "2030-01-02" });
+  await add(page, { payee: "Fee refund", amount: "3.00", date: "2030-01-03", inflow: true });
   const form = await editAccount(page, "Old Bank");
   await form.getByRole("button", { name: "Close account" }).click();
   // Closing goes back to the list, where closed accounts wait behind a toggle.
@@ -208,14 +208,14 @@ test("ticking rows shows their total and marks them reconciled", async ({ page }
   await newAccount(page, "Checking", "500");
   await newAccount(page, "Savings", "0");
   await add(page, { payee: "Lunch", amount: "12", date: "2030-01-02" });
-  await add(page, { payee: "Refund", amount: "5", date: "2030-01-03", inflow: true });
+  await add(page, { payee: "Refund", amount: "5.00", date: "2030-01-03", inflow: true });
   await add(page, {
     payee: "To savings",
     amount: "40",
     date: "2030-01-04",
     envelope: "Transfer (not spending or income)",
   });
-  await add(page, { payee: "February shop", amount: "1", date: "2030-02-01" });
+  await add(page, { payee: "February shop", amount: "1.00", date: "2030-02-01" });
   await openActivityMonth(page, "2030-01");
 
   const lunch = activityRow(page, "Lunch");

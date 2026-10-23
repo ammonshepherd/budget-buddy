@@ -37,13 +37,18 @@ describe("evaluateAmount", () => {
 const press = (state: PadState, keys: PadKey[]) => keys.reduce(padPress, state);
 
 describe("padPress", () => {
-  it("replaces the opening amount when a digit comes first", () => {
-    expect(press(padStart("120.00"), ["5", "0"])).toEqual({ text: "50", fresh: false });
+  it("replaces the opening amount when a digit comes first, filling cents first", () => {
+    expect(press(padStart("120.00"), ["5", "0"])).toEqual({
+      text: "0.50",
+      fresh: false,
+      centsFirst: true,
+    });
+    expect(press(padStart("120.00"), ["5", "0", "0", "0"]).text).toBe("50.00");
   });
 
   it("builds on the opening amount with + or −", () => {
-    expect(press(padStart("120.00"), ["+", "5", "0"]).text).toBe("120.00 + 50");
-    expect(press(padStart("120.00"), ["−", "2", "0"]).text).toBe("120.00 − 20");
+    expect(press(padStart("120.00"), ["+", "5", "0", "0", "0"]).text).toBe("120.00 + 50.00");
+    expect(press(padStart("120.00"), ["−", "2", "0", "0", "0"]).text).toBe("120.00 − 20.00");
   });
 
   it("swaps a sign pressed straight after another", () => {
@@ -51,30 +56,34 @@ describe("padPress", () => {
   });
 
   it("chains several terms", () => {
-    expect(press(padStart("10.00"), ["+", "5", "−", "2"]).text).toBe("10.00 + 5 − 2");
+    expect(press(padStart("10.00"), ["+", "5", "−", "2"]).text).toBe("10.00 + 0.05 − 0.02");
   });
 
-  it("allows one decimal point and two decimals per term", () => {
+  it("the period key turns the digits so far into dollars and stops filling cents first", () => {
+    expect(press(padStart("0.00"), ["1", "2", ".", "5"]).text).toBe("12.5");
     expect(press(padStart("0.00"), [".", "5", ".", "5", "5"]).text).toBe("0.55");
     expect(press(padStart("1.00"), ["+", "1", ".", "2", "5", "9"]).text).toBe("1.00 + 1.25");
+    expect(press(padStart("1.00"), [".", "+", "2"]).text).toBe("0. + 2");
   });
 
   it("drops leading zeros", () => {
-    expect(press(padStart("0.00"), ["0", "0", "7"]).text).toBe("7");
+    expect(press(padStart("0.00"), ["0", "0", "7"]).text).toBe("0.07");
+    expect(press(padStart("1.00"), ["0"]).text).toBe("0.00");
   });
 
-  it("backspace clears the opening amount, then removes one key at a time", () => {
+  it("backspace clears the opening amount, then removes one digit at a time", () => {
     expect(press(padStart("120.00"), ["back"]).text).toBe("");
+    expect(press(padStart("120.00"), ["1", "2", "3", "back"]).text).toBe("0.12");
     expect(press(padStart("120.00"), ["+", "5", "back"]).text).toBe("120.00 + ");
     expect(press(padStart("120.00"), ["+", "back"]).text).toBe("120.00");
   });
 
   it("a sign on an empty pad starts from zero", () => {
-    expect(press(padStart("120.00"), ["back", "+", "5"]).text).toBe("0.00 + 5");
+    expect(press(padStart("120.00"), ["back", "+", "5"]).text).toBe("0.00 + 0.05");
   });
 
   it("works out what the pad shows", () => {
-    const state = press(padStart("120.00"), ["+", "5", "0", "−", "1", "0"]);
+    const state = press(padStart("120.00"), ["+", "5", "0", "0", "0", "−", "1", "0", "0", "0"]);
     expect(evaluateAmount(state.text, 12000)).toBe(16000);
   });
 });

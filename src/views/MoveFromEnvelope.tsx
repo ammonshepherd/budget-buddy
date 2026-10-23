@@ -5,6 +5,7 @@ import type { EnvelopeRow } from "../models/budgetMath";
 import { centsToInput, formatCents } from "../models/money";
 import { ErrorMessage, Money } from "./components";
 import { EnvelopePicker, type PickerOption } from "./EnvelopePicker";
+import { AmountInput } from "./AmountInput";
 
 /**
  * Opened by tapping what is left in an envelope row: moves some of it to
@@ -65,12 +66,11 @@ export function MoveFromEnvelope({
       />
       <label className="field">
         Amount to move
-        <input
+        <AmountInput
           value={amount}
-          inputMode="decimal"
           placeholder="0.00"
-          onChange={(event) => {
-            setAmount(event.target.value);
+          onChange={(text) => {
+            setAmount(text);
             save.clearError();
           }}
         />

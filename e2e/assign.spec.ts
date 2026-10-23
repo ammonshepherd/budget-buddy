@@ -100,15 +100,17 @@ test("the number pad adds and takes away, showing the equation in the cell", asy
     for (const key of keys) await pad.getByRole("button", { name: key, exact: true }).click();
   };
 
-  // Digits first: a new total.
+  // Digits first: a new total, filled in cents first.
   await press("8", "0");
-  await expect(assignedCell(page, "Gas")).toContainText("80");
+  await expect(assignedCell(page, "Gas")).toContainText("0.80");
+  await press("0", "0");
+  await expect(assignedCell(page, "Gas")).toContainText("80.00");
   await press("Assign");
   await expect(pad).toBeHidden();
   await expect(assignedCell(page, "Gas")).toContainText("$80.00");
   await expect(available(page)).toContainText("$820.00");
 
-  // Plus adds to it.
+  // Plus adds to it; a period switches to plain entry ("20" then "." is $20).
   await assignedCell(page, "Gas").click();
   await press("Plus", "2", "0", "Decimal point", "5");
   await expect(assignedCell(page, "Gas")).toContainText("80.00 + 20.5");
@@ -119,8 +121,8 @@ test("the number pad adds and takes away, showing the equation in the cell", asy
 
   // Minus returns money to Available to Assign.
   await assignedCell(page, "Gas").click();
-  await press("Minus", "3", "0");
-  await expect(assignedCell(page, "Gas")).toContainText("100.50 − 30");
+  await press("Minus", "3", "0", "0", "0");
+  await expect(assignedCell(page, "Gas")).toContainText("100.50 − 30.00");
   await press("Assign");
   await expect(assignedCell(page, "Gas")).toContainText("$70.50");
   await expect(available(page)).toContainText("$829.50");
@@ -137,6 +139,6 @@ test("the number pad adds and takes away, showing the equation in the cell", asy
 
   // Below zero is refused.
   await assignedCell(page, "Gas").click();
-  await press("Minus", "1", "0", "0", "Assign");
+  await press("Minus", "1", "0", "0", "0", "0", "Assign");
   await expect(pad.getByRole("alert")).toHaveText("Assigned cannot be negative.");
 });

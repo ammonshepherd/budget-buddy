@@ -12,6 +12,7 @@ import { formatCents, type Cents } from "../../models/money";
 import { MAX_SPLIT_LINES, type SplitLine } from "../../models/splits";
 import { ErrorMessage, Money } from "../components";
 import { EnvelopePicker, type PickerOption } from "../EnvelopePicker";
+import { AmountInput } from "../AmountInput";
 
 /** The transaction form itself (TransactionEntry adds the cover prompt). */
 export function TransactionEditor({
@@ -101,11 +102,10 @@ export function TransactionEditor({
       </div>
       <label className="field field-amount">
         Amount
-        <input
+        <AmountInput
           value={form.amount}
-          inputMode="decimal"
           placeholder="0.00"
-          onChange={(e) => update({ amount: e.target.value })}
+          onChange={(amount) => update({ amount })}
         />
       </label>
       <label className="field field-payee">
@@ -135,12 +135,11 @@ export function TransactionEditor({
                 options={envelopeChoices(entry, remaining)}
                 onChange={(envelopeId) => updateLine(index, { envelopeId })}
               />
-              <input
+              <AmountInput
                 aria-label={`Amount ${index + 1}`}
                 value={line.amount}
-                inputMode="decimal"
                 placeholder="0.00"
-                onChange={(e) => updateLine(index, { amount: e.target.value })}
+                onChange={(amount) => updateLine(index, { amount })}
               />
               <button
                 className="text-button split-remove"
