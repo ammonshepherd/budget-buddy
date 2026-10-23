@@ -187,13 +187,16 @@ export function createSupabaseStore(
     },
 
     async addAccount(householdId, account) {
-      const { error } = await db().from("accounts").insert({
-        household_id: householdId,
-        name: account.name,
-        type: account.type,
-        opening_balance: account.openingBalance,
-        opening_date: account.openingDate,
-      });
+      const { error } = await db()
+        .from("accounts")
+        .insert({
+          household_id: householdId,
+          name: account.name,
+          type: account.type,
+          on_budget: account.onBudget ?? true,
+          opening_balance: account.openingBalance,
+          opening_date: account.openingDate,
+        });
       check(error);
     },
 

@@ -220,25 +220,37 @@ export function AccountView({
     <TransactionImport budget={budget} data={data} accountId={editable.id} />
   );
 
+  // A tracking account has nothing to review: the panel says what it is instead.
+  const tracking = account?.onBudget === false;
+  const backLabel = tracking ? "‹ Back" : "‹ Back to To review";
+
   /** The desktop panel: a transaction being edited, the account form, import, or To review. */
-  let panelLabel = "To review";
-  let panelBody: ReactNode =
-    view.toReview.length > 0 ? (
-      review
-    ) : (
-      <div className="month-summary">
-        <h2>To review</h2>
-        <p className="empty-state">
-          Nothing to review{account ? ` in ${account.name}` : ""}. Every transaction has an
-          envelope, is Income, or is a Transfer.
-        </p>
-        <p className="panel-hint">Choose a transaction to edit it here.</p>
-      </div>
-    );
+  let panelLabel = tracking ? "Tracking account" : "To review";
+  let panelBody: ReactNode = tracking ? (
+    <div className="month-summary">
+      <h2>Tracking account</h2>
+      <p className="empty-state">
+        {account.name} stands alone, outside the budget: it never counts toward Available to Assign,
+        and its transactions have no envelopes or transfers.
+      </p>
+      <p className="panel-hint">Choose a transaction to edit it here.</p>
+    </div>
+  ) : view.toReview.length > 0 ? (
+    review
+  ) : (
+    <div className="month-summary">
+      <h2>To review</h2>
+      <p className="empty-state">
+        Nothing to review{account ? ` in ${account.name}` : ""}. Every transaction has an envelope,
+        is Income, or is a Transfer.
+      </p>
+      <p className="panel-hint">Choose a transaction to edit it here.</p>
+    </div>
+  );
   if (editing) {
     panelLabel = "Edit transaction";
     panelBody = (
-      <PanelBack label="‹ Back to To review" onBack={() => setEditing(null)}>
+      <PanelBack label={backLabel} onBack={() => setEditing(null)}>
         <TransactionEntry
           key={editing.id}
           budget={budget}
@@ -257,14 +269,14 @@ export function AccountView({
   } else if (tool === "edit" && editAccount) {
     panelLabel = `Edit ${editable.name}`;
     panelBody = (
-      <PanelBack label="‹ Back to To review" onBack={closeTool}>
+      <PanelBack label={backLabel} onBack={closeTool}>
         {editAccount}
       </PanelBack>
     );
   } else if (tool === "import" && importCsv) {
     panelLabel = `Import CSV into ${editable.name}`;
     panelBody = (
-      <PanelBack label="‹ Back to To review" onBack={closeTool}>
+      <PanelBack label={backLabel} onBack={closeTool}>
         {importCsv}
       </PanelBack>
     );

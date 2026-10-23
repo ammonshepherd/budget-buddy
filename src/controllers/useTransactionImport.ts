@@ -62,6 +62,8 @@ export function useTransactionImport(budget: Budget, data: BudgetData, startAcco
   return {
     openAccounts,
     accountId: account?.id ?? "",
+    /** A tracking account: rows arrive as plain transactions, with nothing to review. */
+    tracking: account?.onBudget === false,
     fileName: file?.fileName ?? null,
     columns: file ? columnLabels(file.table) : [],
     format,

@@ -2,7 +2,7 @@ import { useId, useRef, useState, type KeyboardEvent } from "react";
 import type { useAccountView } from "../../controllers/useAccountView";
 import { exactOption, matchOptions, type PickerOption } from "../../models/envelopeSearch";
 import { formatSignedCents } from "../../models/money";
-import { SORT_ORDERS, type SortOrder } from "../../models/transactionSearch";
+import type { SortOrder } from "../../models/transactionSearch";
 import { SearchIcon } from "../icons";
 
 type Search = ReturnType<typeof useAccountView>["search"];
@@ -101,7 +101,13 @@ export function TransactionSearch({ search }: { search: Search }) {
               autoComplete="off"
               spellCheck={false}
               enterKeyHint="search"
-              placeholder={search.chips.length > 0 ? "Search within" : "Search or pick an envelope"}
+              placeholder={
+                search.chips.length > 0
+                  ? "Search within"
+                  : search.hasEnvelopes
+                    ? "Search or pick an envelope"
+                    : "Search"
+              }
               value={typed}
               onFocus={() => {
                 setOpen(true);
@@ -168,7 +174,7 @@ export function TransactionSearch({ search }: { search: Search }) {
             value={search.sort}
             onChange={(event) => search.setSort(event.target.value as SortOrder)}
           >
-            {SORT_ORDERS.map((order) => (
+            {search.sortOrders.map((order) => (
               <option key={order.value} value={order.value}>
                 {order.label}
               </option>

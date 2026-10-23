@@ -9,6 +9,7 @@
  */
 import { expect, it } from "vitest";
 import { UserFacingError, type DataStore, type TransactionInput } from "./dataStore";
+import type { ImportFormat } from "./transactionImport";
 import type { TransferSide } from "./transfers";
 
 /** A signed-in store whose user already has a household. */
@@ -24,6 +25,12 @@ async function setUp(makeStore: StoreFactory) {
   await store.addAccount(householdId, { name: `${tag} Checking`, type: "checking", ...opening });
   await store.addAccount(householdId, { name: `${tag} Savings`, type: "checking", ...opening });
   await store.addAccount(householdId, { name: `${tag} Visa`, type: "credit_card", ...opening });
+  await store.addAccount(householdId, {
+    name: `${tag} Brokerage`,
+    type: "checking",
+    onBudget: false,
+    ...opening,
+  });
   await store.addGroup(householdId, tag, 900);
   let data = (await store.load())!;
   const group = data.groups.find((g) => g.name === tag)!;
@@ -38,6 +45,7 @@ async function setUp(makeStore: StoreFactory) {
     checking: account("Checking"),
     savings: account("Savings"),
     visa,
+    tracking: account("Brokerage"),
     a: envelope("A"),
     b: envelope("B"),
     visaPayment: data.envelopes.find((e) => e.cardAccountId === visa)!.id,
@@ -179,6 +187,68 @@ export function storeRuleTests(makeStore: StoreFactory) {
       }),
       /./,
     );
+  });
+
+  it("keeps a tracking account standalone: no envelopes, Income or transfers", async () => {
+    const { store, householdId, ids, save, side } = await setUp(makeStore);
+    await save(ids.tracking, 2_500, []);
+    await save(ids.tracking, -1_000, []);
+    await rejects(save(ids.tracking, -1_000, [[ids.a, -1_000]]), /tracking account/);
+    await rejects(save(ids.tracking, 2_000, [], true), /tracking account/);
+    await rejects(
+      store.saveTransfer({
+        transferId: null,
+        sides: [side(ids.checking, -3_000), side(ids.tracking, 3_000)],
+      }),
+      /tracking account/,
+    );
+    const inflow = (await store.load())!.transactions.find(
+      (t) => t.accountId === ids.tracking && t.amount === 2_500,
+    )!;
+    expect(await store.markIncome([inflow.id])).toBe(0);
+    // Only a checking-type account can be off budget.
+    await rejects(
+      store.addAccount(householdId, {
+        name: `Card ${ids.tracking.slice(0, 8)}`,
+        type: "credit_card",
+        onBudget: false,
+        openingBalance: 0,
+        openingDate: "2026-10-01",
+      }),
+      /./,
+    );
+  });
+
+  it("never marks rows imported into a tracking account as Income", async () => {
+    const { store, ids } = await setUp(makeStore);
+    const format: ImportFormat = {
+      version: 1,
+      hasHeader: true,
+      headers: ["date", "description", "amount"],
+      columnCount: 3,
+      date: 0,
+      dateOrder: "YMD",
+      description: 1,
+      memo: -1,
+      amount: { kind: "signed", column: 2, flip: false },
+      bankId: -1,
+    };
+    const row = (importKey: string) => ({
+      date: "2026-10-07",
+      amount: 1_200,
+      payee: "Dividend",
+      memo: "",
+      importKey,
+      isIncome: true,
+      matchId: null,
+    });
+    await store.importTransactions(ids.tracking, format, [row(`t-${ids.tracking}`)]);
+    await store.importTransactions(ids.checking, format, [row(`c-${ids.checking}`)]);
+    const data = (await store.load())!;
+    const income = (accountId: string) =>
+      data.transactions.find((t) => t.accountId === accountId && t.payee === "Dividend")!.isIncome;
+    expect(income(ids.tracking)).toBe(false);
+    expect(income(ids.checking)).toBe(true);
   });
 
   it("refuses to delete what is still in use", async () => {

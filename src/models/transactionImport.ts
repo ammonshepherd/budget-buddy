@@ -571,7 +571,9 @@ export function previewTransactionImport(
       if (!isSeparate) continue;
     }
     const { amount, payee, date } = row;
+    // A tracking account never has Income.
     const isIncome =
+      account.onBudget &&
       incomeRuleFor(data.incomeRules, { accountId: account.id, amount, payee }) !== null;
     if (isIncome) preview.markedIncome++;
     preview.rows.push({ ...row, isIncome, matchId: null });

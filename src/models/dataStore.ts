@@ -24,9 +24,15 @@ export interface AccountDetails {
   openingDate: IsoDate;
 }
 
-/** The type is chosen once, when the account is added. */
+/** The type (and whether it is a tracking account) is chosen once, when the account is added. */
 export interface NewAccount extends AccountDetails {
   type: AccountType;
+  /**
+   * False for a tracking account: off budget and standalone (no envelopes,
+   * Income or transfers). Only a checking-type account can be off budget.
+   * Defaults to true.
+   */
+  onBudget?: boolean;
 }
 
 export interface TransactionInput {

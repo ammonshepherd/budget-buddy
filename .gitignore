@@ -14,6 +14,9 @@ supabase/.branches/
 #ignore private files
 private/
 
+# Database backups made before each merge (npm run backup)
+.backups/
+
 # Build and tool output
 dist/
 coverage/

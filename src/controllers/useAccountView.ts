@@ -21,6 +21,7 @@ import {
   foundTotal,
   regroupDays,
   searchChoices,
+  SORT_ORDERS,
   sortRows,
   sortsByDate,
   type SearchFilter,
@@ -167,6 +168,12 @@ export function useAccountView(
       envelopeId:
         search.filters.flatMap((f) => ("envelopeId" in f ? [f.envelopeId] : []))[0] ?? null,
       sort: search.sort,
+      /** False in a tracking account: no envelopes to pick or sort by. */
+      hasEnvelopes: account?.onBudget !== false,
+      sortOrders:
+        account?.onBudget === false
+          ? SORT_ORDERS.filter((o) => o.value !== "envelope")
+          : SORT_ORDERS,
       /** Envelopes and kinds this account has, with counts. */
       choices,
       /** Something typed or chosen: To review steps aside and the matches add up. */

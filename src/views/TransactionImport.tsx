@@ -78,9 +78,12 @@ export function TransactionImport({
       </div>
       <p className="empty-state">
         Download a CSV from your bank or card website and choose it here. Columns are detected
-        automatically, and remembered for each account. Imported transactions arrive Uncategorized;
-        give them envelopes on Accounts. A bank row that matches a transaction you typed in is
-        matched to it instead of being added twice.
+        automatically, and remembered for each account.{" "}
+        {io.tracking
+          ? "Imported transactions go straight into this tracking account."
+          : "Imported transactions arrive Uncategorized; give them envelopes on Accounts."}{" "}
+        A bank row that matches a transaction you typed in is matched to it instead of being added
+        twice.
       </p>
 
       <div className="form">

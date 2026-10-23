@@ -1,11 +1,28 @@
 import { describe, expect, it } from "vitest";
 import {
+  accountFromKind,
+  accountKind,
   cardDebt,
   groupAccounts,
+  isTracking,
   openingBalanceFromEntry,
   openingBalanceToEntry,
 } from "./accounts";
 import type { Account, Transaction } from "./types";
+
+describe("account kinds", () => {
+  it("stores a tracking account as an off-budget checking account, and reads it back", () => {
+    expect(accountFromKind("tracking")).toEqual({ type: "checking", onBudget: false });
+    expect(accountFromKind("checking")).toEqual({ type: "checking", onBudget: true });
+    expect(accountFromKind("credit_card")).toEqual({ type: "credit_card", onBudget: true });
+    for (const kind of ["checking", "credit_card", "tracking"] as const) {
+      expect(accountKind(accountFromKind(kind))).toBe(kind);
+    }
+    expect(isTracking({ onBudget: false })).toBe(true);
+    expect(isTracking({ onBudget: true })).toBe(false);
+    expect(isTracking(undefined)).toBe(false);
+  });
+});
 
 describe("opening balance entry", () => {
   it("keeps checking balances as entered", () => {
