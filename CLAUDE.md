@@ -437,6 +437,14 @@ the manifest (`vite.config.ts`), and `icon.svg` as the header logo (transparent,
 so no frame or shadow). `e2e/navigation.spec.ts` checks every icon loads under
 the base path.
 
+The logo (decided in v0.37.1) is a realistic gold coin with a calligraphic
+lowercase "e" dollar sign pressed into it, its two stubs flaring into the
+letter. `icon.svg` is the master; `favicon.svg` is a flat, bolder version of
+the same mark so it reads at 16–32px. The PNGs and `favicon.ico` (16, 32, 48)
+are rendered from these SVGs; `apple-touch-icon.png` and
+`icon-maskable-512.png` sit on `#f4effa`, the maskable coin inside the
+central 80% safe zone.
+
 ## Development process
 
 Before changing code: pull latest, check the version, check open PRs and ask
