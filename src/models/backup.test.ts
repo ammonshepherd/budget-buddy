@@ -125,7 +125,7 @@ describe("validateBackup", () => {
 
   it("refuses files that are not a backup this version can read", () => {
     expect(() => parseBackup("not json")).toThrow("not a JSON file");
-    expect(() => parseBackup('{"format":"other"}')).toThrow("not a Budget Buddy backup");
+    expect(() => parseBackup('{"format":"other"}')).toThrow("not an Enough Money backup");
     expect(() => parseBackup(JSON.stringify({ ...sample(), version: 2 }))).toThrow("version");
     refuses((b) => delete (b as Partial<Backup>).transactions, "transactions list is missing");
     refuses((b) => (b.household.name = " "), "household name");
@@ -266,7 +266,7 @@ describe("summarizeBackup", () => {
 
 describe("helpers", () => {
   it("names the file after the day", () => {
-    expect(backupFileName("2030-02-01")).toBe("budget-buddy-backup-2030-02-01.json");
+    expect(backupFileName("2030-02-01")).toBe("enough-money-backup-2030-02-01.json");
   });
 
   it("calls a household empty only with no budget data", () => {

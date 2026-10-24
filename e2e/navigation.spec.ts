@@ -33,7 +33,7 @@ test("bottom navigation switches pages and updates the URL hash", async ({ page 
     await expect(page).toHaveURL(new RegExp(`#${name.toLowerCase()}(/\\d{4}-\\d{2})?$`));
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
     await expect(nav.getByRole("link", { name })).toHaveAttribute("aria-current", "page");
-    await expect(page).toHaveTitle(`${name} | Budget Buddy`);
+    await expect(page).toHaveTitle(`${name} | Enough Money`);
   }
 });
 
@@ -82,16 +82,16 @@ test("signing out returns to the sign-in page", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
 });
 
-test("assets and manifest are served from the GitHub Pages base path", async ({ page }) => {
+test("assets and manifest are served from the site root", async ({ page }) => {
   await page.goto("./");
   const logo = page.locator(".brand img");
-  await expect(logo).toHaveAttribute("src", "/budget-buddy/icons/icon.svg");
+  await expect(logo).toHaveAttribute("src", "/icons/icon.svg");
   expect(await logo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
 
   const manifestHref = await page.locator('link[rel="manifest"]').getAttribute("href");
-  expect(manifestHref).toBe("/budget-buddy/manifest.webmanifest");
+  expect(manifestHref).toBe("/manifest.webmanifest");
   const manifest = await (await page.request.get(manifestHref!)).json();
-  expect(manifest).toMatchObject({ start_url: "/budget-buddy/", scope: "/budget-buddy/" });
+  expect(manifest).toMatchObject({ start_url: "/", scope: "/" });
 
   // Every app icon, in the manifest and in <head>, loads from the base path.
   expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([
@@ -105,15 +105,12 @@ test("assets and manifest are served from the GitHub Pages base path", async ({ 
     .locator('link[rel="icon"], link[rel="apple-touch-icon"]')
     .evaluateAll((links) => links.map((link) => link.getAttribute("href")!));
   expect(headIcons).toEqual([
-    "/budget-buddy/icons/favicon.svg",
-    "/budget-buddy/icons/favicon-32.png",
-    "/budget-buddy/icons/favicon.ico",
-    "/budget-buddy/icons/apple-touch-icon.png",
+    "/icons/favicon.svg",
+    "/icons/favicon-32.png",
+    "/icons/favicon.ico",
+    "/icons/apple-touch-icon.png",
   ]);
-  for (const href of [
-    ...headIcons,
-    ...manifest.icons.map((i: { src: string }) => `/budget-buddy/${i.src}`),
-  ]) {
+  for (const href of [...headIcons, ...manifest.icons.map((i: { src: string }) => `/${i.src}`)]) {
     expect((await page.request.get(href)).status(), href).toBe(200);
   }
 });

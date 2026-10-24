@@ -69,7 +69,7 @@ export function App() {
                 <button
                   className="icon-button"
                   type="button"
-                  aria-label="Install Budget Buddy"
+                  aria-label="Install Enough Money"
                   onClick={install}
                 >
                   <InstallIcon />
@@ -80,7 +80,7 @@ export function App() {
           </header>
         )}
 
-        {session.status === "loading" && <Message text="Loading Budget Buddy..." />}
+        {session.status === "loading" && <Message text="Loading Enough Money..." />}
         {session.status === "error" && <Message error={session.error} />}
         {session.status === "signedOut" && (
           <main className="page-content">
@@ -103,9 +103,9 @@ export function App() {
 
 function Brand() {
   return (
-    <a className="brand" href="#budget" aria-label="Budget Buddy home">
+    <a className="brand" href="#budget" aria-label="Enough Money home">
       <img src={`${import.meta.env.BASE_URL}icons/icon.svg`} alt="" width="36" height="36" />
-      <span>Budget Buddy</span>
+      <span>Enough Money</span>
     </a>
   );
 }
@@ -377,8 +377,8 @@ function SidebarFoot({
         <button
           className="sidebar-install"
           type="button"
-          aria-label="Install Budget Buddy"
-          title="Install Budget Buddy"
+          aria-label="Install Enough Money"
+          title="Install Enough Money"
           onClick={install}
         >
           <InstallIcon />

@@ -68,7 +68,7 @@ export function useBackup(budget: Budget, data: BudgetData) {
       setRestored(null);
       if (!file) return;
       if (file.size > MAX_FILE_BYTES) {
-        setFileError("That file is too large for a Budget Buddy backup (over 20 MB).");
+        setFileError("That file is too large for an Enough Money backup (over 20 MB).");
         return;
       }
       try {

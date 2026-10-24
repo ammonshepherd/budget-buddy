@@ -15,7 +15,7 @@ test("export everything, then restore it into a new empty household", async ({ p
   const downloading = page.waitForEvent("download");
   await card.getByRole("button", { name: "Export all data" }).click();
   const download = await downloading;
-  expect(download.suggestedFilename()).toMatch(/^budget-buddy-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(download.suggestedFilename()).toMatch(/^enough-money-backup-\d{4}-\d{2}-\d{2}\.json$/);
   const path = await download.path();
   const file = JSON.parse(await readFile(path, "utf8")) as {
     format: string;
@@ -61,5 +61,5 @@ test("a file that is not a backup is explained", async ({ page }) => {
   await card
     .getByLabel("Backup file")
     .setInputFiles({ name: "x.json", mimeType: "application/json", buffer: Buffer.from("[1]") });
-  await expect(card).toContainText("not a Budget Buddy backup file");
+  await expect(card).toContainText("not an Enough Money backup file");
 });

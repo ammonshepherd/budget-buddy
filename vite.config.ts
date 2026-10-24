@@ -4,9 +4,9 @@ import { defineConfig, loadEnv, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import packageJson from "./package.json" with { type: "json" };
 
-// GitHub Pages serves the app from https://ammonshepherd.github.io/budget-buddy/,
+// Cloudflare serves the app from the root of https://enoughmoney.app/,
 // so every URL the build produces starts with this path.
-const BASE = "/budget-buddy/";
+const BASE = "/";
 
 // The test Supabase project (see docs/testing.md); production is lkaurrcarzzkbqdwqfge.
 const TEST_PROJECT_REF = "kiqbgjgvptgknmboazaq";
@@ -29,8 +29,7 @@ function checkBuildEnv(mode: string) {
  * The built page's Content Security Policy: the browser runs only the app's
  * own scripts and styles and talks only to the app and its Supabase project,
  * so injected code could neither load more code nor send data elsewhere.
- * GitHub Pages cannot send headers, so it goes in a <meta> tag. Build only:
- * the dev server injects inline scripts for hot reload.
+ * Build only: the dev server injects inline scripts for hot reload.
  */
 function contentSecurityPolicy(supabaseUrl: string | undefined): string {
   const supabase = supabaseUrl ? ` ${new URL(supabaseUrl).origin}` : "";
@@ -49,23 +48,42 @@ function contentSecurityPolicy(supabaseUrl: string | undefined): string {
   ].join("; ");
 }
 
-function cspPlugin(mode: string): Plugin {
+/**
+ * Cloudflare reads `_headers` from the built files and sends these headers
+ * with every response (the file itself is not served). A header can do what
+ * the <meta> tag cannot: `frame-ancestors 'none'` stops other sites showing
+ * the app in a frame. The <meta> tag stays so `vite preview` (the UI tests)
+ * applies the same policy.
+ */
+function headersFile(policy: string): string {
+  return [
+    "/*",
+    `  Content-Security-Policy: ${policy}; frame-ancestors 'none'`,
+    "  X-Content-Type-Options: nosniff",
+    "  Referrer-Policy: strict-origin-when-cross-origin",
+    "  Permissions-Policy: camera=(), microphone=(), geolocation=()",
+    "",
+  ].join("\n");
+}
+
+function securityPlugin(mode: string): Plugin {
   // loadEnv also picks up VITE_ variables set in the shell (CI, Playwright).
   const env = loadEnv(mode, process.cwd(), "VITE_");
   const supabaseUrl = env.VITE_DATA_STORE === "memory" ? undefined : env.VITE_SUPABASE_URL;
+  const policy = contentSecurityPolicy(supabaseUrl);
   return {
-    name: "budget-buddy-csp",
+    name: "enough-money-security",
     apply: "build",
     transformIndexHtml: () => [
       {
         tag: "meta",
-        attrs: {
-          "http-equiv": "Content-Security-Policy",
-          content: contentSecurityPolicy(supabaseUrl),
-        },
+        attrs: { "http-equiv": "Content-Security-Policy", content: policy },
         injectTo: "head-prepend",
       },
     ],
+    generateBundle() {
+      this.emitFile({ type: "asset", fileName: "_headers", source: headersFile(policy) });
+    },
   };
 }
 
@@ -83,7 +101,7 @@ export default defineConfig(({ command, mode }) => {
     },
     plugins: [
       react(),
-      cspPlugin(mode),
+      securityPlugin(mode),
       VitePWA({
         // Generates the service worker and manifest that sw.js and
         // manifest.webmanifest used to provide by hand.
@@ -100,8 +118,8 @@ export default defineConfig(({ command, mode }) => {
           "icons/icon.svg",
         ],
         manifest: {
-          name: "Budget Buddy",
-          short_name: "Budget Buddy",
+          name: "Enough Money",
+          short_name: "Enough Money",
           description: "A simple envelope-style budgeting app.",
           start_url: BASE,
           scope: BASE,
