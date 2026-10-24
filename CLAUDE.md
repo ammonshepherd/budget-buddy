@@ -259,7 +259,8 @@ non-card budget balances − all envelope money (P included)`.
   page load (`src/models/cardDebtShades.ts`), with readable text on each.
 - Transactions are added with the floating round + button (bottom right of
   Budget and Accounts; not Settings), which opens the transaction form in a
-  modal `<dialog>` (`TransactionDialog`), starting in the open account.
+  modal `<dialog>` (`TransactionDialog`), starting in the open account; its
+  Account picker offers every open account (v0.37.2).
 - Accounts (Accounts and Activity merged in v0.29.0; the Activity layout
   was decided in v0.21.0, `docs/mockups/activity-screen.html`). Three tabs:
   Budget, Accounts, Settings. What is open is in the URL (`#accounts`,

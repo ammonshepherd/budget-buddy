@@ -39,7 +39,7 @@ export function TransactionEditor({
   onCancel: () => void;
   onDelete?: () => Promise<void>;
   layout: "stack" | "row";
-  /** Adding inside an open account: show its name instead of the Account picker. */
+  /** Adding in the desktop row inside an open account: show its name instead of the Account picker. */
   fixedAccount?: boolean;
 }) {
   const save = useAsyncAction(entry.prepare);

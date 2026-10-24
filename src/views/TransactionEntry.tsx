@@ -38,7 +38,7 @@ export function TransactionEntry({
   onDelete?: () => Promise<void>;
   /** "row": the fields side by side, as the new transaction row on Accounts on a desktop. */
   layout?: "stack" | "row";
-  /** Adding inside an open account: the form shows its name, not the Account picker. */
+  /** Adding in the desktop row inside an open account: the form shows its name, not the Account picker. */
   fixedAccount?: boolean;
 }) {
   const entry = useTransactionEntry(budget, data);
@@ -95,7 +95,6 @@ export function TransactionDialog({
   initial,
   onClose,
   onDelete,
-  fixedAccount = false,
 }: {
   budget: Budget;
   data: BudgetData;
@@ -104,7 +103,6 @@ export function TransactionDialog({
   initial: () => TransactionForm;
   onClose: () => void;
   onDelete?: () => Promise<void>;
-  fixedAccount?: boolean;
 }) {
   return (
     <Sheet open={open} label={heading} onClose={onClose}>
@@ -116,7 +114,6 @@ export function TransactionDialog({
           heading={heading}
           onDone={onClose}
           onCancel={onClose}
-          fixedAccount={fixedAccount}
           onDelete={
             onDelete &&
             (async () => {
@@ -133,9 +130,9 @@ export function TransactionDialog({
 /**
  * The round + button in the bottom-right corner (Budget and Accounts), or on
  * a desktop "+ Add transaction" at the top of the sidebar. It opens the
- * transaction form in a modal dialog, in the account open on Accounts (no
- * Account picker then; with none open, the picker shows), unless `onAdd` takes over (with an account or All accounts open
- * on a desktop, a new row opens instead).
+ * transaction form in a modal dialog, starting in the account open on
+ * Accounts; its Account picker offers every open account. `onAdd` takes over
+ * on a desktop with an account or All accounts open (a new row opens instead).
  */
 export function AddTransactionButton({
   budget,
@@ -171,7 +168,6 @@ export function AddTransactionButton({
         open={open}
         heading="Add a transaction"
         initial={() => blankTransactionForm(data, accountId)}
-        fixedAccount={accountId !== null}
         onClose={() => setOpen(false)}
       />
     </>

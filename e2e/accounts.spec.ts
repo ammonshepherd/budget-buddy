@@ -28,10 +28,7 @@ async function add(
   await dialog.getByLabel("Amount").first().fill(tx.amount);
   await dialog.getByLabel("Payee").fill(tx.payee);
   await dialog.getByLabel("Date").fill(tx.date);
-  // Inside an open account the form has no picker, only that account's name.
-  const picker = dialog.locator(".field-account select");
-  if (await picker.count()) await picker.selectOption({ label: tx.account });
-  else await expect(dialog.locator(".fixed-account strong")).toHaveText(tx.account);
+  await dialog.locator(".field-account select").selectOption({ label: tx.account });
   if (transferTo) {
     await chooseEnvelope(dialog.getByLabel("Envelope"), "Transfer (not spending or income)");
     await dialog.getByLabel("To account").selectOption({ label: transferTo });
@@ -103,9 +100,7 @@ test("the list groups accounts by type, with All accounts first and closed ones 
   await expect(page.getByRole("button", { name: "Import CSV" })).toHaveCount(0);
 });
 
-test("Add account is in the page menu; adding inside an account has no Account picker", async ({
-  page,
-}) => {
+test("Add account is in the page menu; adding inside an account starts in it", async ({ page }) => {
   await signInWithHousehold(page);
   await addAccount(page, { name: "Checking", balance: "100" });
   await addAccount(page, { name: "Savings", balance: "0" });
@@ -113,14 +108,15 @@ test("Add account is in the page menu; adding inside an account has no Account p
   // No button on the list itself: Add account waits in the menu.
   await expect(page.getByRole("button", { name: "Add account", exact: true })).toHaveCount(0);
 
-  // Inside an account: its name instead of the picker.
+  // Inside an account: the picker starts in it and offers every account.
   await openAccount(page, "Savings");
   let dialog = await openAddTransaction(page);
-  await expect(dialog.locator(".field-account select")).toHaveCount(0);
-  await expect(dialog.locator(".fixed-account")).toHaveText("Account Savings");
+  const picker = dialog.locator(".field-account select");
+  await expect(picker.locator(":checked")).toHaveText("Savings");
+  await expect(picker.locator("option")).toHaveText(["Checking", "Savings"]);
   await dialog.getByRole("button", { name: "Cancel" }).click();
 
-  // All accounts: the picker is back.
+  // All accounts: the picker too.
   await openAllAccounts(page);
   dialog = await openAddTransaction(page);
   await expect(dialog.locator(".field-account select")).toBeVisible();
@@ -196,7 +192,7 @@ test("an open account: its figures follow the month, its list does not", async (
 
   // The + button adds to the open account.
   const dialog = await openAddTransaction(page);
-  await expect(dialog.locator(".fixed-account strong")).toHaveText("Main");
+  await expect(dialog.locator(".field-account select").locator(":checked")).toHaveText("Main");
   await dialog.getByRole("button", { name: "Cancel" }).click();
 
   // The back arrow returns to the list.
@@ -272,7 +268,7 @@ test("Import CSV from the account, then 100 rows at a time", async ({ page }) =>
   await page.getByRole("button", { name: "Import CSV" }).click();
   const sheet = page.getByRole("dialog", { name: "Import CSV into Checking" });
   // Already in this account: no account picker.
-  await expect(sheet.getByLabel("Account", { exact: true })).toHaveCount(0);
+  await expect(sheet.locator(".field-account select")).toHaveCount(0);
   await sheet.getByLabel("Bank CSV file").setInputFiles({
     name: "BIG.csv",
     mimeType: "text/csv",
