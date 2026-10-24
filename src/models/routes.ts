@@ -1,6 +1,6 @@
 import { isMonth, type Month } from "./month";
 
-/** The app's pages. Hash routing (#budget) keeps GitHub Pages happy. */
+/** The app's pages. Hash routing (#budget) works on any static host. */
 export const ROUTES = ["budget", "accounts", "settings"] as const;
 
 /** One of the strings in ROUTES: "budget" | "accounts" | "settings". */

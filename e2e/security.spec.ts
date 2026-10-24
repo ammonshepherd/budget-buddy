@@ -13,6 +13,17 @@ test("the built page sets a strict Content Security Policy", async ({ page }) =>
   expect(policy).toContain("connect-src 'self';");
 });
 
+test("Cloudflare gets the same policy as a header, with framing blocked", async ({ page }) => {
+  await page.goto("./");
+  const policy = await page
+    .locator('meta[http-equiv="Content-Security-Policy"]')
+    .getAttribute("content");
+  // vite preview serves _headers as a plain file; Cloudflare reads it instead.
+  const headers = await (await page.request.get("/_headers")).text();
+  expect(headers).toContain(`Content-Security-Policy: ${policy}; frame-ancestors 'none'`);
+  expect(headers).toContain("X-Content-Type-Options: nosniff");
+});
+
 test("the policy blocks nothing the app itself does", async ({ page }) => {
   const violations = await watchCsp(page);
   await signInWithHousehold(page);

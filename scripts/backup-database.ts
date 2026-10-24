@@ -78,12 +78,13 @@ const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 const backup = { ...exportBackup(), app_version: version };
 
 mkdirSync(dir, { recursive: true });
-const name = `budget-buddy-backup-${stamp}.json`;
+const name = `enough-money-backup-${stamp}.json`;
 writeFileSync(join(dir, name), `${JSON.stringify(backup, null, 2)}\n`);
 
-// The names sort by date and time, so the oldest come first.
+// The names sort by date and time, so the oldest come first. Files from
+// before the rename (v0.37.0) start with budget-buddy, which sorts first too.
 const old = readdirSync(dir)
-  .filter((f) => /^budget-buddy-backup-.*\.json$/.test(f))
+  .filter((f) => /^(enough-money|budget-buddy)-backup-.*\.json$/.test(f))
   .sort()
   .reverse()
   .slice(KEEP);

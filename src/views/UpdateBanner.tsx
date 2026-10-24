@@ -11,7 +11,7 @@ export function UpdateBanner({
 }) {
   return (
     <div className="update-banner" role="status">
-      <p>A new version of Budget Buddy is available.</p>
+      <p>A new version of Enough Money is available.</p>
       <div className="update-banner-actions">
         <button className="update-later" type="button" onClick={onDismiss}>
           Later

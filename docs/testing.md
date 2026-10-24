@@ -1,17 +1,17 @@
 # Testing and the test database
 
-Budget Buddy has two Supabase projects. Automated tests only ever touch the
+Enough Money has two Supabase projects (named from its old name, Budget Buddy). Automated tests only ever touch the
 test project. Every script that writes test data checks its target first
 (`scripts/testTarget.ts`) and refuses anything but the test project or a
 local Supabase.
 
-|               | Production                             | Test                                     |
-| ------------- | -------------------------------------- | ---------------------------------------- |
-| Name          | `budget-buddy`                         | `budget-buddy-test`                      |
-| Project ref   | `lkaurrcarzzkbqdwqfge`                 | `kiqbgjgvptgknmboazaq`                   |
-| Used by       | the app on GitHub Pages, `npm run dev` | integration tests, `test:ui:db`, seeding |
-| Settings file | `.env.local` / Actions **variables**   | `.env.test` / Actions **secrets**        |
-| Supabase CLI  | never linked                           | linked (`supabase/.temp`, not committed) |
+|               | Production                                | Test                                     |
+| ------------- | ----------------------------------------- | ---------------------------------------- |
+| Name          | `budget-buddy`                            | `budget-buddy-test`                      |
+| Project ref   | `lkaurrcarzzkbqdwqfge`                    | `kiqbgjgvptgknmboazaq`                   |
+| Used by       | the app on enoughmoney.app, `npm run dev` | integration tests, `test:ui:db`, seeding |
+| Settings file | `.env.local` / Actions **variables**      | `.env.test` / Actions **secrets**        |
+| Supabase CLI  | never linked                              | linked (`supabase/.temp`, not committed) |
 
 ## Which command uses what
 

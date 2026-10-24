@@ -3,7 +3,7 @@ import { useCallback } from "react";
 // the service worker and tells us when a newer build has downloaded.
 import { useRegisterSW } from "virtual:pwa-register/react";
 
-/** How often an open app asks GitHub Pages for a newer build. */
+/** How often an open app asks the server for a newer build. */
 const CHECK_EVERY_MS = 60 * 60 * 1000;
 
 /**

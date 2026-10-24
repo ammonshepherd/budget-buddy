@@ -1,13 +1,14 @@
-# Budget Buddy
+# Enough Money
 
-Budget Buddy is a mobile-first, installable envelope-budgeting web app for a small household.
+Enough Money (called Budget Buddy until v0.37.0) is a mobile-first, installable envelope-budgeting web app for a small household, at
+<https://enoughmoney.app>.
 
 The full description of how it works is in [`docs/SPEC.md`](docs/SPEC.md); the decided
 budgeting rules are in [`CLAUDE.md`](CLAUDE.md).
 
 ## Version
 
-The current application version is **0.33.0** (kept in `package.json`; the app shows it in
+The current application version is **0.37.0** (kept in `package.json`; the app shows it in
 the header, and `docs/SPEC.md` describes that version).
 
 Versions follow:
@@ -21,7 +22,7 @@ Versions follow:
 - [Vite](https://vite.dev) dev server and bundler, with `vite-plugin-pwa` for the service worker and manifest
 - [React](https://react.dev) + TypeScript
 - [Vitest](https://vitest.dev) unit tests and [Playwright](https://playwright.dev) UI tests
-- Hash routing (`#budget`, `#accounts`, …) so the app works on GitHub Pages
+- Hash routing (`#budget`, `#accounts`, …), so a static host serves every page from one file
 - Supabase: email sign-in, Postgres with Row Level Security (`supabase/migrations/`)
 
 ## Folder structure (MVC)
@@ -57,9 +58,9 @@ npm run db:seed:test # recreate the test users and their households
 1. Copy `.env.example` to `.env.local` and fill in the publishable key
    (Supabase dashboard → Project Settings → API Keys).
 2. In Supabase → Authentication → URL Configuration, add
-   `http://localhost:5173/budget-buddy/` as a redirect URL (and as the Site URL
+   `http://localhost:5173/` as a redirect URL (and as the Site URL
    while developing) so email confirmation links come back to the app.
-3. `npm run dev`, open <http://localhost:5173/budget-buddy/>, create an account,
+3. `npm run dev`, open <http://localhost:5173/>, create an account,
    confirm the email, sign in and name your household.
 
 ### Data stores
@@ -78,19 +79,27 @@ It is skipped until `.env.test` is filled in (copy `.env.test.example`). See
 
 ## Deployment
 
-The app is hosted on GitHub Pages at <https://ammonshepherd.github.io/budget-buddy/>.
-`.github/workflows/deploy.yml` checks, tests and builds every pull request, and deploys
-to Pages on each push to `main`. Vite `base` and the PWA manifest use `/budget-buddy/`,
-so the dev server runs at <http://localhost:5173/budget-buddy/>.
+The app is hosted on Cloudflare at <https://enoughmoney.app> (domain, DNS and hosting
+all in Cloudflare). `.github/workflows/deploy.yml` checks, tests and builds every pull
+request, and on each push to `main` runs `wrangler deploy`, which uploads `dist/` as a
+Worker that only serves files (`wrangler.jsonc`). The build writes `dist/_headers`, which
+Cloudflare sends as security headers.
 
 One-time setup:
 
-- **Settings → Pages → Source:** GitHub Actions.
-- **Settings → Secrets and variables → Actions → Variables:** `VITE_SUPABASE_URL` and
-  `VITE_SUPABASE_ANON_KEY` (public values). For local development copy `.env.example` to
-  `.env.local`.
-- **Supabase → Authentication → URL Configuration:** add the Pages URL as the Site URL
-  and as a redirect URL.
+- **Cloudflare → Manage account → Account API tokens → Create token:** the "Edit
+  Cloudflare Workers" template, limited to your account and the `enoughmoney.app` zone.
+- **GitHub → Settings → Secrets and variables → Actions:** the secret
+  `CLOUDFLARE_API_TOKEN` (that token), and the variables `CLOUDFLARE_ACCOUNT_ID` (on the
+  Cloudflare dashboard's account home), `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+  (public values). For local development copy `.env.example` to `.env.local`.
+- **Cloudflare DNS:** no record for the bare `enoughmoney.app` (the first deploy adds it
+  as the Worker's custom domain). Optionally a Redirect Rule from `www.enoughmoney.app`.
+- **Cloudflare → enoughmoney.app:** leave off anything that injects scripts into pages
+  (Web Analytics auto-inject, Rocket Loader, Email Address Obfuscation); the Content
+  Security Policy would block it.
+- **Supabase → Authentication → URL Configuration:** `https://enoughmoney.app` as the
+  Site URL and as a redirect URL.
 
 ## The Budget page
 

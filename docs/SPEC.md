@@ -1,4 +1,4 @@
-# Budget Buddy — specification
+# Enough Money — specification
 
 What the app does and how it is built, in enough detail to rebuild it. Three
 sources together are the full picture; when they disagree, fix the docs:
@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.36.0.
+Version described: 0.37.0.
 
 ## 1. Purpose
 
@@ -17,7 +17,9 @@ An envelope-budgeting Progressive Web App for one small household. Money in
 checking accounts gets a job in envelopes; spending comes out of envelopes;
 credit card spending is set aside in a payment envelope per card. Bank and card
 CSV exports are imported and reviewed. Works on a phone first, installable,
-hosted on GitHub Pages with Supabase as the back end.
+hosted on Cloudflare at `https://enoughmoney.app` with Supabase as the back
+end. Called Budget Buddy until v0.37.0; the Supabase projects, test emails
+and the backup format name keep the old name.
 
 ## 2. Project structure
 
@@ -77,9 +79,9 @@ always show what the store holds.
 - `VITE_DATA_STORE=memory` — the in-memory store (UI tests).
 - `.env.test` — the test project (`--mode test`, seed script, database tests);
   see `docs/testing.md`.
-- `vite.config.ts`: `base: "/budget-buddy/"`, `vite-plugin-pwa` with
+- `vite.config.ts`: `base: "/"`, `vite-plugin-pwa` with
   `registerType: "prompt"` (a new build waits for the new version banner,
-  §5 App shell), manifest (name/short name "Budget Buddy",
+  §5 App shell), manifest (name/short name "Enough Money",
   `start_url`/`scope`/`id` = base, `display: standalone`, background `#faf8fc`,
   theme `#4b2a68`, icons per CLAUDE.md), `__APP_VERSION__` from `package.json`,
   a build check (no secret-looking `VITE_` variable; production never points
@@ -88,8 +90,14 @@ always show what the store holds.
   itself, images also as `data:`, connections only to the app and the
   Supabase project, no plugins, `base-uri`/`form-action` self; the dev
   server injects inline scripts so it gets none; `e2e/security.spec.ts`
-  checks it blocks nothing the app does), and the Vitest projects `unit`
-  and `integration`.
+  checks it blocks nothing the app does), the same policy plus
+  `frame-ancestors 'none'`, `nosniff`, a referrer policy and a permissions
+  policy (no camera, microphone or location) in `dist/_headers`, which
+  Cloudflare sends as headers, and the Vitest projects `unit` and
+  `integration`.
+- `wrangler.jsonc`: Cloudflare hosting, a Worker named `enough-money` with
+  no code that serves `dist/` on the custom domain `enoughmoney.app`; no
+  workers.dev or preview URLs.
 
 ### Commands and CI
 
@@ -106,7 +114,8 @@ UI tests build with the memory store into `dist-e2e/` and run against
 
 GitHub Actions: `deploy.yml` runs on pushes to `main` and on pull requests:
 `npm ci`, `format:check`, `lint`, `npm test` (unit), `build`. Only pushes to
-`main` deploy to Pages. `tests.yml` runs on pull requests: the UI tests, and
+`main` deploy, with `npx wrangler@<pinned> deploy` (`CLOUDFLARE_API_TOKEN`
+secret, `CLOUDFLARE_ACCOUNT_ID` variable). `tests.yml` runs on pull requests: the UI tests, and
 the integration and `test:ui:db` tests against the test project using
 repository secrets (skipped without them). Every action is pinned to a
 commit hash (release tag in a comment); `.github/dependabot.yml` proposes
@@ -203,7 +212,7 @@ These are implemented in `budgetMath.ts` and the controllers:
 ### App shell
 
 - Max width 30rem, centred; on wider screens it floats as a rounded card.
-- Header: icon + "Budget Buddy" (links to `#budget`), an Install button when
+- Header: icon + "Enough Money" (links to `#budget`), an Install button when
   the browser offers installing, and, signed in, the page menu at the top
   right. Since v0.36.0 the header shows no version (Settings → About does;
   the desktop sidebar still shows it).
@@ -226,12 +235,12 @@ These are implemented in `budgetMath.ts` and the controllers:
   the panel).
 - New version banner (`useAppUpdate`, `UpdateBanner`): once a newer deploy
   has downloaded, a white card floats over the top of the screen, signed in
-  or not: "A new version of Budget Buddy is available." with Later (hides it
+  or not: "A new version of Enough Money is available." with Later (hides it
   until the next check) and Refresh (switches to the new version and
   reloads). The open app checks every hour and whenever it comes back on
   screen, besides the browser's own check on load; offline it does nothing.
 - Bottom navigation (fixed): Budget, Accounts, Settings, with icons; the
-  current page is highlighted. Page title is "⟨Page⟩ | Budget Buddy".
+  current page is highlighted. Page title is "⟨Page⟩ | Enough Money".
 - Hash routes (`src/models/routes.ts`): `#budget`, `#budget/YYYY-MM`,
   `#accounts` (the list), `#accounts/all` (All accounts open),
   `#accounts/<account id>` (one account open), each Accounts route with an
@@ -252,7 +261,7 @@ These are implemented in `budgetMath.ts` and the controllers:
   (`SHADES` in `src/models/cardDebtShades.ts`), picked at random once per
   page load, so it changes with every refresh; the text is near-black or
   white, whichever reads better (at least 4.5:1). Hidden at $0.00 or less.
-- States: "Loading Budget Buddy…", sign-in, create household, or the app.
+- States: "Loading Enough Money…", sign-in, create household, or the app.
 
 ### Desktop layout (1000px and up)
 
@@ -262,7 +271,7 @@ live by `useDesktop`), App adds `.desktop` to the shell; below that, or
 signed out, everything is as above.
 
 - No header or bottom bar. A sidebar on the left (`aside` "Sidebar",
-  16rem): the logo, "Budget Buddy" and the version; "+ Add transaction"
+  16rem): the logo, "Enough Money" and the version; "+ Add transaction"
   (not on Settings; opens the same dialog); the pages ("Primary
   navigation"), with every open account listed under Accounts (since
   v0.35.1, `sidebarAccounts` in `src/models/accounts.ts`): All accounts and
@@ -737,8 +746,9 @@ Backup.
 - **Import envelope plan:** month (default current), CSV file, preview with
   new groups/envelopes and Planned changes, invalid rows by line, then Import.
 - **Backup** (`src/models/backup.ts`, `useBackup`, `BackupSection`): "Export
-  all data" saves `budget-buddy-backup-YYYY-MM-DD.json` (format
-  `budget-buddy-backup`, version 1) and says what it holds (counts and the
+  all data" saves `enough-money-backup-YYYY-MM-DD.json` (format
+  `budget-buddy-backup`, its name from before the rename; version 1) and
+  says what it holds (counts and the
   months with transactions or a stored Planned/Assigned/Released). The file
   mirrors the tables without `household_id`: household name, accounts (closed
   ones, `import_format`), groups, envelopes (`card_account_id`), envelope
@@ -855,12 +865,7 @@ Decided or wanted, but not in the app:
   finishing only when the ticked rows match it, locking reconciled rows,
   a separate cleared status, "Select all" for a day or month.
 - Tithing/fast-offering rules.
-- Security: a domain of the app's own. On `ammonshepherd.github.io` every
-  other GitHub Pages site of the owner shares the app's origin, so its
-  scripts could read the Supabase session in localStorage; the Content
-  Security Policy protects only the app's own pages. Moving changes Vite
-  `base`, the manifest scope, Supabase Auth Site URL and redirect URLs.
-  Also Supabase leaked-password protection (a paid plan).
+- Security: Supabase leaked-password protection (a paid plan).
 - Maintenance: dependency updates (minor releases of React, supabase-js,
   Vite, Vitest, Playwright, ESLint; TypeScript 7 is a major upgrade for its
   own branch).

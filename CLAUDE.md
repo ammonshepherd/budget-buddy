@@ -1,6 +1,8 @@
-# Budget Buddy — guide for Claude
+# Enough Money — guide for Claude
 
-Envelope-budgeting Progressive Web App for a small household. The owner is
+Envelope-budgeting Progressive Web App for a small household (called Budget
+Buddy until v0.37.0; the Supabase projects, test emails and the backup format
+name keep the old name). The owner is
 learning Vite, React and TypeScript: explain new concepts briefly in PR
 descriptions and when asked, without being condescending.
 
@@ -21,16 +23,24 @@ always describes the app as of that version (including §9, not built yet).
   `kiqbgjgvptgknmboazaq` ("budget-buddy-test"), used only by tests; see
   `docs/testing.md`.
 - Vitest (unit/integration) and Playwright (UI).
-- Hash routing so the app still works on GitHub Pages.
-- Hosting: GitHub Pages at `https://ammonshepherd.github.io/budget-buddy/`,
-  deployed by a GitHub Actions workflow that runs `npm run build` on pushes to
-  `main` (Pages source = GitHub Actions). Vite `base` is `/budget-buddy/`; the PWA
-  manifest scope/start_url must match. Supabase URL and anon key are injected at
-  build time from repository Actions variables. Supabase Auth Site URL and
-  redirect URL must include the Pages URL. Public sign-up and every provider
-  but email stay off. The built page carries a Content Security Policy
-  (`vite.config.ts`); a new outside resource must be added to it. Actions
-  are pinned to commit hashes.
+- Hash routing, so any static host serves every page from one `index.html`.
+- Hosting (moved from GitHub Pages in v0.37.0): Cloudflare at
+  `https://enoughmoney.app` (Cloudflare registrar and DNS), a Worker that
+  only serves static files (`wrangler.jsonc`: no workers.dev or preview
+  URLs, since every build uses the production database). The GitHub Actions
+  workflow `deploy.yml` checks and builds every PR and, on pushes to `main`,
+  runs `wrangler deploy` (pinned version) after the checks pass. Vite `base`
+  is `/`; the PWA manifest scope/start_url/id match. Supabase URL and anon
+  key are injected at build time from repository Actions variables;
+  `CLOUDFLARE_API_TOKEN` (secret) and `CLOUDFLARE_ACCOUNT_ID` (variable)
+  deploy. Supabase Auth Site URL and redirect URL must include
+  `https://enoughmoney.app`. Public sign-up and every provider but email
+  stay off. The built page carries a Content Security Policy
+  (`vite.config.ts`), as a `<meta>` tag and in `dist/_headers` (sent as a
+  header by Cloudflare, with `frame-ancestors 'none'`); a new outside
+  resource must be added to it. Cloudflare features that inject scripts
+  (Web Analytics auto-inject, Rocket Loader, email obfuscation) stay off.
+  Actions are pinned to commit hashes.
 
 ## Architecture: keep MVC
 
@@ -444,8 +454,8 @@ the version, changed files, tests run, remaining limitations, and the PR link.
   database as a Settings → Export JSON file in `.backups/`, ignored by git;
   it keeps the 5 newest and deletes older ones; it prints only counts),
   wait for the PR's checks, merge with `--delete-branch`,
-  pull `main`, then confirm the Pages deploy succeeded and the live bundle shows
-  the new version.
+  pull `main`, then confirm the Cloudflare deploy succeeded and the live bundle
+  shows the new version.
 - Stacked PRs: before merging the lower PR, keep its branch, retarget the upper
   PR to `main`, and only then delete the lower branch (deleting it first closes
   the upper PR).

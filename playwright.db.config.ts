@@ -15,14 +15,14 @@ export default defineConfig({
   testDir: "./e2e-db",
   // The specs share one test user and its data.
   workers: 1,
-  use: { baseURL: "http://localhost:4174/budget-buddy/" },
+  use: { baseURL: "http://localhost:4174/" },
   projects: [{ name: "mobile-chromium", use: { ...devices["Pixel 7"] } }],
   // Without a test database the specs skip, so nothing needs building.
   webServer: configured
     ? {
         command:
           "vite build --mode test --outDir dist-e2e-db && vite preview --mode test --outDir dist-e2e-db --port 4174 --strictPort",
-        url: "http://localhost:4174/budget-buddy/",
+        url: "http://localhost:4174/",
         reuseExistingServer: !process.env.CI,
         env: { VITE_SUPABASE_URL: env.url, VITE_SUPABASE_ANON_KEY: env.anonKey },
       }

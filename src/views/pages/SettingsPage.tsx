@@ -49,7 +49,7 @@ export function SettingsPage({
       <header className="page-heading">
         <p className="eyebrow">Your preferences</p>
         <h1 id="settings-title">Settings</h1>
-        <p>Manage your preferences and prepare Budget Buddy for your household.</p>
+        <p>Manage your preferences and prepare Enough Money for your household.</p>
       </header>
 
       <section className="settings-list" aria-label="Application settings">
@@ -67,7 +67,7 @@ export function SettingsPage({
             <ActivityIcon />
           </span>
           <span className="settings-row-copy">
-            <strong>About Budget Buddy</strong>
+            <strong>About Enough Money</strong>
             <small>Version {APP_VERSION}</small>
           </span>
         </div>

@@ -1,6 +1,6 @@
-# Builds the app and publishes dist/ to GitHub Pages on every push to main.
-# Pull requests run the same checks and build, but do not deploy.
-name: Deploy to GitHub Pages
+# Checks and builds every pull request; on pushes to main it also deploys
+# dist/ to Cloudflare (https://enoughmoney.app, configured in wrangler.jsonc).
+name: Deploy to Cloudflare
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
 
 # Only one deployment at a time; a newer push waits for the current one.
 concurrency:
-  group: pages-${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -35,20 +35,13 @@ jobs:
           # Vite only exposes variables that start with VITE_ to app code.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: dist
-
-  deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      # Runs only after every check above passed, and only for main.
+      # wrangler's version is pinned like the actions above.
+      - name: Deploy to Cloudflare
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: npx --yes wrangler@4.148.0 deploy
+        env:
+          # A Cloudflare API token (secret) with the "Edit Cloudflare Workers"
+          # permissions, and the account ID (variable). See README → Deployment.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}

@@ -19,6 +19,8 @@ import { UserFacingError } from "./dataStore";
 import { isMonth, monthOf, type Month } from "./month";
 import type { BudgetData } from "./types";
 
+// The app was called Budget Buddy until v0.37.0. The format name stays, so
+// older backup files (and restore_backup in the database) still match it.
 export const BACKUP_FORMAT = "budget-buddy-backup";
 export const BACKUP_VERSION = 1;
 
@@ -154,7 +156,7 @@ const timestamp = (v: unknown) =>
 /** Throws a BackupError when a value is not a usable backup; otherwise it is one. */
 export function validateBackup(value: unknown): Backup {
   if (!isObject(value) || value.format !== BACKUP_FORMAT) {
-    return fail("it is not a Budget Buddy backup file.");
+    return fail("it is not an Enough Money backup file.");
   }
   if (value.version !== BACKUP_VERSION) {
     return fail(
@@ -432,7 +434,7 @@ export function isEmptyHousehold(data: BudgetData): boolean {
 
 export const NOT_EMPTY = "A backup can only be restored into an empty household";
 
-/** "budget-buddy-backup-2026-10-20.json" */
+/** "enough-money-backup-2026-10-20.json" */
 export function backupFileName(today: string): string {
-  return `budget-buddy-backup-${today}.json`;
+  return `enough-money-backup-${today}.json`;
 }

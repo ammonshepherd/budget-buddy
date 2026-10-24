@@ -28,7 +28,7 @@ export function useHashRoute(): AppLocation {
   // An effect runs after React has updated the screen: the right place to
   // touch things React does not manage, such as the browser tab title.
   useEffect(() => {
-    document.title = `${ROUTE_TITLES[route]} | Budget Buddy`;
+    document.title = `${ROUTE_TITLES[route]} | Enough Money`;
   }, [route]);
 
   return location;
