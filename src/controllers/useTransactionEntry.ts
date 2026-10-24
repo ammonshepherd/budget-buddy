@@ -309,11 +309,16 @@ export function useTransactionEntry(budget: Budget, data: BudgetData) {
     isCardCredit,
     isTrackingForm,
     /**
-     * The Account picker's choices: budget accounts, or tracking accounts
-     * when the form is in one. A transaction never moves between the two.
+     * The Account picker's choices. A new transaction can go in any open
+     * account (budget accounts first, then tracking ones; switching to a
+     * tracking account drops its envelope). A saved one never moves between
+     * budget and tracking accounts.
      */
-    accountChoices: (form: TransactionForm): Account[] =>
-      isTrackingForm(form) ? openAccounts.filter((a) => !a.onBudget) : budgetAccounts,
+    accountChoices: (form: TransactionForm): Account[] => {
+      const tracking = openAccounts.filter((a) => !a.onBudget);
+      if (!form.id) return [...budgetAccounts, ...tracking];
+      return isTrackingForm(form) ? tracking : budgetAccounts;
+    },
     /** Whether a transfer is possible at all (two open budget accounts). */
     canTransfer: budgetAccounts.length >= 2,
     /** Whether the transaction being edited is saved as a transfer (both sides). */

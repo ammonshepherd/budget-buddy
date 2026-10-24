@@ -9,7 +9,7 @@ sources together are the full picture; when they disagree, fix the docs:
 | `supabase/migrations/*.sql` | The exact database: columns, constraints, SQL, RLS |
 | This file                   | Everything else: structure, screens, import, look  |
 
-Version described: 0.37.1.
+Version described: 0.37.2.
 
 ## 1. Purpose
 
@@ -251,8 +251,8 @@ These are implemented in `budgetMath.ts` and the controllers:
   and their nav links carry it (`routeHref`).
 - Floating round + button (bottom right, above the nav) on Budget and
   Accounts opens the transaction dialog; with an open account on Accounts it
-  adds to that account (the form shows its name instead of the Account
-  picker).
+  starts in that account (the Account picker still offers every open
+  account).
 - Credit card debt: while the cards owe anything today (`cardDebt` in
   `src/models/accounts.ts`, display only), every page shows "CREDIT CARD
   DEBT" (14px) and the amount (26px) in a rounded strip with 12px space
@@ -681,11 +681,14 @@ picker it shows is gone).
 
 Fields: Outflow/Inflow, Amount (> 0), Payee, Envelope, Account, Date (default
 today), Memo; in a tracking account there is no Envelope and Memo is called
-Notes, and the Account picker lists only tracking accounts (elsewhere only
-budget accounts, so a transaction never moves between the two; a new one
-starts in the first open budget account unless an account is open); when adding inside an open account, Account is that account's
-name, not a picker (editing always has the picker); then Save (adding) / Save changes, Cancel, and (editing)
-Delete transaction / Delete transfer.
+Notes. Adding, the Account picker lists every open account (budget accounts,
+then tracking ones; choosing a tracking account drops the envelope), and a
+new transaction starts in the open account, else the first open budget
+account. Editing, it lists only tracking accounts for a tracking account's
+transaction and only budget accounts otherwise, so a saved transaction never
+moves between the two. (Only the desktop's new row inside an account shows
+that account's name instead of a picker.) Then Save (adding) / Save
+changes, Cancel, and (editing) Delete transaction / Delete transfer.
 
 Envelopes are chosen with the envelope picker (`EnvelopePicker`, used for the
 Envelope field, split lines, the cover prompt and the Assign dialog): a text

@@ -50,7 +50,13 @@ test("a tracking account stands alone: own balance, no envelopes, no transfers",
   await openAccount(page, "Brokerage");
   const dialog = await openAddTransaction(page);
   await expect(dialog.getByLabel("Envelope")).toHaveCount(0);
-  await expect(dialog.locator(".fixed-account")).toHaveText("Account Brokerage");
+  const picker = dialog.locator(".field-account select");
+  await expect(picker.locator(":checked")).toHaveText("Brokerage");
+  // A new transaction can go in any account; choosing a budget one brings
+  // the envelope back.
+  await expect(picker.locator("option")).toHaveText(["Checking", "Savings", "Brokerage"]);
+  await picker.selectOption({ label: "Checking" });
+  await expect(dialog.getByLabel("Envelope")).toBeVisible();
   await dialog.getByRole("button", { name: "Cancel" }).click();
 
   await add(page, { payee: "Dividend", amount: "25", notes: "Q3 payout", inflow: true });
@@ -93,9 +99,13 @@ test("a tracking account stands alone: own balance, no envelopes, no transfers",
   await openAllAccounts(page);
   await expect(activityRow(page, "Dividend")).toHaveCount(0);
 
-  // From a budget account it is neither an account choice nor a transfer target.
+  // A new transaction can go in it, but it is never a transfer target.
   const form = await openAddTransaction(page);
-  await expect(form.locator(".field-account select option")).toHaveText(["Checking", "Savings"]);
+  await expect(form.locator(".field-account select option")).toHaveText([
+    "Checking",
+    "Savings",
+    "Brokerage",
+  ]);
   await chooseEnvelope(form.getByLabel("Envelope"), "Transfer (not spending or income)");
   await expect(form.getByLabel("To account").locator("option")).toHaveText(["Savings"]);
 });
